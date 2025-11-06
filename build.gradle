@@ -1,0 +1,63 @@
+
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'org.springframework.boot' version "$springBootVersion"
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'org.glodean'
+version = "$appVersion"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform("org.junit:junit-bom:$junitVersion")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation "com.google.guava:guava:$guavaVersion"
+    implementation "org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
+    implementation "org.apache.solr:solr-solrj:$solrjVersion"
+    implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
+    implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
+}
+
+jacocoTestReport {
+    dependsOn test // Ensure tests run before generating reports
+    reports {
+        xml.required.set(true) // Enable XML report (useful for CI tools)
+        html.required.set(true) // Enable HTML report for local viewing
+        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
+    }
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport // Generate report after tests
+}
+
+jacoco {
+    toolVersion = "0.8.13" // Specify the JaCoCo version
+    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.7
+            }
+        }
+    }
+}
+
+jar {
+    archiveBaseName = "constant_tracker"
+    manifest {
+        attributes 'Main-Class': 'org.glodean.constants.Main'
+    }
+}

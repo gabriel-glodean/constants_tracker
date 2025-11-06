@@ -1,0 +1,12 @@
+#spring configuration
+spring:
+  output:
+    ansi:
+      enabled: always
+
+
+#our config
+constants:
+  solr:
+    url: http://localhost:8983/solr/
+

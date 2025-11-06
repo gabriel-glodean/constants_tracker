@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+  <luceneMatchVersion>9.0.0</luceneMatchVersion>
+  <directoryFactory name="DirectoryFactory" class="solr.StandardDirectoryFactory"/>
+  <indexConfig><lockType>native</lockType></indexConfig>
+
+  <requestHandler name="/select" class="solr.SearchHandler">
+    <lst name="defaults">
+      <str name="echoParams">explicit</str>
+      <int name="rows">10</int>
+      <str name="df">text</str>
+    </lst>
+  </requestHandler>
+
+  <requestHandler name="/update" class="solr.UpdateRequestHandler"/>
+
+  <requestHandler name="/admin/ping" class="solr.PingRequestHandler">
+    <lst name="invariants">
+      <str name="qt">/select</str>
+      <str name="q">*:*</str>
+    </lst>
+  </requestHandler>
+
+  <updateRequestProcessorChain name="default">
+    <processor class="solr.LogUpdateProcessorFactory" />
+    <processor class="solr.DistributedUpdateProcessorFactory" />
+    <processor class="solr.RunUpdateProcessorFactory" />
+  </updateRequestProcessorChain>
+
+  <query><maxBooleanClauses>1024</maxBooleanClauses></query>
+
+  <autoCommit><maxTime>15000</maxTime><openSearcher>true</openSearcher></autoCommit>
+  <autoSoftCommit><maxTime>5000</maxTime></autoSoftCommit>
+
+  <requestDispatcher handleSelect="true">
+    <requestParsers enableRemoteStreaming="false"
+                    multipartUploadLimitInKB="2048"
+                    formUploadLimitInKB="2048"/>
+  </requestDispatcher>
+</config>

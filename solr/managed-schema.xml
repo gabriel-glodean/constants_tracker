@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schema name="minimal" version="1.7">
+    <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false"/>
+    <field name="_root_" type="string" indexed="true" stored="true" required="false" multiValued="false"/>
+    <field name="doc_type" type="string" indexed="true" stored="true"/>
+    <field name="class_name" type="string" indexed="true" stored="true"/>
+    <field name="project" type="string" indexed="true" stored="true"/>
+    <field name="constant_value_s" type="string" indexed="true" stored="true"/>
+    <field name="usage_type_s" type="string" indexed="true" stored="true"/>
+
+    <uniqueKey>id</uniqueKey>
+    <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true"/>
+    <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true"/>
+    <fieldType name="pint" class="solr.IntPointField" docValues="true"/>
+    <fieldType name="pfloat" class="solr.FloatPointField" docValues="true"/>
+    <fieldType name="text_general" class="solr.TextField" positionIncrementGap="100">
+        <analyzer type="index">
+            <tokenizer class="solr.StandardTokenizerFactory"/>
+            <filter class="solr.LowerCaseFilterFactory"/>
+        </analyzer>
+        <analyzer type="query">
+            <tokenizer class="solr.StandardTokenizerFactory"/>
+            <filter class="solr.LowerCaseFilterFactory"/>
+        </analyzer>
+    </fieldType>
+</schema>
