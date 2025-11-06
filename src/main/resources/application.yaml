@@ -4,6 +4,15 @@ spring:
     ansi:
       enabled: always
 
+memcached.cache:
+  servers: localhost:11211
+  provider: static
+  # default expiration set to '1d' (1 day i.e. '86400' seconds) and custom ones for cache_name1 and cache_name2
+  expiration: 1d
+  expiration-per-cache:
+    cache_name1: 1h
+  metrics-cache-names: cache_name1
+
 
 #our config
 constants:
