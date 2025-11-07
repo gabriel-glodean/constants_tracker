@@ -56,19 +56,21 @@ public record SolrService(@Autowired HttpSolrClientBase solrClient,
     }
 
     public Mono<GetClassConstantsReply> find(GetClassConstantsRequest request) {
-        Cache constants = cacheManager.getCache("constants");
-        if (constants != null) {
-            GetClassConstantsReply reply = constants.get(request, GetClassConstantsReply.class);
-            if (reply != null) {
-                return Mono.just(reply);
+        return Mono.defer(() -> {
+            Cache constants = cacheManager.getCache("constants");
+            if (constants != null) {
+                GetClassConstantsReply reply = constants.get(request, GetClassConstantsReply.class);
+                if (reply != null) {
+                    return Mono.just(reply);
+                }
+                return findDirect(request).map(
+                        r -> {
+                            constants.put(request, r);
+                            return r;
+                        });
             }
-            return findDirect(request).map(
-                    r -> {
-                        constants.put(request, r);
-                        return r;
-                    });
-        }
-        return findDirect(request);
+            return findDirect(request);
+        });
     }
 
     private Mono<GetClassConstantsReply> findDirect(GetClassConstantsRequest request) {
