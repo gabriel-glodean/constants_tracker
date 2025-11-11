@@ -34,4 +34,7 @@ USER app
 # Expose the internal port (you can change via SERVER_PORT)
 EXPOSE 8080
 
+HEALTHCHECK --interval=30s --timeout=3s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:8080/actuator/health | grep '"status":"UP"' || exit 1
+
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -Dserver.port=${SERVER_PORT} -Dspring.data.redis.host=${REDIS_HOST} -Dspring.data.redis.port=${REDIS_PORT} -Dconstants.solr.url=${SOLR_URL} -jar /app/constant_tracker.jar"]

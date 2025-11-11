@@ -1,5 +1,6 @@
 #spring configuration
 spring:
+  application.name: constant-tracker
   codec:
     max-in-memory-size: 5MB
   output:
@@ -12,6 +13,16 @@ spring:
     port: 6379
 logging.level:
   org.springframework.web: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 #our config
 constants:
   solr:

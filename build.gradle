@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'jacoco'
     id 'org.springframework.boot' version "$springBootVersion"
+    id 'com.diffplug.spotless' version "$spotlessVersion"
+
 }
 
 apply plugin: 'io.spring.dependency-management'
@@ -18,6 +20,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation "com.google.guava:guava:$guavaVersion"
+    implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:$webfluxUIVersion"
+    implementation "org.springframework.boot:spring-boot-starter-actuator:$springBootVersion"
     implementation "org.springframework.boot:spring-boot-starter-data-redis:$springBootVersion"
     implementation "org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
     implementation "org.apache.solr:solr-solrj:$solrjVersion"
@@ -59,5 +63,16 @@ jacocoTestCoverageVerification {
                 minimum = 0.7
             }
         }
+    }
+}
+
+spotless {
+    java {
+        // Use Google's standard Java format (same as used in the JDK)
+        googleJavaFormat('1.17.0')
+        // Include all your source files
+        target 'src//*.java'
+        importOrder()
+        removeUnusedImports()
     }
 }
