@@ -116,8 +116,7 @@ java -jar build/libs/constant-tracker-*.jar
 
 - Enrich analysis with method flow graphs  
 - Add Testcontainers integration tests  
-- Extend Solr schema for cross-reference search  
-- Expose OpenAPI / Swagger documentation  
+- Extend Solr schema for cross-reference search
 - Optional GraalVM native image  
 
 ---
