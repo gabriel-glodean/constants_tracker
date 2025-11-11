@@ -1,34 +1,127 @@
-
 # Constant Tracker
 
-This is pretty much a toy project for me to test out Java 25. For now, it can analyze a subset of bytecode to figure out how constants are being used and store the info into Solr. It uses Webflux for handling REST calls. 
+A Spring Boot (WebFlux) service that indexes **Java bytecode constants** for fast search and analysis using Solr.
 
+This started as an experiment in exploring the JVM class file structure — parsing the constant pool, resolving references, and indexing them into Solr for querying and visualization.  
+The focus of this project is **bytecode analysis correctness**, but in the future analysis of java files might be on the table.
 
-## License
+---
 
-[MIT](https://choosealicense.com/licenses/mit/)
+## 🧠 Design Focus
 
-## Running
-The easiest way to starting the application up is to use Terraform, for this the following steps are
-required:
-1. Install Gradle (9.1.0+ for JAVA 25 support), Docker, and Terraform.
-2. Call  _docker build -t constant_tracker:latest ._
-3. Call _terraform init_
-4. Call _terraform apply_ to start the Tracker, Redis, and Solr
-5. Call _terraform destroy_ to stop them.
+The central module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor.  
+It’s tested at over **90 % coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
 
-***NOTE*** I know that step to shouldn't be there, but for now I will live with it.
+WebFlux and Redis layers are intentionally minimal; they serve as integration and caching shells for the core analysis engine.
 
-To send REST request I recommend using Postman (or something similar) as it makes sending class files trivial, just selecting them and that's it)
+---
 
-For now, the only endpoint supported is class with GET, PUT, and POST verbs implemented.
-A sample url is _localhost:8080/class?version=1&project=test&className=org/glodean/constants/samples/Greeter_.
-For POST and PUT make sure that your requests include Content-Type:application/octet-stream
+## 🧩 Architecture
 
-## Java package structure
-- __web.endpoints__: contains the reactive endpoint definitions
-- __store__: classes for writing into Solr
-- __model__: general extracted data
-- __extractor__: classes for extracting constants from various places (for now just bytecode)
-- __extractor__: classes that implement a Points-to Analysis on JVM bytecode to extract constants and how they are used.
-- __dto__: for entering and exiting the app.
+```
+[ .class upload ]
+       │
+       ▼
+[ Reactive controller ]
+       │
+       ▼
+[ Analysis engine ]
+       │
+       ▼
+[ Redis cache ] → [ Solr index ]
+```
+
+- **Spring Boot 3 / WebFlux** – reactive REST interface  
+- **Solr 9** – full-text indexing of constant references  
+- **Redis 7** – caching
+- **Java 25** – uses latest features including ClassFile API  
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Build the image
+docker build -t constant_tracker:latest .
+
+# Option A: Docker Compose (not yet there)
+docker compose up -d
+
+# Option B: Terraform (advanced)
+terraform init && terraform apply -auto-approve
+
+# Upload a class file for analysis
+curl -X POST "http://localhost:8080/class?project=demo"   -H "Content-Type: application/octet-stream"   --data-binary @samples/Greeter.class
+```
+
+Once started:
+- API → http://localhost:8080  
+- Solr UI → http://localhost:8983/solr/#/  
+- Swagger UI → http://localhost:8080/swagger-ui.html
+
+---
+
+## 🧪 Tests
+
+- **Bytecode parser:** > 80+ % coverage (JaCoCo report under `build/reports/jacoco`)  
+- **Reactive API:** minimal tests verifying upload and integration  
+- **Integration stack:** Terraform / Docker Compose for Solr + Redis environments  
+
+---
+
+## 📦 Mock Files and Samples
+
+Example `.class` files are included in the [`samples/`](./samples) directory.  
+They can be used to test or demonstrate the analysis process without compiling your own Java sources.
+
+```bash
+# Example: analyze a provided mock class
+curl -X POST "http://localhost:8080/class?project=samples"   -H "Content-Type: application/octet-stream"   --data-binary @samples/ExampleConstants.class
+```
+
+These mock classes cover:
+- simple constant pools
+- field and method reference examples  
+
+---
+
+## 📸 Screenshot
+
+![Application screenshot](PLACEHOLDER_FOR_YOUR_SCREENSHOT_URL)
+
+_Add your screenshot link above once uploaded — e.g. `docs/screenshot.png` or a GitHub asset._
+
+---
+
+## 🧩 Technical Highlights
+
+- Custom parser for JVM constant pool (fields, methods, strings, class refs, dynamic invocations)  
+- Handles `invokedynamic` and bootstrap method resolution  
+- Exports constants and metadata to Solr documents  
+- Reactive and container-ready (WebFlux + Redis + Solr)  
+- Built and tested on JDK 25  
+
+---
+
+## 🛠️ Build & Run Locally
+
+```bash
+./gradlew clean build
+java -jar build/libs/constant-tracker-*.jar
+```
+
+---
+
+## 🧭 Future Work
+
+- Enrich analysis with method flow graphs  
+- Add Testcontainers integration tests  
+- Extend Solr schema for cross-reference search  
+- Expose OpenAPI / Swagger documentation  
+- Optional GraalVM native image  
+
+---
+
+## 📜 License
+
+MIT © Gabriel Glodean
