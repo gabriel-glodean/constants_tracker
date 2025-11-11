@@ -37,7 +37,7 @@ variable "host_os" {
 
 variable "solr_core"      {
   type = string
-  default = "mycore"
+  default = "Constants"
 }
 variable "app_image_name" {
   type = string
@@ -55,13 +55,15 @@ variable "solr_port"      {
   type = number
   default = 8983
 }
+variable "redis_port"      {
+  type = number
+  default = 6379
+}
 
 ############################
 # Network
 ############################
-resource "docker_network" "appnet" {
-  name = "appnet"
-}
+resource "docker_network" "appnet" { name = "appnet" }
 
 ############################
 # Build/pull images
@@ -69,15 +71,15 @@ resource "docker_network" "appnet" {
 # Build your app from the local Dockerfile
 resource "docker_image" "app" {
   name = "${var.app_image_name}:${var.app_image_tag}"
-  build {
-    context    = "."
-    dockerfile = "Dockerfile"
-  }
+  #build {
+  #  context    = "."
+  #  dockerfile = "Dockerfile"
+  #}
   keep_locally = true
 }
 
-resource "docker_image" "solr"  { name = "solr:9" }
-resource "docker_image" "redis" { name = "redis:7-alpine" }
+resource "docker_image" "solr"  { name = "solr:latest" }
+resource "docker_image" "redis" { name = "redis:latest" }
 
 ############################
 # Copy ./solr -> var.solr_host_path (option #3)
@@ -105,6 +107,12 @@ resource "null_resource" "copy_solr_unix" {
 }
 
 # Windows copy (PowerShell + robocopy); enabled when host_os == "windows"
+# Normalize paths for Windows (backslashes for robocopy)
+locals {
+  solr_src_win  = replace(local.solr_src, "/", "\\")
+  solr_dst_win  = replace(var.solr_host_path, "/", "\\")
+}
+
 resource "null_resource" "copy_solr_win" {
   count = var.host_os == "windows" ? 1 : 0
 
@@ -113,12 +121,9 @@ resource "null_resource" "copy_solr_win" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOC
-      powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-        "New-Item -ItemType Directory -Force -Path '${var.solr_host_path}' | Out-Null; ^
-         robocopy '${local.solr_src}' '${var.solr_host_path}' /E /NFL /NDL /NJH /NJS /NC /NS; ^
-         if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }"
-    EOC
+    # Use cmd.exe for robocopy and simple errorlevel handling
+    interpreter = ["cmd", "/C"]
+    command     = "IF NOT EXIST \"${local.solr_dst_win}\" mkdir \"${local.solr_dst_win}\" && robocopy \"${local.solr_src_win}\" \"${local.solr_dst_win}\" /E /NFL /NDL /NJH /NJS /NC /NS & IF %ERRORLEVEL% GEQ 8 EXIT /B %ERRORLEVEL%"
   }
 }
 
@@ -157,6 +162,11 @@ resource "docker_container" "redis" {
   name    = "redis"
   image   = docker_image.redis.image_id
   command = ["redis-server", "--appendonly", "yes"]
+
+  ports {
+    internal = 6379
+    external = var.redis_port
+  }
 
   networks_advanced { name = docker_network.appnet.name }
 }
