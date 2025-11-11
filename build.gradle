@@ -18,12 +18,19 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation "com.google.guava:guava:$guavaVersion"
+    implementation "org.springframework.boot:spring-boot-starter-data-redis:$springBootVersion"
     implementation "org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
     implementation "org.apache.solr:solr-solrj:$solrjVersion"
     implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
-    implementation "io.sixhours:memcached-spring-boot-starter:$memcachedVersion"
+}
+tasks.named('bootJar'){
+    mainClass.set("$entryClass")
+}
+
+tasks.named('bootRun'){
+    mainClass.set("$entryClass")
 }
 
 jacocoTestReport {
@@ -52,12 +59,5 @@ jacocoTestCoverageVerification {
                 minimum = 0.7
             }
         }
-    }
-}
-
-jar {
-    archiveBaseName = "constant_tracker"
-    manifest {
-        attributes 'Main-Class': 'org.glodean.constants.Main'
     }
 }

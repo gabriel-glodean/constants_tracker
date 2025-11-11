@@ -13,17 +13,31 @@ import org.glodean.constants.dto.GetClassConstantsRequest;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.support.atomic.RedisAtomicInteger;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
 
 @Service
-public record SolrService(@Autowired HttpSolrClientBase solrClient,
-                          @Autowired CacheManager cacheManager) {
+public class SolrService {
     private static final Logger logger = LogManager.getLogger(SolrService.class);
+
+    private final HttpSolrClientBase solrClient;
+    private final RedisConnectionFactory connectionFactory;
+
+    public SolrService(@Autowired HttpSolrClientBase solrClient,
+                       @Autowired RedisConnectionFactory connectionFactory) {
+        this.solrClient = solrClient;
+        this.connectionFactory = connectionFactory;
+    }
+
+    public Mono<ClassConstants> store(ClassConstants constants, String project) {
+        int latestVersion = new RedisAtomicInteger("IdCounter:" + project + ":" + constants.name(), connectionFactory).incrementAndGet();
+        return this.store(constants, project, latestVersion);
+    }
 
     public Mono<ClassConstants> store(ClassConstants constants, String project, int version) {
         SolrInputDocument parentDocument = new SolrInputDocument();
@@ -55,34 +69,16 @@ public record SolrService(@Autowired HttpSolrClientBase solrClient,
                 .map(_ -> constants);
     }
 
-    public Mono<GetClassConstantsReply> find(GetClassConstantsRequest request) {
-        return Mono.defer(() -> {
-            Cache constants = cacheManager.getCache("constants");
-            if (constants != null) {
-                GetClassConstantsReply reply = constants.get(request, GetClassConstantsReply.class);
-                if (reply != null) {
-                    return Mono.just(reply);
-                }
-                return findDirect(request).map(
-                        r -> {
-                            constants.put(request, r);
-                            return r;
-                        });
-            }
-            return findDirect(request);
-        });
-    }
-
-    private Mono<GetClassConstantsReply> findDirect(GetClassConstantsRequest request) {
+    public @Cacheable(cacheNames = "Constants", key = "#request.key()")
+    Mono<GetClassConstantsReply> find(GetClassConstantsRequest request) {
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set("q", "*:*");
-        params.set("q.op", "AND");
-        params.set("fq", "_root_:\"" + request.project() + ":" + request.clazz() + ":" + request.version() + ":*\"");
-        params.set("fq", "doc_type:\"child\"");
+        params.set("fq", "_root_:\"" + request.key() + "\"");
         params.set("fl", "constant_value_s, usage_type_s");
         params.set("rows", 1000);
         QueryRequest query = new QueryRequest(params);
         query.setPath("/select");
+        logger.atInfo().log("Search query {}", query.getParams());
         return Mono.fromFuture(solrClient.requestAsync(query, "Constants"))
                 .map(SolrService::apply);
     }
@@ -101,29 +97,4 @@ public record SolrService(@Autowired HttpSolrClientBase solrClient,
         }
         return new GetClassConstantsReply(constants);
     }
-
-    @Autowired
-    public HttpSolrClientBase solrClient() {
-        return solrClient;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (SolrService) obj;
-        return Objects.equals(this.solrClient, that.solrClient);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(solrClient);
-    }
-
-    @Override
-    public String toString() {
-        return "SolrService[" +
-                "solrClient=" + solrClient + ']';
-    }
-
 }

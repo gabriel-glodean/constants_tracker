@@ -4,6 +4,7 @@ import com.google.common.collect.Iterables;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 import org.glodean.constants.samples.Greeter;
+import org.glodean.constants.samples.InvokeDynamicFunctionality;
 import org.glodean.constants.samples.SimpleIteration;
 import org.junit.jupiter.api.Test;
 
@@ -41,5 +42,13 @@ class ClassModelExtractorTest {
                         new ClassConstant(Greeter.wackyFormat, EnumSet.of(STATIC_FIELD_STORE))
                 ));
         assertEquals(expected, model);
+    }
+
+    @Test
+    void extractForInvokeDynamic() throws IOException {
+        var model = Iterables
+                .getFirst(new ClassModelExtractor(convertClassToModel(InvokeDynamicFunctionality.class)).extract(),
+                        null);
+        assertNotNull(model);
     }
 }

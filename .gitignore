@@ -41,3 +41,26 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# === Terraform state files ===
+*.tfstate
+.tfstate.
+terraform.tfstate
+terraform.tfstate.backup
+
+# === Terraform working directory ===
+.terraform
+.terraform.lock.hcl
+
+# === Crash logs ===
+crash.log
+crash.*.log
+
+# === Plan files ===
+*.tfplan
+
+# === Local variables and overrides ===
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
