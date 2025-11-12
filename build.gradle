@@ -18,6 +18,9 @@ repositories {
 dependencies {
     testImplementation platform("org.junit:junit-bom:$junitVersion")
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation "com.google.guava:guava:$guavaVersion"
     implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:$webfluxUIVersion"

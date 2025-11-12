@@ -40,6 +40,7 @@ public class SolrService {
     }
 
     public Mono<ClassConstants> store(ClassConstants constants, String project, int version) {
+        logger.atInfo().log("Storing the constants {}", constants);
         SolrInputDocument parentDocument = new SolrInputDocument();
         var id = project + ":" + constants.name() + ":" + version;
         parentDocument.setField("id", id);
@@ -63,13 +64,13 @@ public class SolrService {
         }
         var request = new UpdateRequest();
         request.add(parentDocument);
-        request.setCommitWithin(10_000);
+        request.setParam("commit", "true");
 
         return Mono.fromFuture(solrClient.requestAsync(request, "Constants"))
                 .map(_ -> constants);
     }
 
-    public @Cacheable(cacheNames = "Constants", key = "#request.key()")
+    public /*@Cacheable(cacheNames = "Constants", key = "#request.key()")*/
     Mono<GetClassConstantsReply> find(GetClassConstantsRequest request) {
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set("q", "*:*");
