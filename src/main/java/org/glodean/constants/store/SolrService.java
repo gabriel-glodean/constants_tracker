@@ -24,6 +24,7 @@ import java.util.*;
 @Service
 public class SolrService {
     private static final Logger logger = LogManager.getLogger(SolrService.class);
+    public static final String DATA_LOCATION = "Constants";
 
     private final HttpSolrClientBase solrClient;
     private final RedisConnectionFactory connectionFactory;
@@ -66,11 +67,11 @@ public class SolrService {
         request.add(parentDocument);
         request.setParam("commit", "true");
 
-        return Mono.fromFuture(solrClient.requestAsync(request, "Constants"))
+        return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION))
                 .map(_ -> constants);
     }
 
-    public /*@Cacheable(cacheNames = "Constants", key = "#request.key()")*/
+    public @Cacheable(cacheNames = DATA_LOCATION, key = "#request.key()")
     Mono<GetClassConstantsReply> find(GetClassConstantsRequest request) {
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set("q", "*:*");
@@ -80,13 +81,16 @@ public class SolrService {
         QueryRequest query = new QueryRequest(params);
         query.setPath("/select");
         logger.atInfo().log("Search query {}", query.getParams());
-        return Mono.fromFuture(solrClient.requestAsync(query, "Constants"))
+        return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
                 .map(SolrService::apply);
     }
 
     private static GetClassConstantsReply apply(NamedList<Object> list) {
         Map<Object, Collection<ClassConstant.UsageType>> constants = HashMap.newHashMap(10);
         if (list.get("response") instanceof Collection<?> response) {
+            if (response.isEmpty()){
+                throw new IllegalArgumentException("Unknown class!");
+            }
             for (var responsePart : response)
                 if (responsePart instanceof Map<?, ?> reMap && !reMap.isEmpty()) {
                     logger.atInfo().log("received {}", reMap);
