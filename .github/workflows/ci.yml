@@ -16,21 +16,11 @@ jobs:
         image: redis:latest
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
       solr:
         image: solr:latest
         ports:
           - 8983:8983
-        options: >-
-          --health-cmd="curl -f http://localhost:8983/solr/admin/ping || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
       - name: Checkout
