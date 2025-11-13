@@ -1,6 +1,6 @@
-############################################################
-# Terraform: copy ./solr -> host folder, then run Solr/Redis/App
-############################################################
+###########################################################
+# Terraform: Solr (local .solr_data folder), Redis, App
+###########################################################
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -14,150 +14,93 @@ terraform {
 provider "docker" {}
 
 ############################
-# Variables (tweak as needed)
+# Variables
 ############################
-# Where to copy your project ./solr to on the HOST (final mount source)
-# Use forward slashes even on Windows (Docker Desktop accepts them).
-variable "solr_host_path" {
+variable "solr_core" {
   type    = string
-  # Windows example:
-  default = "C:/dev/solr_data"
-  # macOS/Linux example: "/Users/you/dev/solr_data"
-}
-
-# Set to "windows" or "unix"
-variable "host_os" {
-  type    = string
-  default = "windows"
-  validation {
-    condition     = contains(["windows", "unix"], var.host_os)
-    error_message = "host_os must be 'windows' or 'unix'."
-  }
-}
-
-variable "solr_core"      {
-  type = string
   default = "Constants"
 }
+
 variable "app_image_name" {
-  type = string
+  type    = string
   default = "constant_tracker"
 }
-variable "app_image_tag"  {
-  type = string
+
+variable "app_image_tag" {
+  type    = string
   default = "latest"
 }
-variable "app_port"       {
-  type = number
+
+variable "app_port" {
+  type    = number
   default = 8080
 }
-variable "solr_port"      {
-  type = number
+
+variable "solr_port" {
+  type    = number
   default = 8983
 }
-variable "redis_port"      {
-  type = number
+
+variable "redis_port" {
+  type    = number
   default = 6379
 }
 
 ############################
 # Network
 ############################
-resource "docker_network" "appnet" { name = "appnet" }
+resource "docker_network" "appnet" {
+  name = "appnet"
+}
 
 ############################
-# Build/pull images
+# Images
 ############################
-# Build your app from the local Dockerfile
 resource "docker_image" "app" {
-  name = "${var.app_image_name}:${var.app_image_tag}"
-  #build {
-  #  context    = "."
-  #  dockerfile = "Dockerfile"
-  #}
+  name         = "${var.app_image_name}:${var.app_image_tag}"
   keep_locally = true
 }
 
-resource "docker_image" "solr"  { name = "solr:latest" }
-resource "docker_image" "redis" { name = "redis:latest" }
-
-############################
-# Copy ./solr -> var.solr_host_path (option #3)
-############################
-# Re-run copy when any file under ./solr changes
-locals {
-  solr_src = "${path.module}/solr"
+resource "docker_image" "solr" {
+  name = "solr:latest"
 }
 
-# Unix copy (rsync); enabled when host_os == "unix"
-resource "null_resource" "copy_solr_unix" {
-  count = var.host_os == "unix" ? 1 : 0
-
-  triggers = {
-    src_hash = sha1(join("", fileset(local.solr_src, "")))
-  }
-
-  provisioner "local-exec" {
-    interpreter = ["/bin/sh", "-c"]
-    command     = <<-EOC
-      mkdir -p "${var.solr_host_path}"
-      rsync -a "${local.solr_src}/" "${var.solr_host_path}/"
-    EOC
-  }
-}
-
-# Windows copy (PowerShell + robocopy); enabled when host_os == "windows"
-# Normalize paths for Windows (backslashes for robocopy)
-locals {
-  solr_src_win  = replace(local.solr_src, "/", "\\")
-  solr_dst_win  = replace(var.solr_host_path, "/", "\\")
-}
-
-resource "null_resource" "copy_solr_win" {
-  count = var.host_os == "windows" ? 1 : 0
-
-  triggers = {
-    src_hash = sha1(join("", fileset(local.solr_src, "")))
-  }
-
-  provisioner "local-exec" {
-    # Use cmd.exe for robocopy and simple errorlevel handling
-    interpreter = ["cmd", "/C"]
-    command     = "IF NOT EXIST \"${local.solr_dst_win}\" mkdir \"${local.solr_dst_win}\" && robocopy \"${local.solr_src_win}\" \"${local.solr_dst_win}\" /E /NFL /NDL /NJH /NJS /NC /NS & IF %ERRORLEVEL% GEQ 8 EXIT /B %ERRORLEVEL%"
-  }
+resource "docker_image" "redis" {
+  name = "redis:latest"
 }
 
 ############################
-# Containers
+# Solr container (using local .solr_data)
 ############################
 resource "docker_container" "solr" {
   name  = "solr"
   image = docker_image.solr.image_id
 
-  # Ensure copy finished
-  depends_on = [
-    null_resource.copy_solr_unix,
-    null_resource.copy_solr_win
+  command = [
+    "bash",
+    "-lc",
+    "if [ ! -d /var/solr/data/${var.solr_core} ]; then solr-precreate ${var.solr_core}; fi && exec solr-foreground"
   ]
 
-  # Have Solr ensure the core exists (pre-create if missing)
-  # (Solr will also load any core present under /var/solr/data/<core>)
-  command = ["bash", "-lc", "if [ ! -d /var/solr/data/${var.solr_core} ]; then solr-precreate ${var.solr_core}; fi && exec solr-foreground"]
-
-  networks_advanced { name = docker_network.appnet.name }
+  networks_advanced {
+    name = docker_network.appnet.name
+  }
 
   ports {
     internal = 8983
     external = var.solr_port
   }
 
-  # Mount the copied host folder as Solr's core root
+  # Bind-mount your project's .solr_data directory
   volumes {
-    host_path      = var.solr_host_path
+    host_path      = "${path.cwd}/.solr_data"
     container_path = "/var/solr/data"
   }
 }
 
+############################
+# Redis
+############################
 resource "docker_container" "redis" {
   name    = "redis"
   image   = docker_image.redis.image_id
@@ -168,14 +111,21 @@ resource "docker_container" "redis" {
     external = var.redis_port
   }
 
-  networks_advanced { name = docker_network.appnet.name }
+  networks_advanced {
+    name = docker_network.appnet.name
+  }
 }
 
+############################
+# App
+############################
 resource "docker_container" "app" {
   name  = var.app_image_name
   image = docker_image.app.image_id
 
-  networks_advanced { name = docker_network.appnet.name }
+  networks_advanced {
+    name = docker_network.appnet.name
+  }
 
   ports {
     internal = 8080
@@ -184,9 +134,7 @@ resource "docker_container" "app" {
 
   env = [
     "SERVER_PORT=8080",
-    # Solr base URL for Spring Data Solr / SolrJ
     "SPRING_DATA_SOLR_HOST=http://solr:8983/solr",
-    # Redis wiring
     "REDIS_HOST=redis",
     "REDIS_PORT=6379",
   ]
@@ -200,6 +148,14 @@ resource "docker_container" "app" {
 ############################
 # Outputs
 ############################
-output "app_url"  { value = "http://localhost:${var.app_port}" }
-output "solr_url" { value = "http://localhost:${var.solr_port}/solr/#/" }
-output "mounted_solr_host_path" { value = var.solr_host_path}
+output "app_url" {
+  value = "http://localhost:${var.app_port}"
+}
+
+output "solr_url" {
+  value = "http://localhost:${var.solr_port}/solr/#/"
+}
+
+output "solr_data_path" {
+  value = "${path.module}/.solr_data"
+}
