@@ -63,7 +63,7 @@ class E2EIngestTest {
 
     @Test
     void endToEndUploadAndQuery() throws Exception {
-        byte[] clazz = Files.readAllBytes(Path.of("src/test/resources/Greeter.class"));
+        byte[] clazz = Files.readAllBytes(Path.of("src/test/resources/samples/Greeter.class"));
         web.post()
                 .uri("/class?project=demo&version=1")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)

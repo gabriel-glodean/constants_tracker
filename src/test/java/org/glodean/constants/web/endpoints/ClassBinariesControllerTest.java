@@ -42,7 +42,7 @@ class ClassBinariesControllerTest {
     public static final String GET_URL = "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter";
     public static final String PUT_URL = "/class?project=demo&version=1";
     public static final String POST_URL = "/class?project=demo";
-    public static final Path SAMPLE_PATH = Path.of("src/test/resources/Greeter.class");
+    public static final Path SAMPLE_PATH = Path.of("src/test/resources/samples/Greeter.class");
     @Autowired
     WebTestClient web;
 

@@ -1,0 +1,51 @@
+services:
+  solr:
+    image: solr:latest
+    container_name: solr
+    # Precreate core if it doesn't exist, then run in foreground
+    command:
+      - bash
+      - -lc
+      - >
+        if [ ! -d /var/solr/data/${SOLR_CORE:-Constants} ];
+        then solr-precreate ${SOLR_CORE:-Constants};
+        fi && exec solr-foreground
+    ports:
+      - "${SOLR_PORT:-8983}:8983"
+    volumes:
+      # Host path where your Solr core data lives
+      # You can override SOLR_HOST_PATH in .env or environment
+      - "${SOLR_HOST_PATH:-./.solr_data}:/var/solr/data"
+    networks:
+      - app_network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - app_network
+
+  app:
+    image: "${APP_IMAGE_NAME:-constant_tracker}:${APP_IMAGE_TAG:-latest}"
+    container_name: "${APP_IMAGE_NAME:-constant_tracker}"
+    depends_on:
+      - solr
+      - redis
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - SERVER_PORT=8080
+      # Solr base URL for Spring Data Solr / SolrJ
+      - SPRING_DATA_SOLR_HOST=http://solr:8983/solr
+      # Redis wiring
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
