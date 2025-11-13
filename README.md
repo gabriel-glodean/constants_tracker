@@ -112,7 +112,7 @@ or with the Solr UI:
 
 ```bash
 ./gradlew clean build
-java -jar build/libs/constant-tracker-*.jar
+java -jar build/libs/constant-tracker-0.1.0-SNAPSHOT.jar
 ```
 
 ---
