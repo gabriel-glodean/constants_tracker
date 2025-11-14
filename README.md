@@ -109,8 +109,9 @@ or with the Solr UI:
 ---
 
 ## 📚 API Documentation
-- Swagger UI: http://localhost:8080/swagger-ui.html or http://localhost:8080/swagger-ui/index.html
-- OpenAPI JSON: http://localhost:8080/v3/api-docs
+
+- Swagger UI: /swagger-ui.html or /swagger-ui/index.html
+- OpenAPI JSON v3/api-docs
 
 ## 🛠️ Build & Run Locally
 
