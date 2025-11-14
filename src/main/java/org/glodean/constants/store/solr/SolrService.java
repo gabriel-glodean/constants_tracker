@@ -1,4 +1,6 @@
-package org.glodean.constants.store;
+package org.glodean.constants.store.solr;
+
+import static org.glodean.constants.store.Constants.DATA_LOCATION;
 
 import java.util.Collection;
 import java.util.EnumSet;
@@ -12,37 +14,31 @@ import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
-import org.glodean.constants.dto.GetClassConstantsReply;
-import org.glodean.constants.dto.GetClassConstantsRequest;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.store.ClassConstantsSore;
+import org.glodean.constants.store.VersionIncrementer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.support.atomic.RedisAtomicInteger;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service
-public class SolrService {
+public class SolrService implements ClassConstantsSore {
   private static final Logger logger = LogManager.getLogger(SolrService.class);
-  public static final String DATA_LOCATION = "Constants";
 
   private final HttpSolrClientBase solrClient;
-  private final RedisConnectionFactory connectionFactory;
+  private final VersionIncrementer versionIncrementer;
 
   public SolrService(
-      @Autowired HttpSolrClientBase solrClient,
-      @Autowired RedisConnectionFactory connectionFactory) {
+      @Autowired HttpSolrClientBase solrClient, @Autowired VersionIncrementer versionIncrementer) {
     this.solrClient = solrClient;
-    this.connectionFactory = connectionFactory;
+    this.versionIncrementer = versionIncrementer;
   }
 
   public Mono<ClassConstants> store(ClassConstants constants, String project) {
-    int latestVersion =
-        new RedisAtomicInteger("IdCounter:" + project + ":" + constants.name(), connectionFactory)
-            .incrementAndGet();
-    return this.store(constants, project, latestVersion);
+    return this.store(
+        constants, project, versionIncrementer.getNextVersion(project, constants.name()));
   }
 
   public Mono<ClassConstants> store(ClassConstants constants, String project, int version) {
@@ -75,11 +71,12 @@ public class SolrService {
     return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION)).map(_ -> constants);
   }
 
-  public @Cacheable(cacheNames = DATA_LOCATION, key = "#request.key()") Mono<GetClassConstantsReply>
-      find(GetClassConstantsRequest request) {
+  public @Cacheable(cacheNames = DATA_LOCATION, key = "#key") Mono<
+          Map<Object, Collection<ClassConstant.UsageType>>>
+      find(String key) {
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.set("q", "*:*");
-    params.set("fq", "_root_:\"" + request.key() + "\"");
+    params.set("fq", "_root_:\"" + key + "\"");
     params.set("fl", "constant_value_s, usage_type_s");
     params.set("rows", 1000);
     QueryRequest query = new QueryRequest(params);
@@ -88,7 +85,7 @@ public class SolrService {
     return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION)).map(SolrService::apply);
   }
 
-  private static GetClassConstantsReply apply(NamedList<Object> list) {
+  private static Map<Object, Collection<ClassConstant.UsageType>> apply(NamedList<Object> list) {
     Map<Object, Collection<ClassConstant.UsageType>> constants = HashMap.newHashMap(10);
     if (list.get("response") instanceof Collection<?> response) {
       if (response.isEmpty()) {
@@ -105,6 +102,6 @@ public class SolrService {
               .add(usage);
         }
     }
-    return new GetClassConstantsReply(constants);
+    return constants;
   }
 }

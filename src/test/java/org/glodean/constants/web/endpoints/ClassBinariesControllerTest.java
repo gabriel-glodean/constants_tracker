@@ -1,5 +1,6 @@
 package org.glodean.constants.web.endpoints;
 
+import static org.glodean.constants.store.Constants.DATA_LOCATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -16,14 +17,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.store.SolrService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -47,8 +46,6 @@ class ClassBinariesControllerTest {
 
   @MockitoBean RedisConnectionFactory redisConnectionFactory;
 
-  @MockitoBean RedisConnection redisConnection;
-
   @MockitoBean HttpSolrClientBase solrClient;
 
   @Autowired CacheManager cacheManager;
@@ -58,8 +55,7 @@ class ClassBinariesControllerTest {
   @BeforeEach
   void setup() {
     store = new ConcurrentHashMap<>();
-    Objects.requireNonNull(cacheManager.getCache(SolrService.DATA_LOCATION)).clear();
-    when(redisConnectionFactory.getConnection()).thenReturn(redisConnection);
+    Objects.requireNonNull(cacheManager.getCache(DATA_LOCATION)).clear();
   }
 
   @Test

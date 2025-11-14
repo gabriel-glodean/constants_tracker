@@ -63,3 +63,4 @@ terraform.tfvars.json
 *.auto.tfvars.json
 
 .solr_data
+logs

@@ -9,7 +9,7 @@ import org.glodean.constants.dto.GetClassConstantsRequest;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.bytecode.ClassModelExtractor;
 import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.SolrService;
+import org.glodean.constants.store.ClassConstantsSore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/class")
-public record ClassBinariesController(@Autowired SolrService storage) {
+public record ClassBinariesController(@Autowired ClassConstantsSore storage) {
   private static final Logger logger = LogManager.getLogger(ClassBinariesController.class);
 
   @PutMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -92,7 +92,9 @@ public record ClassBinariesController(@Autowired SolrService storage) {
   public Mono<ResponseEntity<GetClassConstantsReply>> classConstants(
       Mono<GetClassConstantsRequest> request) {
     return request
+        .map(GetClassConstantsRequest::key)
         .flatMap(storage::find)
+        .map(GetClassConstantsReply::new)
         .map(ResponseEntity::ok)
         .onErrorResume(
             IllegalArgumentException.class, _ -> Mono.just(ResponseEntity.notFound().build()))

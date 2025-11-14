@@ -1,4 +1,4 @@
-package org.glodean.constants.store;
+package org.glodean.constants.store.solr;
 
 import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
