@@ -18,25 +18,45 @@ repositories {
 dependencies {
     testImplementation platform("org.junit:junit-bom:$junitVersion")
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation ('org.springframework.boot:spring-boot-starter-test'){
+            exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+            exclude group: 'ch.qos.logback', module: 'logback-classic'
+    }
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:testcontainers'
+    testImplementation "org.springframework.boot:spring-boot-testcontainers:$springBootVersion"
+    testImplementation 'com.redis:testcontainers-redis'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation "com.google.guava:guava:$guavaVersion"
     implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:$webfluxUIVersion"
-    implementation "org.springframework.boot:spring-boot-starter-actuator:$springBootVersion"
-    implementation "org.springframework.boot:spring-boot-starter-data-redis:$springBootVersion"
-    implementation "org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
+    implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation("org.springframework.boot:spring-boot-starter-data-redis:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
     implementation "org.apache.solr:solr-solrj:$solrjVersion"
-    implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
-    implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
-    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
+    implementation "org.springframework.boot:spring-boot-starter-log4j2:$springBootVersion"
 }
-tasks.named('bootJar'){
+
+// Safety: remove any accidental Logback on any configuration
+configurations.configureEach {
+    exclude group: 'ch.qos.logback', module: 'logback-classic'
+    exclude group: 'ch.qos.logback', module: 'logback-core'
+    // critical: remove Log4j→SLF4J bridge (conflicts with log4j-slf4j2-impl)
+    exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+    // optional: avoid JUL→SLF4J when using Log4j2's JUL bridge
+    exclude group: 'org.slf4j', module: 'jul-to-slf4j'
+}
+
+tasks.named('bootJar') {
     mainClass.set("$entryClass")
 }
 
-tasks.named('bootRun'){
+tasks.named('bootRun') {
     mainClass.set("$entryClass")
 }
 
@@ -60,21 +80,28 @@ jacoco {
 }
 
 jacocoTestCoverageVerification {
+    dependsOn tasks.named('test')
+    dependsOn tasks.named('jacocoTestReport')
     violationRules {
         rule {
             limit {
-                minimum = 0.7
+                minimum = 0.85
             }
         }
     }
 }
 
+tasks.named('check') {
+    // enforce coverage when running `check`
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
 spotless {
     java {
         // Use Google's standard Java format (same as used in the JDK)
-        googleJavaFormat('1.17.0')
+        googleJavaFormat('1.27.0')
         // Include all your source files
-        target 'src//*.java'
+        target 'src/**/*.java'
         importOrder()
         removeUnusedImports()
     }

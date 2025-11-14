@@ -69,7 +69,7 @@ Once started:
 
 ## 🧪 Tests
 
-- **Bytecode parser:** > 80+ % coverage (JaCoCo report under `build/reports/jacoco`)
+- **Bytecode parser:** > 85+ % coverage (JaCoCo report under `build/reports/jacoco`)
 - **Reactive API:** minimal tests verifying upload and integration
 - **Integration stack:** Terraform / Docker Compose for Solr + Redis environments
 
@@ -107,6 +107,10 @@ or with the Solr UI:
 - Built and tested on JDK 25
 
 ---
+
+## 📚 API Documentation
+- Swagger UI: http://localhost:8080/swagger-ui.html or http://localhost:8080/swagger-ui/index.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 ## 🛠️ Build & Run Locally
 

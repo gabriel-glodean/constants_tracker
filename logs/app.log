@@ -1,0 +1,913 @@
+2025-11-14 07:05:16 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:05:16 [main] INFO  org.glodean.constants.Main - Starting Main using Java 25 with PID 21200 (C:\Users\gabri\IdeaProjects\constant_tracker\build\classes\java\main started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:05:16 [main] INFO  org.glodean.constants.Main - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:05:17 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:05:17 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:05:17 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 15 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:05:17 [main] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:05:17 [main] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:05:18 [main] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:05:18 [main] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:05:18 [main] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:05:18 [main] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 8080 (http)
+2025-11-14 07:05:18 [main] INFO  org.glodean.constants.Main - Started Main in 1.826 seconds (process running for 2.257)
+2025-11-14 07:05:18 [main] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:05:18 [main] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:25:19 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:25:19 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:25:19 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: 49e93869a7eb17273d4068cfbd925ed56a0647481f8057f23c00879c4967bcd0
+2025-11-14 07:25:20 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.4487317S
+2025-11-14 07:25:20 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:25:20 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:25:20 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:25:20 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:25:20 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: 73a2f6fc7a0d7ddcda4b29a0f5b81789781ad7c8deaf6a9851af477b377cd936
+2025-11-14 07:25:20 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /laughing_brattain: Waiting for 120 seconds for URL: http://localhost:54274/solr/admin/cores?action=STATUS (where port 54274 maps to container port 8983)
+2025-11-14 07:25:24 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT4.3749843S
+2025-11-14 07:25:24 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:25:24 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: ece07b63fa7536dae48bab62ef40c1bc101dce66c950093c3fe49ff67aac1bcd
+2025-11-14 07:25:24 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2964677S
+2025-11-14 07:25:24 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:25:25 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:25:25 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:25:25 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Starting E2EIngestTest using Java 25 with PID 16472 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:25:25 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:25:26 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:25:26 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:25:26 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 14 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:25:27 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:25:27 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:25:27 [Test worker] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:25:27 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:25:27 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:25:28 [Test worker] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 54283 (http)
+2025-11-14 07:25:28 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Started E2EIngestTest in 2.819 seconds (process running for 10.338)
+2025-11-14 07:25:28 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:25:28 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:25:28 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [56cf1e37] HTTP POST http://localhost:54283/class?project=demo&version=1
+2025-11-14 07:25:28 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [56cf1e37] Writing 2111 bytes
+2025-11-14 07:25:28 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [e975221e-1] HTTP POST "/class?project=demo&version=1"
+2025-11-14 07:25:28 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [e975221e-1] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:25:28 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [e975221e-1] Content-Type:application/octet-stream
+2025-11-14 07:25:28 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [e975221e-1] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:25:28 [webflux-http-nio-2] DEBUG org.springframework.web.HttpLogging - [e975221e-1] Read 2111 bytes
+2025-11-14 07:25:28 [webflux-http-nio-2] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:25:29 [webflux-http-nio-2] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]], ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]]]]
+2025-11-14 07:25:29 [webflux-http-nio-2] WARN  org.apache.solr.client.solrj.impl.HttpJdkSolrClient - Could not issue HEAD request to http://localhost:8983/solr/Constants/update 
+java.net.ConnectException: null
+	at java.net.http/jdk.internal.net.http.HttpClientImpl.send(HttpClientImpl.java:923) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.HttpClientFacade.send(HttpClientFacade.java:133) ~[java.net.http:?]
+	at org.apache.solr.client.solrj.impl.HttpJdkSolrClient.maybeTryHeadRequestSync(HttpJdkSolrClient.java:416) [solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at org.apache.solr.client.solrj.impl.HttpJdkSolrClient.maybeTryHeadRequest(HttpJdkSolrClient.java:392) [solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at org.apache.solr.client.solrj.impl.HttpJdkSolrClient.preparePutOrPost(HttpJdkSolrClient.java:304) [solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at org.apache.solr.client.solrj.impl.HttpJdkSolrClient.prepareRequest(HttpJdkSolrClient.java:245) [solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at org.apache.solr.client.solrj.impl.HttpJdkSolrClient.requestAsync(HttpJdkSolrClient.java:170) [solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at org.glodean.constants.store.SolrService.store(SolrService.java:75) [main/:?]
+	at org.glodean.constants.store.SolrService.store(SolrService.java:45) [main/:?]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[?:?]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[?:?]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360) [spring-aop-6.2.12.jar:6.2.12]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:724) [spring-aop-6.2.12.jar:6.2.12]
+	at org.glodean.constants.store.SolrService$$SpringCGLIB$$0.store(<generated>) [main/:?]
+	at org.glodean.constants.web.endpoints.ClassBinariesController.lambda$storeClass$4(ClassBinariesController.java:48) [main/:?]
+	at reactor.core.publisher.MonoFlatMap$FlatMapMain.onNext(MonoFlatMap.java:132) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onNext(FluxMapFuseable.java:129) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.MonoFlatMap$FlatMapMain.onNext(MonoFlatMap.java:158) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.MonoFlatMap$FlatMapMain.onNext(MonoFlatMap.java:158) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMap$MapSubscriber.onNext(FluxMap.java:122) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxSwitchIfEmpty$SwitchIfEmptySubscriber.onNext(FluxSwitchIfEmpty.java:74) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxOnErrorResume$ResumeSubscriber.onNext(FluxOnErrorResume.java:79) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onNext(FluxMapFuseable.java:129) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onNext(FluxContextWrite.java:107) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMapFuseable$MapFuseableConditionalSubscriber.onNext(FluxMapFuseable.java:299) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxFilterFuseable$FilterFuseableConditionalSubscriber.onNext(FluxFilterFuseable.java:337) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.Operators$BaseFluxToMonoOperator.completePossiblyEmpty(Operators.java:2096) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.MonoCollect$CollectSubscriber.onComplete(MonoCollect.java:145) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxPeek$PeekSubscriber.onComplete(FluxPeek.java:260) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144) [reactor-core-3.7.12.jar:3.7.12]
+	at reactor.netty.channel.FluxReceive.onInboundComplete(FluxReceive.java:413) [reactor-netty-core-1.2.11.jar:1.2.11]
+	at reactor.netty.channel.ChannelOperations.onInboundComplete(ChannelOperations.java:464) [reactor-netty-core-1.2.11.jar:1.2.11]
+	at reactor.netty.http.server.HttpServerOperations.handleLastHttpContent(HttpServerOperations.java:903) [reactor-netty-http-1.2.11.jar:1.2.11]
+	at reactor.netty.http.server.HttpServerOperations.onInboundNext(HttpServerOperations.java:812) [reactor-netty-http-1.2.11.jar:1.2.11]
+	at reactor.netty.channel.ChannelOperationsHandler.channelRead(ChannelOperationsHandler.java:115) [reactor-netty-core-1.2.11.jar:1.2.11]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at reactor.netty.http.server.HttpTrafficHandler.channelRead(HttpTrafficHandler.java:321) [reactor-netty-http-1.2.11.jar:1.2.11]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346) [netty-codec-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318) [netty-codec-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1357) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:868) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:796) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:732) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:658) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+Caused by: java.net.ConnectException
+	at java.net.http/jdk.internal.net.http.common.Utils.toConnectException(Utils.java:1070) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.connectAsync(PlainHttpConnection.java:223) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.checkRetryConnect(PlainHttpConnection.java:277) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.lambda$connectAsync$0(PlainHttpConnection.java:235) ~[java.net.http:?]
+	at java.base/java.util.concurrent.CompletableFuture.uniHandle(CompletableFuture.java:955) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$UniHandle.tryFire(CompletableFuture.java:932) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:531) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1794) ~[?:?]
+	at org.apache.solr.common.util.ExecutorUtil$MDCAwareThreadPoolExecutor.lambda$execute$0(ExecutorUtil.java:381) ~[solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) ~[?:?]
+	... 1 more
+Caused by: java.nio.channels.ClosedChannelException
+	at java.base/sun.nio.ch.SocketChannelImpl.ensureOpen(SocketChannelImpl.java:204) ~[?:?]
+	at java.base/sun.nio.ch.SocketChannelImpl.connect(SocketChannelImpl.java:942) ~[?:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.connectAsync(PlainHttpConnection.java:211) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.checkRetryConnect(PlainHttpConnection.java:277) ~[java.net.http:?]
+	at java.net.http/jdk.internal.net.http.PlainHttpConnection.lambda$connectAsync$0(PlainHttpConnection.java:235) ~[java.net.http:?]
+	at java.base/java.util.concurrent.CompletableFuture.uniHandle(CompletableFuture.java:955) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$UniHandle.tryFire(CompletableFuture.java:932) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:531) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1794) ~[?:?]
+	at org.apache.solr.common.util.ExecutorUtil$MDCAwareThreadPoolExecutor.lambda$execute$0(ExecutorUtil.java:381) ~[solr-solrj-9.9.0.jar:9.9.0 386ed096a1946c488cfe576a19a147bdb1153508 - houston - 2025-07-18 14:15:23]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) ~[?:?]
+	... 1 more
+2025-11-14 07:25:29 [webflux-http-nio-2] INFO  org.apache.solr.client.solrj.impl.HttpJdkSolrClient - All unencrypted POST requests with a chunked body will use http/1.1
+2025-11-14 07:25:29 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [e975221e-1] Completed 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:25:29 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [56cf1e37] [6381a169-1] Response 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:25:29 [Test worker] ERROR org.springframework.test.web.reactive.server.ExchangeResult - Request details for assertion failure:
+
+> POST http://localhost:54283/class?project=demo&version=1
+> accept-encoding: [gzip]
+> user-agent: [ReactorNetty/1.2.11]
+> host: [localhost:54283]
+> accept: [*/*]
+> WebTestClient-Request-Id: [1]
+> Content-Type: [application/octet-stream]
+> Content-Length: [2111]
+
+2111 bytes of content.
+
+< 500 INTERNAL_SERVER_ERROR Internal Server Error
+< content-length: [0]
+
+0 bytes of content (unknown content-type).
+
+2025-11-14 07:25:29 [lettuce-eventExecutorLoop-3-1] INFO  io.lettuce.core.protocol.ConnectionWatchdog - Reconnecting, last destination was localhost/127.0.0.1:54282
+2025-11-14 07:25:29 [lettuce-nioEventLoop-5-2] WARN  io.lettuce.core.protocol.ConnectionWatchdog - Cannot reconnect to [localhost/<unresolved>:54282]: Connection closed prematurely
+io.lettuce.core.RedisConnectionException: Connection closed prematurely
+	at io.lettuce.core.protocol.RedisHandshakeHandler.channelInactive(RedisHandshakeHandler.java:76) [lettuce-core-6.6.0.RELEASE.jar:6.6.0.RELEASE/643bd47]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:303) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:281) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelInactive(AbstractChannelHandlerContext.java:274) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.ChannelInboundHandlerAdapter.channelInactive(ChannelInboundHandlerAdapter.java:81) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.lettuce.core.ChannelGroupListener.channelInactive(ChannelGroupListener.java:54) [lettuce-core-6.6.0.RELEASE.jar:6.6.0.RELEASE/643bd47]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:303) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:281) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelInactive(AbstractChannelHandlerContext.java:274) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelInactive(DefaultChannelPipeline.java:1352) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:301) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelInactive(AbstractChannelHandlerContext.java:281) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelInactive(DefaultChannelPipeline.java:850) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.AbstractChannel$AbstractUnsafe$7.run(AbstractChannel.java:811) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:566) [netty-transport-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) [netty-common-4.1.128.Final.jar:4.1.128.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+2025-11-14 07:25:29 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-14 07:25:29 [netty-shutdown] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Graceful shutdown complete
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:26:09 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:26:09 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:26:09 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: 9262d7016bd5327363a18136b1b6f1b7385a0c1c9bdaf0b27636ce3071669945
+2025-11-14 07:26:10 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.4464157S
+2025-11-14 07:26:10 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:26:10 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:26:10 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:26:10 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:26:10 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: 615c8f5eadde9b86772f98b2b04f6ac55a061d04d8e3b50fea7c56ee5f8e32ba
+2025-11-14 07:26:10 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /jovial_wilson: Waiting for 120 seconds for URL: http://localhost:54320/solr/admin/cores?action=STATUS (where port 54320 maps to container port 8983)
+2025-11-14 07:26:13 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT3.35289S
+2025-11-14 07:26:13 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:26:13 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: c2c59593ef9e77ceca54aa1232c31f101645178d855e1eecbccb8de197f0dc7c
+2025-11-14 07:26:13 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2804802S
+2025-11-14 07:26:13 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:26:14 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:26:14 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:26:14 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Starting E2EIngestTest using Java 25 with PID 1728 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:26:14 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:26:15 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:26:15 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:26:15 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 15 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:26:16 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:26:16 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:26:16 [Test worker] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:26:16 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:26:16 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:26:17 [Test worker] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 54332 (http)
+2025-11-14 07:26:17 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Started E2EIngestTest in 2.892 seconds (process running for 9.304)
+2025-11-14 07:26:17 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:26:17 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:26:17 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [79f40088] HTTP POST http://localhost:54332/class?project=demo&version=1
+2025-11-14 07:26:17 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [79f40088] Writing 2111 bytes
+2025-11-14 07:26:17 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [b2dc330a-1] HTTP POST "/class?project=demo&version=1"
+2025-11-14 07:26:17 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [b2dc330a-1] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:26:17 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [b2dc330a-1] Content-Type:application/octet-stream
+2025-11-14 07:26:17 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [b2dc330a-1] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:26:17 [webflux-http-nio-2] DEBUG org.springframework.web.HttpLogging - [b2dc330a-1] Read 2111 bytes
+2025-11-14 07:26:17 [webflux-http-nio-2] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:26:18 [webflux-http-nio-2] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]], ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]]]]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [b2dc330a-1] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [b2dc330a-1] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [b2dc330a-1] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Sc (truncated)...]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [b2dc330a-1] Completed 200 OK
+2025-11-14 07:26:18 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [79f40088] [c77220a4-1] Response 200 OK
+2025-11-14 07:26:18 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [33a35f7e] HTTP GET http://localhost:54332/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:26:18 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [b2dc330a-2] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:26:18 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [b2dc330a-2] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:26:18 [lettuce-nioEventLoop-5-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Roll me Scooby snacks %s! %n, usage_type_s=STATIC_FIELD_STORE}
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Default, usage_type_s=METHOD_INVOCATION_PARAMETER}
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Hello guys from %s, I am %d characters long %n, usage_type_s=METHOD_INVOCATION_TARGET}
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [b2dc330a-2] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [b2dc330a-2] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [b2dc330a-2] Encoding [GetClassConstantsReply[constants={Hello guys from %s, I am %d characters long %n=[METHOD_INVOCATION_ (truncated)...]
+2025-11-14 07:26:18 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [b2dc330a-2] Completed 200 OK
+2025-11-14 07:26:18 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [33a35f7e] [c77220a4-2] Response 200 OK
+2025-11-14 07:26:18 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [33a35f7e] [c77220a4-2] Read 189 bytes
+2025-11-14 07:26:19 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-14 07:26:19 [netty-shutdown] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Graceful shutdown complete
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:26:53 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:26:54 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:26:54 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:26:54 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: b8433574a99439b59c5669bd8df2c7ef06ad41ad516da3c1e6bb9408f1f64cfd
+2025-11-14 07:26:54 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.5128899S
+2025-11-14 07:26:54 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:26:54 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:26:54 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:26:54 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:26:54 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: d32cf98d31204f509434bc558680235e8389437a7256d2ae0f97a2dc01856c3b
+2025-11-14 07:26:54 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /magical_darwin: Waiting for 120 seconds for URL: http://localhost:54349/solr/admin/cores?action=STATUS (where port 54349 maps to container port 8983)
+2025-11-14 07:26:57 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT3.2390217S
+2025-11-14 07:26:57 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:26:57 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: 92f8362a7579013e9cdf4814017d0dcad3e5a3ca869d4ddc9ca1ec7bfbfa6a0d
+2025-11-14 07:26:58 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2950221S
+2025-11-14 07:26:58 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:26:58 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:26:58 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:26:58 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Starting E2EIngestTest using Java 25 with PID 15088 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:26:58 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:26:59 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:26:59 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:26:59 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 15 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:27:00 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:27:00 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:27:00 [Test worker] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:27:00 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:27:00 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:27:01 [Test worker] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 54356 (http)
+2025-11-14 07:27:01 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Started E2EIngestTest in 2.856 seconds (process running for 9.323)
+2025-11-14 07:27:01 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:27:01 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:27:01 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5baef48] HTTP POST http://localhost:54356/class?project=demo&version=1
+2025-11-14 07:27:02 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [5baef48] Writing 2111 bytes
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [d6a7fa70-1] HTTP POST "/class?project=demo&version=1"
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [d6a7fa70-1] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [d6a7fa70-1] Content-Type:application/octet-stream
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [d6a7fa70-1] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.HttpLogging - [d6a7fa70-1] Read 2111 bytes
+2025-11-14 07:27:02 [webflux-http-nio-2] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:27:02 [webflux-http-nio-2] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]], ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]]]]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [d6a7fa70-1] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [d6a7fa70-1] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [d6a7fa70-1] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys (truncated)...]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [d6a7fa70-1] Completed 200 OK
+2025-11-14 07:27:02 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5baef48] [253c49c2-1] Response 200 OK
+2025-11-14 07:27:02 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [16ed68b8] HTTP GET http://localhost:54356/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [d6a7fa70-2] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:27:02 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [d6a7fa70-2] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:27:02 [lettuce-nioEventLoop-5-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Hello guys from %s, I am %d characters long %n, usage_type_s=METHOD_INVOCATION_TARGET}
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Default, usage_type_s=METHOD_INVOCATION_PARAMETER}
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Roll me Scooby snacks %s! %n, usage_type_s=STATIC_FIELD_STORE}
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [d6a7fa70-2] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [d6a7fa70-2] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [d6a7fa70-2] Encoding [GetClassConstantsReply[constants={Hello guys from %s, I am %d characters long %n=[METHOD_INVOCATION_ (truncated)...]
+2025-11-14 07:27:02 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [d6a7fa70-2] Completed 200 OK
+2025-11-14 07:27:02 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [16ed68b8] [253c49c2-2] Response 200 OK
+2025-11-14 07:27:02 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [16ed68b8] [253c49c2-2] Read 189 bytes
+2025-11-14 07:27:03 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-14 07:27:03 [netty-shutdown] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Graceful shutdown complete
+2025-11-14 07:27:58 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:27:58 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:27:58 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:27:58 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:27:59 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:27:59 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: 706817011cfaebf41e6fb819505f9c57336b8b46e40919b882c569e542acfd1f
+2025-11-14 07:27:59 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.493427S
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:27:59 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:27:59 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:27:59 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: 84ec79fdb36d3ccb2575048b69df59b9a57ca45299e9e06605c8ad99315198b9
+2025-11-14 07:28:00 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /laughing_williams: Waiting for 120 seconds for URL: http://localhost:54372/solr/admin/cores?action=STATUS (where port 54372 maps to container port 8983)
+2025-11-14 07:28:03 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT3.3199469S
+2025-11-14 07:28:03 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:28:03 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: 858c2f7a48817aab0e9200e37138af7e68c05208bddd7d2977af689653f5af8b
+2025-11-14 07:28:03 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2570865S
+2025-11-14 07:28:03 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:28:03 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:28:04 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:28:04 [Test worker] ERROR org.springframework.boot.SpringApplication - Application run failed
+org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsNotFoundException: No ConnectionDetails found for source '@ServiceConnection source for E2EIngestTest.solr'
+	at org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsFactories.getConnectionDetails(ConnectionDetailsFactories.java:105) ~[spring-boot-autoconfigure-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.registerBeanDefinitions(ConnectionDetailsRegistrar.java:72) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.lambda$registerBeanDefinitions$0(ConnectionDetailsRegistrar.java:67) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) ~[?:?]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.registerBeanDefinitions(ConnectionDetailsRegistrar.java:67) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ServiceConnectionContextCustomizer.customizeContext(ServiceConnectionContextCustomizer.java:66) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextCustomizerAdapter.initialize(SpringBootContextLoader.java:453) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.applyInitializers(SpringApplication.java:612) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.prepareContext(SpringApplication.java:383) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:317) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:144) [spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58) [spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46) [spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1461) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:563) [spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:144) [spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:110) [spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DependencyInjectionTestExecutionListener.injectDependencies(DependencyInjectionTestExecutionListener.java:155) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DependencyInjectionTestExecutionListener.prepareTestInstance(DependencyInjectionTestExecutionListener.java:111) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:260) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:159) [spring-test-6.2.12.jar:6.2.12]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$10(ClassBasedTestDescriptor.java:383) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.executeAndMaskThrowable(ClassBasedTestDescriptor.java:388) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$11(ClassBasedTestDescriptor.java:382) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:197) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214) [?:?]
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265) [?:?]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632) [?:?]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeTestInstancePostProcessors(ClassBasedTestDescriptor.java:382) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$instantiateAndPostProcessTestInstance$6(ClassBasedTestDescriptor.java:293) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.instantiateAndPostProcessTestInstance(ClassBasedTestDescriptor.java:292) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$4(ClassBasedTestDescriptor.java:281) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) [?:?]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$5(ClassBasedTestDescriptor.java:280) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.TestInstancesProvider.getTestInstances(TestInstancesProvider.java:27) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$prepare$0(TestMethodTestDescriptor.java:112) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:111) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:69) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$prepare$2(NodeTestTask.java:128) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.prepare(NodeTestTask.java:128) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) [?:?]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) [?:?]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:201) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:170) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:94) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:59) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:142) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:58) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.processAllTestClasses(JUnitPlatformTestClassProcessor.java:135) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.access$000(JUnitPlatformTestClassProcessor.java:110) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor.stop(JUnitPlatformTestClassProcessor.java:104) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.stop(SuiteTestClassProcessor.java:64) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[?:?]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[?:?]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:92) [gradle-messaging-9.1.0.jar:9.1.0]
+	at jdk.proxy2/jdk.proxy2.$Proxy6.stop(Unknown Source) [?:?]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$3.run(TestWorker.java:194) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69) [gradle-worker.jar:?]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74) [gradle-worker.jar:?]
+2025-11-14 07:28:04 [Test worker] WARN  org.springframework.test.context.TestContextManager - Caught exception while allowing TestExecutionListener [org.springframework.test.context.support.DependencyInjectionTestExecutionListener] to prepare test instance [org.glodean.constants.integration.E2EIngestTest@7a12cb2c]
+java.lang.IllegalStateException: Failed to load ApplicationContext for [ReactiveWebMergedContextConfiguration@65ff1e6d testClass = org.glodean.constants.integration.E2EIngestTest, locations = [], classes = [org.glodean.constants.Main], contextInitializerClasses = [], activeProfiles = [], propertySourceDescriptors = [], propertySourceProperties = ["org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true", "server.port=0"], contextCustomizers = [org.springframework.boot.testcontainers.service.connection.ServiceConnectionContextCustomizer@a8455896, org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@64a00fe0, org.springframework.boot.test.autoconfigure.actuate.observability.ObservabilityContextCustomizerFactory$DisableObservabilityContextCustomizer@1f, org.springframework.boot.test.autoconfigure.properties.PropertyMappingContextCustomizer@0, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverContextCustomizer@7c5fbde4, org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@68ee7b3b, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@6f0df74, org.springframework.boot.test.mock.mockito.MockitoContextCustomizer@0, org.springframework.boot.test.web.client.TestRestTemplateContextCustomizer@6b6bae60, org.springframework.boot.test.web.reactive.server.WebTestClientContextCustomizer@73b034ca, org.springframework.boot.test.web.reactor.netty.DisableReactorResourceFactoryGlobalResourcesContextCustomizerFactory$DisableReactorResourceFactoryGlobalResourcesContextCustomizerCustomizer@149ef64a, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@d09f9786, org.springframework.boot.test.context.SpringBootTestAnnotation@6a5f7460], contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:180) ~[spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130) ~[spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DependencyInjectionTestExecutionListener.injectDependencies(DependencyInjectionTestExecutionListener.java:155) ~[spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.support.DependencyInjectionTestExecutionListener.prepareTestInstance(DependencyInjectionTestExecutionListener.java:111) ~[spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:260) [spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:159) [spring-test-6.2.12.jar:6.2.12]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$10(ClassBasedTestDescriptor.java:383) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.executeAndMaskThrowable(ClassBasedTestDescriptor.java:388) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$11(ClassBasedTestDescriptor.java:382) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:197) [?:?]
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214) [?:?]
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265) [?:?]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632) [?:?]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeTestInstancePostProcessors(ClassBasedTestDescriptor.java:382) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$instantiateAndPostProcessTestInstance$6(ClassBasedTestDescriptor.java:293) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.instantiateAndPostProcessTestInstance(ClassBasedTestDescriptor.java:292) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$4(ClassBasedTestDescriptor.java:281) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) [?:?]
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$5(ClassBasedTestDescriptor.java:280) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.TestInstancesProvider.getTestInstances(TestInstancesProvider.java:27) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$prepare$0(TestMethodTestDescriptor.java:112) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:111) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:69) [junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$prepare$2(NodeTestTask.java:128) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.prepare(NodeTestTask.java:128) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) [?:?]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) [?:?]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54) [junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:201) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:170) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:94) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:59) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:142) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:58) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) [junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.processAllTestClasses(JUnitPlatformTestClassProcessor.java:135) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.access$000(JUnitPlatformTestClassProcessor.java:110) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor.stop(JUnitPlatformTestClassProcessor.java:104) [gradle-testing-junit-platform-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.stop(SuiteTestClassProcessor.java:64) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[?:?]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[?:?]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33) [gradle-messaging-9.1.0.jar:9.1.0]
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:92) [gradle-messaging-9.1.0.jar:9.1.0]
+	at jdk.proxy2/jdk.proxy2.$Proxy6.stop(Unknown Source) [?:?]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$3.run(TestWorker.java:194) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63) [gradle-testing-base-infrastructure-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72) [gradle-worker-main-9.1.0.jar:9.1.0]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69) [gradle-worker.jar:?]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74) [gradle-worker.jar:?]
+Caused by: org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsNotFoundException: No ConnectionDetails found for source '@ServiceConnection source for E2EIngestTest.solr'
+	at org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsFactories.getConnectionDetails(ConnectionDetailsFactories.java:105) ~[spring-boot-autoconfigure-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.registerBeanDefinitions(ConnectionDetailsRegistrar.java:72) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.lambda$registerBeanDefinitions$0(ConnectionDetailsRegistrar.java:67) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) ~[?:?]
+	at org.springframework.boot.testcontainers.service.connection.ConnectionDetailsRegistrar.registerBeanDefinitions(ConnectionDetailsRegistrar.java:67) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.testcontainers.service.connection.ServiceConnectionContextCustomizer.customizeContext(ServiceConnectionContextCustomizer.java:66) ~[spring-boot-testcontainers-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextCustomizerAdapter.initialize(SpringBootContextLoader.java:453) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.applyInitializers(SpringApplication.java:612) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.prepareContext(SpringApplication.java:383) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:317) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:144) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1461) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:563) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:144) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:110) ~[spring-boot-test-3.5.7.jar:3.5.7]
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225) ~[spring-test-6.2.12.jar:6.2.12]
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152) ~[spring-test-6.2.12.jar:6.2.12]
+	... 91 more
+2025-11-14 07:30:55 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:30:55 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:30:55 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:30:56 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:30:56 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: ff3b43825f9a3c5b0d11afe5f0e09beee23e5463bbcdfcb7ca5fcdb521cdef18
+2025-11-14 07:30:56 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.4846951S
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:30:56 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:30:56 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:30:56 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: ecfee28f0d2e386348c792fbe4db1059b2286a7f7316c93cd60b4bf9cb027ee0
+2025-11-14 07:30:57 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /charming_elgamal: Waiting for 120 seconds for URL: http://localhost:54397/solr/admin/cores?action=STATUS (where port 54397 maps to container port 8983)
+2025-11-14 07:31:00 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT3.332257S
+2025-11-14 07:31:00 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:31:00 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: 5bb41d978ffa1eb926d3a2abdd479a4743846025679eb9f567ad52068041c087
+2025-11-14 07:31:00 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2586567S
+2025-11-14 07:31:00 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:31:00 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:31:01 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:31:01 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Starting E2EIngestTest using Java 25 with PID 2788 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:31:01 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:31:01 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:31:01 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:31:02 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 15 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:31:03 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:31:03 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:31:03 [Test worker] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:31:03 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:31:03 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:31:03 [Test worker] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 54404 (http)
+2025-11-14 07:31:03 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Started E2EIngestTest in 2.744 seconds (process running for 9.24)
+2025-11-14 07:31:03 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:31:03 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:31:04 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [7d2459aa] HTTP POST http://localhost:54404/class?project=demo&version=1
+2025-11-14 07:31:04 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [7d2459aa] Writing 2111 bytes
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [5a8d5007-1] HTTP POST "/class?project=demo&version=1"
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [5a8d5007-1] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [5a8d5007-1] Content-Type:application/octet-stream
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [5a8d5007-1] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.HttpLogging - [5a8d5007-1] Read 2111 bytes
+2025-11-14 07:31:04 [webflux-http-nio-2] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:04 [webflux-http-nio-2] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:04 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [5a8d5007-1] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:04 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [5a8d5007-1] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:04 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [5a8d5007-1] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys (truncated)...]
+2025-11-14 07:31:04 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [5a8d5007-1] Completed 200 OK
+2025-11-14 07:31:04 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [7d2459aa] [587d1808-1] Response 200 OK
+2025-11-14 07:31:04 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [6af8bdae] HTTP GET http://localhost:54404/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [5a8d5007-2] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:04 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [5a8d5007-2] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:05 [lettuce-nioEventLoop-5-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Hello guys from %s, I am %d characters long %n, usage_type_s=METHOD_INVOCATION_TARGET}
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Roll me Scooby snacks %s! %n, usage_type_s=STATIC_FIELD_STORE}
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Default, usage_type_s=METHOD_INVOCATION_PARAMETER}
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [5a8d5007-2] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [5a8d5007-2] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [5a8d5007-2] Encoding [GetClassConstantsReply[constants={Hello guys from %s, I am %d characters long %n=[METHOD_INVOCATION_ (truncated)...]
+2025-11-14 07:31:05 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [5a8d5007-2] Completed 200 OK
+2025-11-14 07:31:05 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [6af8bdae] [587d1808-2] Response 200 OK
+2025-11-14 07:31:05 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [6af8bdae] [587d1808-2] Read 189 bytes
+2025-11-14 07:31:05 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.web.endpoints.ClassBinariesControllerTest]: ClassBinariesControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:31:05 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.web.endpoints.ClassBinariesControllerTest
+2025-11-14 07:31:05 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - Starting ClassBinariesControllerTest using Java 25 with PID 2788 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:31:05 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 3 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: none
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:31:06 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - Started ClassBinariesControllerTest in 0.831 seconds (process running for 12.192)
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [4a917245] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [13ed4b41] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:06 [parallel-1] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [13ed4b41] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:06 [parallel-1] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:06 [parallel-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [13ed4b41] Completed 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:31:06 [parallel-1] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [4a917245] [6bd1b624] Response 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5f60b101] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [1f9435f] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [1f9435f] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:06 [parallel-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:06 [parallel-2] INFO  org.glodean.constants.store.SolrService - received {usage_type_s=PROPAGATION_IN_ARITHMETIC_OPERATIONS, constant_value_s=1}
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [1f9435f] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [1f9435f] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.HttpLogging - [1f9435f] Encoding [GetClassConstantsReply[constants={1=[PROPAGATION_IN_ARITHMETIC_OPERATIONS]}]]
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [1f9435f] Completed 200 OK
+2025-11-14 07:31:06 [parallel-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5f60b101] [7f078d87] Response 200 OK
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.HttpLogging - [5f60b101] [7f078d87] Read 60 bytes
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [74a09aff] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [587f3f38] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [587f3f38] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [587f3f38] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [587f3f38] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.HttpLogging - [587f3f38] Encoding [GetClassConstantsReply[constants={1=[PROPAGATION_IN_ARITHMETIC_OPERATIONS]}]]
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [587f3f38] Completed 200 OK
+2025-11-14 07:31:06 [parallel-3] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [74a09aff] [3622ab4b] Response 200 OK
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.HttpLogging - [74a09aff] [3622ab4b] Read 60 bytes
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [519427cd] HTTP PUT /class?project=demo&version=1
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.HttpLogging - [519427cd] Writing 2111 bytes
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [c6b6510] HTTP PUT "/class?project=demo&version=1"
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [c6b6510] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String, int)
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [c6b6510] Content-Type:application/octet-stream
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [c6b6510] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.HttpLogging - [c6b6510] Read 2111 bytes
+2025-11-14 07:31:06 [parallel-4] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-4] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [c6b6510] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [c6b6510] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.HttpLogging - [c6b6510] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys (truncated)...]
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [c6b6510] Completed 200 OK
+2025-11-14 07:31:06 [parallel-4] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [519427cd] [64610f7b] Response 200 OK
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [3d9671f8] HTTP POST /class?project=demo
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.HttpLogging - [3d9671f8] Writing 2111 bytes
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [683acc8c] HTTP POST "/class?project=demo"
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [683acc8c] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [683acc8c] Content-Type:application/octet-stream
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [683acc8c] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.HttpLogging - [683acc8c] Read 2111 bytes
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [683acc8c] Completed 422 UNPROCESSABLE_ENTITY
+2025-11-14 07:31:06 [parallel-5] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [3d9671f8] [20f9f5ad] Response 422 UNPROCESSABLE_ENTITY
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1ae7d0b7] HTTP POST /class?project=demo
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.HttpLogging - [1ae7d0b7] Writing 2111 bytes
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [40dd1212] HTTP POST "/class?project=demo"
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [40dd1212] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [40dd1212] Content-Type:application/octet-stream
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [40dd1212] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.HttpLogging - [40dd1212] Read 2111 bytes
+2025-11-14 07:31:06 [parallel-6] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-6] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [40dd1212] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [40dd1212] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.HttpLogging - [40dd1212] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Hello guys (truncated)...]
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [40dd1212] Completed 200 OK
+2025-11-14 07:31:06 [parallel-6] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1ae7d0b7] [675a6629] Response 200 OK
+2025-11-14 07:31:06 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [71ab2469] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:06 [parallel-7] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [2f42004b] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:06 [parallel-7] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [2f42004b] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:06 [parallel-7] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:06 [parallel-7] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [2f42004b] Completed 404 NOT_FOUND
+2025-11-14 07:31:06 [parallel-7] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [71ab2469] [2185ebd3] Response 404 NOT_FOUND
+2025-11-14 07:31:06 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-14 07:31:07 [netty-shutdown] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Graceful shutdown complete
+2025-11-14 07:31:35 [Test worker] INFO  org.testcontainers.images.PullPolicy - Image pull policy will be performed by: DefaultPullPolicy()
+2025-11-14 07:31:35 [Test worker] INFO  org.testcontainers.utility.ImageNameSubstitutor - Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2025-11-14 07:31:35 [Test worker] INFO  org.testcontainers.DockerClientFactory - Testcontainers version: 1.21.3
+2025-11-14 07:31:35 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.dockerclient.DockerClientProviderStrategy - Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.DockerClientFactory - Docker host IP address is localhost
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.DockerClientFactory - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Docker Desktop
+  Total Memory: 15814 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+2025-11-14 07:31:36 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Creating container for image: testcontainers/ryuk:0.12.0
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.utility.RegistryAuthLocator - Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2025-11-14 07:31:36 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 is starting: 7ac3a57747bd4debf1d77b3c2d6cb47539e99761ef7cb80e04f6a90c1b3af180
+2025-11-14 07:31:36 [Test worker] INFO  tc.testcontainers/ryuk:0.12.0 - Container testcontainers/ryuk:0.12.0 started in PT0.4431479S
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.utility.RyukResourceReaper - Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.DockerClientFactory - Checking the system...
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.DockerClientFactory - ✔︎ Docker server version should be at least 1.6.0
+2025-11-14 07:31:36 [Test worker] INFO  tc.solr:9 - Creating container for image: solr:9
+2025-11-14 07:31:36 [Test worker] INFO  tc.solr:9 - Container solr:9 is starting: 1fdfa00eacaff3819a4d4f77c8706cc97ef8285d0beccc58579be35dc4310933
+2025-11-14 07:31:36 [Test worker] INFO  org.testcontainers.containers.wait.strategy.HttpWaitStrategy - /interesting_lumiere: Waiting for 120 seconds for URL: http://localhost:54424/solr/admin/cores?action=STATUS (where port 54424 maps to container port 8983)
+2025-11-14 07:31:40 [Test worker] INFO  tc.solr:9 - Container solr:9 started in PT3.3789718S
+2025-11-14 07:31:40 [Test worker] INFO  tc.redis:7 - Creating container for image: redis:7
+2025-11-14 07:31:40 [Test worker] INFO  tc.redis:7 - Container redis:7 is starting: 6d53a8e50839a9172c7d52700973b152713cebeafe05edf3f67f74dc29e0a49f
+2025-11-14 07:31:40 [Test worker] INFO  tc.redis:7 - Container redis:7 started in PT0.2885907S
+2025-11-14 07:31:40 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.integration.E2EIngestTest]: E2EIngestTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:31:40 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.integration.E2EIngestTest
+2025-11-14 07:31:40 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-11-14 07:31:41 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Starting E2EIngestTest using Java 25 with PID 3076 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:31:41 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:31:41 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-14 07:31:41 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-11-14 07:31:41 [Test worker] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 17 ms. Found 0 Redis repository interfaces.
+2025-11-14 07:31:42 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 7 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:31:43 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /webjars/swagger-ui/**, /swagger-ui/**] in 'resourceHandlerMapping'
+2025-11-14 07:31:43 [Test worker] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2025-11-14 07:31:43 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 @ExceptionHandler
+2025-11-14 07:31:43 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:31:43 [Test worker] INFO  org.springframework.boot.web.embedded.netty.NettyWebServer - Netty started on port 54430 (http)
+2025-11-14 07:31:43 [Test worker] INFO  org.glodean.constants.integration.E2EIngestTest - Started E2EIngestTest in 2.877 seconds (process running for 9.517)
+2025-11-14 07:31:43 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2025-11-14 07:31:43 [Test worker] WARN  org.springdoc.core.events.SpringDocAppInitializer - SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2025-11-14 07:31:44 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1364ca39] HTTP POST http://localhost:54430/class?project=demo&version=1
+2025-11-14 07:31:44 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [1364ca39] Writing 2111 bytes
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [36265562-1] HTTP POST "/class?project=demo&version=1"
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [36265562-1] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [36265562-1] Content-Type:application/octet-stream
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [36265562-1] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.HttpLogging - [36265562-1] Read 2111 bytes
+2025-11-14 07:31:44 [webflux-http-nio-2] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:44 [webflux-http-nio-2] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [36265562-1] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [36265562-1] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [36265562-1] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Sc (truncated)...]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [36265562-1] Completed 200 OK
+2025-11-14 07:31:44 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1364ca39] [6c2d194c-1] Response 200 OK
+2025-11-14 07:31:44 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [e8b4851] HTTP GET http://localhost:54430/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [36265562-2] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:44 [webflux-http-nio-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [36265562-2] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:44 [lettuce-nioEventLoop-5-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Roll me Scooby snacks %s! %n, usage_type_s=STATIC_FIELD_STORE}
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Hello guys from %s, I am %d characters long %n, usage_type_s=METHOD_INVOCATION_TARGET}
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=Default, usage_type_s=METHOD_INVOCATION_PARAMETER}
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [36265562-2] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [36265562-2] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.HttpLogging - [36265562-2] Encoding [GetClassConstantsReply[constants={Hello guys from %s, I am %d characters long %n=[METHOD_INVOCATION_ (truncated)...]
+2025-11-14 07:31:44 [ForkJoinPool.commonPool-worker-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [36265562-2] Completed 200 OK
+2025-11-14 07:31:44 [reactor-http-nio-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [e8b4851] [6c2d194c-2] Response 200 OK
+2025-11-14 07:31:44 [reactor-http-nio-2] DEBUG org.springframework.web.HttpLogging - [e8b4851] [6c2d194c-2] Read 189 bytes
+2025-11-14 07:31:45 [Test worker] INFO  org.springframework.test.context.support.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [org.glodean.constants.web.endpoints.ClassBinariesControllerTest]: ClassBinariesControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-14 07:31:45 [Test worker] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration org.glodean.constants.Main for test class org.glodean.constants.web.endpoints.ClassBinariesControllerTest
+2025-11-14 07:31:45 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - Starting ClassBinariesControllerTest using Java 25 with PID 3076 (started by gabri in C:\Users\gabri\IdeaProjects\constant_tracker)
+2025-11-14 07:31:45 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - No active profile set, falling back to 1 default profile: "default"
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - 3 mappings in 'requestMappingHandlerMapping'
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.handler.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.result.method.annotation.ControllerMethodResolver - ControllerAdvice beans: none
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-14 07:31:46 [Test worker] INFO  org.glodean.constants.web.endpoints.ClassBinariesControllerTest - Started ClassBinariesControllerTest in 0.838 seconds (process running for 12.325)
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [4f0d3d19] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [635f1e8d] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:46 [parallel-1] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [635f1e8d] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:46 [parallel-1] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:46 [parallel-1] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [635f1e8d] Completed 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:31:46 [parallel-1] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [4f0d3d19] [55f9401d] Response 500 INTERNAL_SERVER_ERROR
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [12e691eb] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [2fc6002b] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [2fc6002b] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:46 [parallel-2] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:46 [parallel-2] INFO  org.glodean.constants.store.SolrService - received {constant_value_s=1, usage_type_s=PROPAGATION_IN_ARITHMETIC_OPERATIONS}
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [2fc6002b] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [2fc6002b] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.HttpLogging - [2fc6002b] Encoding [GetClassConstantsReply[constants={1=[PROPAGATION_IN_ARITHMETIC_OPERATIONS]}]]
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [2fc6002b] Completed 200 OK
+2025-11-14 07:31:46 [parallel-2] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [12e691eb] [5116c250] Response 200 OK
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.HttpLogging - [12e691eb] [5116c250] Read 60 bytes
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [25f00b16] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [3a9edb27] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [3a9edb27] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [3a9edb27] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [3a9edb27] 0..1 [org.glodean.constants.dto.GetClassConstantsReply]
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.HttpLogging - [3a9edb27] Encoding [GetClassConstantsReply[constants={1=[PROPAGATION_IN_ARITHMETIC_OPERATIONS]}]]
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [3a9edb27] Completed 200 OK
+2025-11-14 07:31:46 [parallel-3] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [25f00b16] [39ef9257] Response 200 OK
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.HttpLogging - [25f00b16] [39ef9257] Read 60 bytes
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [7f4b8349] HTTP PUT /class?project=demo&version=1
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.HttpLogging - [7f4b8349] Writing 2111 bytes
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [483b0aa7] HTTP PUT "/class?project=demo&version=1"
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [483b0aa7] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String, int)
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [483b0aa7] Content-Type:application/octet-stream
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [483b0aa7] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.HttpLogging - [483b0aa7] Read 2111 bytes
+2025-11-14 07:31:46 [parallel-4] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-4] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [483b0aa7] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [483b0aa7] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.HttpLogging - [483b0aa7] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Sc (truncated)...]
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [483b0aa7] Completed 200 OK
+2025-11-14 07:31:46 [parallel-4] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [7f4b8349] [5c451033] Response 200 OK
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1bd3a199] HTTP POST /class?project=demo
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.HttpLogging - [1bd3a199] Writing 2111 bytes
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [62759cdd] HTTP POST "/class?project=demo"
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [62759cdd] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [62759cdd] Content-Type:application/octet-stream
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [62759cdd] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.HttpLogging - [62759cdd] Read 2111 bytes
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [62759cdd] Completed 422 UNPROCESSABLE_ENTITY
+2025-11-14 07:31:46 [parallel-5] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [1bd3a199] [51d6cacd] Response 422 UNPROCESSABLE_ENTITY
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [17db0fad] HTTP POST /class?project=demo
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.HttpLogging - [17db0fad] Writing 2111 bytes
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [4cff8624] HTTP POST "/class?project=demo"
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [4cff8624] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#storeClass(Mono, String)
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [4cff8624] Content-Type:application/octet-stream
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver - [4cff8624] 0..1 [org.springframework.core.io.buffer.DataBuffer]
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.HttpLogging - [4cff8624] Read 2111 bytes
+2025-11-14 07:31:46 [parallel-6] INFO  org.glodean.constants.web.endpoints.ClassBinariesController - Extracting constants for class org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-6] INFO  org.glodean.constants.store.SolrService - Storing the constants ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Scooby snacks %s! %n, constantData=[STATIC_FIELD_STORE]], ClassConstant[value=Hello guys from %s, I am %d characters long %n, constantData=[METHOD_INVOCATION_TARGET]], ClassConstant[value=Default, constantData=[METHOD_INVOCATION_PARAMETER]]]]
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [4cff8624] Using 'application/json' given [*/*] and supported [application/json, application/*+json, application/x-ndjson, text/event-stream]
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler - [4cff8624] 0..1 [org.glodean.constants.model.ClassConstants]
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.HttpLogging - [4cff8624] Encoding [ClassConstants[name=org/glodean/constants/samples/Greeter, constants=[ClassConstant[value=Roll me Sc (truncated)...]
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [4cff8624] Completed 200 OK
+2025-11-14 07:31:46 [parallel-6] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [17db0fad] [75ac3b65] Response 200 OK
+2025-11-14 07:31:46 [Test worker] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5a89d584] HTTP GET /class?project=demo&version=1&className=org/glodean/constants/samples/Greeter
+2025-11-14 07:31:46 [parallel-7] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [6b448dd3] HTTP GET "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter"
+2025-11-14 07:31:46 [parallel-7] DEBUG org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping - [6b448dd3] Mapped to org.glodean.constants.web.endpoints.ClassBinariesController#classConstants(Mono)
+2025-11-14 07:31:46 [parallel-7] INFO  org.glodean.constants.store.SolrService - Search query q=*:*&fq=_root_:"demo:org/glodean/constants/samples/Greeter:1"&fl=constant_value_s,+usage_type_s&rows=1000
+2025-11-14 07:31:46 [parallel-7] DEBUG org.springframework.web.server.adapter.HttpWebHandlerAdapter - [6b448dd3] Completed 404 NOT_FOUND
+2025-11-14 07:31:46 [parallel-7] DEBUG org.springframework.web.reactive.function.client.ExchangeFunctions - [5a89d584] [65837ecb] Response 404 NOT_FOUND
+2025-11-14 07:31:46 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-14 07:31:46 [netty-shutdown] INFO  org.springframework.boot.web.embedded.netty.GracefulShutdown - Graceful shutdown complete

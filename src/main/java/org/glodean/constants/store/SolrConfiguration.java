@@ -8,8 +8,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SolrConfiguration {
-    @Bean
-    public HttpSolrClientBase solrClient(@Value("${constants.solr.url}") String url){
-        return new HttpJdkSolrClient.Builder(url).build();
-    }
+  @Bean
+  public HttpSolrClientBase solrClient(@Value("${constants.solr.url}") String url) {
+    return new HttpJdkSolrClient.Builder(url).build();
+  }
 }
