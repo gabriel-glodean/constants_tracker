@@ -16,7 +16,7 @@ import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.ClassConstantsSore;
+import org.glodean.constants.store.ClassConstantsStore;
 import org.glodean.constants.store.VersionIncrementer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service
-public class SolrService implements ClassConstantsSore {
+public class SolrService implements ClassConstantsStore {
   private static final Logger logger = LogManager.getLogger(SolrService.class);
 
   private final HttpSolrClientBase solrClient;

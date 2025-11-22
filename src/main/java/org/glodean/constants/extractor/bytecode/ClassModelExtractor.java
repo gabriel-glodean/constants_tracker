@@ -12,7 +12,8 @@ import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 
-public record ClassModelExtractor(ClassModel model) implements ModelExtractor {
+public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
+    implements ModelExtractor {
 
   @Override
   public Collection<ClassConstants> extract() throws ExtractionException {
@@ -23,7 +24,7 @@ public record ClassModelExtractor(ClassModel model) implements ModelExtractor {
       }
       var analysis = new ByteCodeMethodAnalyzer(model, mm);
       analysis.run();
-      joinedMap.putAll(AnalysisMerger.MERGER.merge(analysis.code, analysis.in));
+      joinedMap.putAll(merger.merge(analysis.code, analysis.in));
     }
     return Set.of(
         new ClassConstants(

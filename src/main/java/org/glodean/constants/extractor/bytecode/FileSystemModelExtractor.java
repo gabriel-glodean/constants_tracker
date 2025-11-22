@@ -2,25 +2,25 @@ package org.glodean.constants.extractor.bytecode;
 
 import java.io.IOException;
 import java.lang.classfile.ClassFile;
-import java.nio.file.FileSystems;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstants;
 
-public record FileSystemModelExtractor(Path filePath) implements ModelExtractor {
+public record FileSystemModelExtractor(FileSystem fileSystem, AnalysisMerger merger)
+    implements ModelExtractor {
+  private static final Logger logger = LogManager.getLogger(FileSystemModelExtractor.class);
+
   @Override
   public Collection<ClassConstants> extract() throws ExtractionException {
-    Map<String, Object> props = Collections.emptyMap();
     Queue<ClassConstants> ret = new ConcurrentLinkedQueue<>();
-    try (var fileSystem = FileSystems.newFileSystem(filePath, props);
-        var paths = Files.walk(fileSystem.getPath("/"));
+    try (var paths = Files.walk(fileSystem.getPath("/"));
         var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       paths
           .filter(Files::isRegularFile)
@@ -30,9 +30,11 @@ public record FileSystemModelExtractor(Path filePath) implements ModelExtractor 
                   executor.execute(
                       () -> {
                         try {
-                          ret.addAll(new ClassModelExtractor(ClassFile.of().parse(path)).extract());
+                          ret.addAll(
+                              new ClassModelExtractor(ClassFile.of().parse(path), merger)
+                                  .extract());
                         } catch (IOException e) {
-                          IO.println("Exception %s happened, ignoring %s".formatted(e, path));
+                          logger.atInfo().log("Exception {} happened, ignoring {}", e, path);
                         }
                       }));
     } catch (IOException e) {

@@ -111,7 +111,7 @@ class ClassBinariesControllerTest {
                 "constant_value_s",
                 "1",
                 "usage_type_s",
-                ClassConstant.UsageType.PROPAGATION_IN_ARITHMETIC_OPERATIONS.name())));
+                ClassConstant.UsageType.ARITHMETIC_OPERAND.name())));
     when(solrClient.requestAsync(any(), anyString()))
         .thenReturn(CompletableFuture.completedFuture(response));
     // first call, not cached

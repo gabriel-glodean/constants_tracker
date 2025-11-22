@@ -22,14 +22,18 @@ class ClassModelExtractorTest {
   void extractSimpleIntegers() throws IOException {
     var model =
         Iterables.getFirst(
-            new ClassModelExtractor(convertClassToModel(SimpleIteration.class)).extract(), null);
+            new ClassModelExtractor(
+                    convertClassToModel(SimpleIteration.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
     assertNotNull(model);
     var expected =
         new ClassConstants(
             "org/glodean/constants/samples/SimpleIteration",
             Set.of(
-                new ClassConstant(0, EnumSet.of(PROPAGATION_IN_ARITHMETIC_OPERATIONS)),
-                new ClassConstant(1, EnumSet.of(PROPAGATION_IN_ARITHMETIC_OPERATIONS))));
+                new ClassConstant(0, EnumSet.of(ARITHMETIC_OPERAND)),
+                new ClassConstant(1, EnumSet.of(ARITHMETIC_OPERAND))));
     assertEquals(expected, model);
   }
 
@@ -37,7 +41,11 @@ class ClassModelExtractorTest {
   void extractGreeter() throws IOException {
     var model =
         Iterables.getFirst(
-            new ClassModelExtractor(convertClassToModel(Greeter.class)).extract(), null);
+            new ClassModelExtractor(
+                    convertClassToModel(Greeter.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
     assertNotNull(model);
     var expected =
         new ClassConstants(
@@ -53,7 +61,9 @@ class ClassModelExtractorTest {
   void extractForInvokeDynamic() throws IOException {
     var model =
         Iterables.getFirst(
-            new ClassModelExtractor(convertClassToModel(InvokeDynamicFunctionality.class))
+            new ClassModelExtractor(
+                    convertClassToModel(InvokeDynamicFunctionality.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
                 .extract(),
             null);
     assertNotNull(model);

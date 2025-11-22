@@ -1,15 +1,12 @@
 package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
-import java.lang.classfile.ClassFile;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.glodean.constants.dto.GetClassConstantsReply;
 import org.glodean.constants.dto.GetClassConstantsRequest;
 import org.glodean.constants.extractor.ModelExtractor;
-import org.glodean.constants.extractor.bytecode.ClassModelExtractor;
 import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.ClassConstantsSore;
+import org.glodean.constants.services.ExtractionService;
+import org.glodean.constants.store.ClassConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -20,8 +17,8 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/class")
-public record ClassBinariesController(@Autowired ClassConstantsSore storage) {
-  private static final Logger logger = LogManager.getLogger(ClassBinariesController.class);
+public record ClassBinariesController(
+    @Autowired ClassConstantsStore storage, @Autowired ExtractionService extractionService) {
 
   @PutMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   public Mono<ResponseEntity<ClassConstants>> storeClass(
@@ -57,7 +54,7 @@ public record ClassBinariesController(@Autowired ClassConstantsSore storage) {
             Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
   }
 
-  private static Mono<ClassConstants> modelMono(Mono<DataBuffer> javaClass) {
+  private Mono<ClassConstants> modelMono(Mono<DataBuffer> javaClass) {
     return javaClass
         .map(
             dataBuffer -> {
@@ -66,20 +63,11 @@ public record ClassBinariesController(@Autowired ClassConstantsSore storage) {
               DataBufferUtils.release(dataBuffer);
               return bytes;
             })
+        .map(extractionService::extractorForClassFile)
         .flatMap(
-            bytes -> {
+            modelExtractor -> {
               try {
-                return Mono.just(ClassFile.of().parse(bytes));
-              } catch (IllegalArgumentException e) {
-                return Mono.error(e);
-              }
-            })
-        .flatMap(
-            cm -> {
-              try {
-                logger.atInfo().log(
-                    "Extracting constants for class {}", cm.thisClass().asInternalName());
-                return Mono.just(new ClassModelExtractor(cm).extract());
+                return Mono.just(modelExtractor.extract());
               } catch (ModelExtractor.ExtractionException e) {
                 return Mono.error(e);
               }

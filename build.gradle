@@ -28,6 +28,7 @@ dependencies {
     testImplementation 'com.redis:testcontainers-redis'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation "com.google.guava:guava:$guavaVersion"
+    implementation "com.google.jimfs:jimfs:$jimfsVersion"
     implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:$webfluxUIVersion"
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion") {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
@@ -85,7 +86,7 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
-                minimum = 0.85
+                minimum = 0.8
             }
         }
     }

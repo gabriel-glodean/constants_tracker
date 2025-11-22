@@ -12,14 +12,24 @@ import java.lang.classfile.instruction.IncrementInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.OperatorInstruction;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import org.glodean.constants.extractor.bytecode.types.Constant;
 import org.glodean.constants.extractor.bytecode.types.ConstantPropagation;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 import org.glodean.constants.model.ClassConstant;
 
-enum AnalysisMerger {
-  MERGER;
+public class AnalysisMerger {
+  private final Function<String, Set<String>> patternSplitter;
+
+  public AnalysisMerger(Function<String, Set<String>> patternSplitter) {
+    this.patternSplitter = patternSplitter;
+  }
+
+  public Set<String> splitConstants(String pattern) {
+    return patternSplitter.apply(pattern);
+  }
 
   public Multimap<Object, ClassConstant.UsageType> merge(
       List<CodeElement> code, final List<State> in) {
@@ -47,13 +57,11 @@ enum AnalysisMerger {
           handle(state.stack.get(state.stack.size() - index), map, METHOD_INVOCATION_TARGET);
         }
       }
-      case IncrementInstruction ii ->
-          handle(state.locals.get(ii.slot()), map, PROPAGATION_IN_ARITHMETIC_OPERATIONS);
+      case IncrementInstruction ii -> handle(state.locals.get(ii.slot()), map, ARITHMETIC_OPERAND);
       case OperatorInstruction oi when oi.opcode() != ARRAYLENGTH -> {
-        handle(state.stack.getLast(), map, PROPAGATION_IN_ARITHMETIC_OPERATIONS);
-        handle(state.stack.get(state.stack.size() - 2), map, PROPAGATION_IN_ARITHMETIC_OPERATIONS);
+        handle(state.stack.getLast(), map, ARITHMETIC_OPERAND);
+        handle(state.stack.get(state.stack.size() - 2), map, ARITHMETIC_OPERAND);
       }
-
       default -> {}
     }
   }
