@@ -1,11 +1,9 @@
 package org.glodean.constants.samples;
 
-public class InvokeDynamicFunctionality {
-  //    public final String great(String name){
-  //        return "Hello "+name+"! What's up?!";
-  //    }
+import java.util.Set;
 
-  public final String concat(String first, int second) {
-    return first + second;
+public class InvokeDynamicFunctionality {
+  public final String concat(Set<String> inputs) {
+    return inputs.stream().reduce("", (a, b) -> a + b);
   }
 }

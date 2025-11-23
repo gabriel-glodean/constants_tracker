@@ -27,14 +27,11 @@ public class InternalStringConcatPatternSplitter implements StringConcatPatternS
     int start = 0;
     int idx;
     while ((idx = pattern.indexOf('\u0001', start)) != -1) {
-      if (start != idx) {
-        result.add(pattern.substring(start, idx));
-      }
+      result.add(pattern.substring(start, idx));
       start = idx + 1;
     }
-    if (start < pattern.length()) {
-      result.add(pattern.substring(start));
-    }
+
+    result.add(pattern.substring(start));
     return result;
   }
 }

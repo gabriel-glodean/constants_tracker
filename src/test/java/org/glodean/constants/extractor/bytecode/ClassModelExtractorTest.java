@@ -66,6 +66,12 @@ class ClassModelExtractorTest {
                     new AnalysisMerger(new InternalStringConcatPatternSplitter()))
                 .extract(),
             null);
-    assertNotNull(model);
+    var expected =
+        new ClassConstants(
+            "org/glodean/constants/samples/InvokeDynamicFunctionality",
+            Set.of(
+                new ClassConstant(
+                    "", EnumSet.of(METHOD_INVOCATION_PARAMETER, STRING_CONCATENATION_MEMBER))));
+    assertEquals(expected, model);
   }
 }

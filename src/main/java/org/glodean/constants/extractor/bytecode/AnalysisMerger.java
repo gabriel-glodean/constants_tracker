@@ -4,13 +4,12 @@ import static java.lang.classfile.Opcode.*;
 import static org.glodean.constants.model.ClassConstant.UsageType.*;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.instruction.FieldInstruction;
-import java.lang.classfile.instruction.IncrementInstruction;
-import java.lang.classfile.instruction.InvokeInstruction;
-import java.lang.classfile.instruction.OperatorInstruction;
+import java.lang.classfile.instruction.*;
+import java.lang.constant.ClassDesc;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -38,7 +37,7 @@ public class AnalysisMerger {
     return map;
   }
 
-  private static void handle(
+  private void handle(
       CodeElement instr, State state, Multimap<Object, ClassConstant.UsageType> map) {
     if (instr == null) {
       return;
@@ -55,6 +54,25 @@ public class AnalysisMerger {
         }
         if (ii.opcode() != INVOKESTATIC) {
           handle(state.stack.get(state.stack.size() - index), map, METHOD_INVOCATION_TARGET);
+        }
+      }
+      case InvokeDynamicInstruction idi -> {
+        if (idi.name().stringValue().equals("makeConcatWithConstants")
+            && idi.bootstrapMethod()
+                .owner()
+                .equals(ClassDesc.ofInternalName("java/lang/invoke/StringConcatFactory"))) {
+          String pattern = (String) Iterables.getFirst(idi.bootstrapArgs(), "");
+          for (String constant : patternSplitter.apply(pattern)) {
+            map.put(constant, STRING_CONCATENATION_MEMBER);
+          }
+          for (int index = 1; index <= idi.typeSymbol().parameterCount(); index++) {
+            handle(state.stack.get(state.stack.size() - index), map, STRING_CONCATENATION_MEMBER);
+          }
+          return;
+        }
+
+        for (int index = 1; index <= idi.typeSymbol().parameterCount(); index++) {
+          handle(state.stack.get(state.stack.size() - index), map, METHOD_INVOCATION_PARAMETER);
         }
       }
       case IncrementInstruction ii -> handle(state.locals.get(ii.slot()), map, ARITHMETIC_OPERAND);

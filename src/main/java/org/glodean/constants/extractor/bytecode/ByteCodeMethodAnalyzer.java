@@ -166,6 +166,8 @@ final class ByteCodeMethodAnalyzer {
                 + ii.name().stringValue()
                 + ii.type().stringValue());
       }
+      case InvokeDynamicInstruction idi ->
+          PROVIDER.handlerFor(InvokeDynamicInstruction.class).handle(idi, st, tag);
       case StackInstruction si -> PROVIDER.handlerFor(StackInstruction.class).handle(si, st, tag);
       case OperatorInstruction oi ->
           PROVIDER.handlerFor(OperatorInstruction.class).handle(oi, st, tag);
