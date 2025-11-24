@@ -1,4 +1,3 @@
-- handle string propagation through invokedynamic of StringConcatFactory
 - add exception-flow analysis to handle exception handling code, ignored so far
 - handle all the stack operation
 - add document replacement handling

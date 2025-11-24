@@ -2,13 +2,13 @@ package org.glodean.constants.extractor.bytecode;
 
 import static org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerProvider.PROVIDER;
 
-import com.google.common.collect.Streams;
 import java.lang.classfile.*;
 import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.instruction.*;
 import java.lang.reflect.AccessFlag;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.ObjectReference;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity;
@@ -24,10 +24,12 @@ final class ByteCodeMethodAnalyzer {
   final List<CodeElement> code;
   final int maxLocals;
   final List<String> calls = new ArrayList<>();
+  private final Map<Class<?>, InstructionHandler<Instruction>> handlerCache;
 
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
     this.cm = cm;
     this.methodModel = mm;
+    this.handlerCache = new HashMap<>();
     this.methodTag =
         cm.thisClass().asInternalName()
             + "::"
@@ -51,28 +53,11 @@ final class ByteCodeMethodAnalyzer {
       out.add(null);
       successors.add(new ArrayList<>());
     }
-    buildSuccessors();
-  }
-
-  private void buildSuccessors() {
-    Streams.mapWithIndex(code.stream(), AbstractMap.SimpleImmutableEntry::new)
-        .filter(Objects::nonNull)
-        .filter(
-            e -> {
-              var element = e.getKey();
-              return !(element instanceof ReturnInstruction || element instanceof ThrowInstruction);
-            })
-        .forEach(
-            e -> {
-              int i = Math.toIntExact(e.getValue());
-              if (e.getKey() instanceof BranchInstruction bi) {
-                if (bi.opcode() != Opcode.GOTO || bi.opcode() != Opcode.GOTO_W)
-                  successors.get(i).add(i + 1);
-                int nextInstruction = indexOfLabel(bi.target());
-                successors.get(i).add(nextInstruction);
-              }
-              successors.get(i).add(i + 1);
-            });
+    // delegate successor construction to SuccessorBuilder
+    List<List<Integer>> built = SuccessorBuilder.build(code, methodModel);
+    for (int i = 0; i < built.size() && i < successors.size(); i++) {
+      successors.set(i, built.get(i));
+    }
   }
 
   private int indexOfLabel(Label t) {
@@ -137,12 +122,6 @@ final class ByteCodeMethodAnalyzer {
     return st;
   }
 
-  private static <T extends Instruction> void callHandler(
-      Class<T> cls, T ins, State st, String tag) {
-    var h = PROVIDER.handlerFor(cls);
-    if (h != null) h.handle(ins, st, tag);
-  }
-
   private void recordInvokeIfNeeded(Instruction ins) {
     if (ins instanceof InvokeInstruction ii) {
       calls.add(
@@ -155,48 +134,48 @@ final class ByteCodeMethodAnalyzer {
     }
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private void dispatch(CodeElement e, State st, String tag) {
-    if (!(e instanceof Instruction ins)) return;
+    if (e instanceof Instruction ins) {
 
-    switch (ins) {
-      case NewObjectInstruction ni -> callHandler(NewObjectInstruction.class, ni, st, tag);
-      case NewReferenceArrayInstruction nai ->
-          callHandler(NewReferenceArrayInstruction.class, nai, st, tag);
-      case NewPrimitiveArrayInstruction npi ->
-          callHandler(NewPrimitiveArrayInstruction.class, npi, st, tag);
-      case NewMultiArrayInstruction nmai ->
-          callHandler(NewMultiArrayInstruction.class, nmai, st, tag);
-      case LoadInstruction li -> callHandler(LoadInstruction.class, li, st, tag);
-      case ConstantInstruction ci -> callHandler(ConstantInstruction.class, ci, st, tag);
-      case StoreInstruction si -> callHandler(StoreInstruction.class, si, st, tag);
-      case FieldInstruction fi -> callHandler(FieldInstruction.class, fi, st, tag);
-      case ArrayLoadInstruction ali -> callHandler(ArrayLoadInstruction.class, ali, st, tag);
-      case ArrayStoreInstruction asi -> callHandler(ArrayStoreInstruction.class, asi, st, tag);
-      case TypeCheckInstruction tc -> callHandler(TypeCheckInstruction.class, tc, st, tag);
-      case ReturnInstruction ri -> callHandler(ReturnInstruction.class, ri, st, tag);
-      case ThrowInstruction ti ->
-          callHandler(ThrowInstruction.class, ti, st, tag); // TODO implement
-      case InvokeInstruction ii -> {
-        callHandler(InvokeInstruction.class, ii, st, tag);
-        recordInvokeIfNeeded(ii);
+      Class<?> runtime = e.getClass();
+      var handler =
+          handlerCache.computeIfAbsent(
+              runtime,
+              k -> {
+                // exact registration
+                var h = PROVIDER.handlerFor((Class) k);
+                if (h != null) return h;
+                // try runtime interfaces
+                Queue<Class<?>> toCheck = new ArrayDeque<>();
+                for (Class<?> iface : k.getInterfaces()) {
+                  h = PROVIDER.handlerFor((Class) iface);
+                  if (h != null) return h;
+                  toCheck.offer(iface);
+                }
+                // walk superclasses and their interfaces
+                Class<?> s = k.getSuperclass();
+                while (s != null) {
+                  h = PROVIDER.handlerFor((Class) s);
+                  if (h != null) return h;
+                  for (Class<?> iface : s.getInterfaces()) {
+                    h = PROVIDER.handlerFor((Class) iface);
+                    if (h != null) return h;
+                    toCheck.offer(iface);
+                  }
+                  var superClass = s.getSuperclass();
+                  if (superClass != null) {
+                    toCheck.offer(superClass);
+                  }
+                  s = toCheck.poll();
+                }
+                return null;
+              });
+
+      if (handler != null) {
+        handler.handle(ins, st, tag);
+        recordInvokeIfNeeded(ins);
       }
-      case InvokeDynamicInstruction idi ->
-          callHandler(InvokeDynamicInstruction.class, idi, st, tag);
-      case StackInstruction ssi -> callHandler(StackInstruction.class, ssi, st, tag);
-      case OperatorInstruction oi -> callHandler(OperatorInstruction.class, oi, st, tag);
-      case BranchInstruction bi -> callHandler(BranchInstruction.class, bi, st, tag);
-      case TableSwitchInstruction tsi ->
-          callHandler(TableSwitchInstruction.class, tsi, st, tag); // TODO implement
-      case LookupSwitchInstruction lsi ->
-          callHandler(LookupSwitchInstruction.class, lsi, st, tag); // TODO implement
-      case IncrementInstruction inc -> callHandler(IncrementInstruction.class, inc, st, tag);
-      case ConvertInstruction ci ->
-          callHandler(ConvertInstruction.class, ci, st, tag); // TODO implement
-      case MonitorInstruction mi ->
-          callHandler(MonitorInstruction.class, mi, st, tag); // TODO implement
-      case NopInstruction _ -> {}
-      case DiscontinuedInstruction di ->
-          callHandler(DiscontinuedInstruction.class, di, st, tag); // TODO implement
     }
   }
 

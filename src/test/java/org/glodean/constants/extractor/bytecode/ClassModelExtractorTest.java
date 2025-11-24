@@ -11,6 +11,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.samples.GotoSample;
 import org.glodean.constants.samples.Greeter;
 import org.glodean.constants.samples.InvokeDynamicFunctionality;
 import org.glodean.constants.samples.SimpleIteration;
@@ -72,6 +73,27 @@ class ClassModelExtractorTest {
             Set.of(
                 new ClassConstant(
                     "", EnumSet.of(METHOD_INVOCATION_PARAMETER, STRING_CONCATENATION_MEMBER))));
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForContinues() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(GotoSample.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants(
+            "org/glodean/constants/samples/GotoSample",
+            Set.of(
+                new ClassConstant(0, EnumSet.of(METHOD_INVOCATION_PARAMETER, ARITHMETIC_OPERAND)),
+                new ClassConstant(1, EnumSet.of(METHOD_INVOCATION_PARAMETER, ARITHMETIC_OPERAND)),
+                new ClassConstant(2, EnumSet.of(ARITHMETIC_OPERAND)),
+                new ClassConstant(3, EnumSet.of(METHOD_INVOCATION_PARAMETER)),
+                new ClassConstant(10, EnumSet.of(METHOD_INVOCATION_PARAMETER))));
     assertEquals(expected, model);
   }
 }
