@@ -133,51 +133,71 @@ final class ByteCodeMethodAnalyzer {
   }
 
   private State transfer(int i, State st) {
-    CodeElement e = code.get(i);
-    String tag = methodTag + "@" + i;
-    switch (e) {
-      case NewObjectInstruction ni ->
-          PROVIDER.handlerFor(NewObjectInstruction.class).handle(ni, st, tag);
+    dispatch(code.get(i), st, methodTag + "@" + i);
+    return st;
+  }
+
+  private static <T extends Instruction> void callHandler(
+      Class<T> cls, T ins, State st, String tag) {
+    var h = PROVIDER.handlerFor(cls);
+    if (h != null) h.handle(ins, st, tag);
+  }
+
+  private void recordInvokeIfNeeded(Instruction ins) {
+    if (ins instanceof InvokeInstruction ii) {
+      calls.add(
+          methodTag
+              + " -> "
+              + ii.owner().asInternalName()
+              + "."
+              + ii.name().stringValue()
+              + ii.type().stringValue());
+    }
+  }
+
+  private void dispatch(CodeElement e, State st, String tag) {
+    if (!(e instanceof Instruction ins)) return;
+
+    switch (ins) {
+      case NewObjectInstruction ni -> callHandler(NewObjectInstruction.class, ni, st, tag);
       case NewReferenceArrayInstruction nai ->
-          PROVIDER.handlerFor(NewReferenceArrayInstruction.class).handle(nai, st, tag);
+          callHandler(NewReferenceArrayInstruction.class, nai, st, tag);
       case NewPrimitiveArrayInstruction npi ->
-          PROVIDER.handlerFor(NewPrimitiveArrayInstruction.class).handle(npi, st, tag);
+          callHandler(NewPrimitiveArrayInstruction.class, npi, st, tag);
       case NewMultiArrayInstruction nmai ->
-          PROVIDER.handlerFor(NewMultiArrayInstruction.class).handle(nmai, st, tag);
-      case LoadInstruction li -> PROVIDER.handlerFor(LoadInstruction.class).handle(li, st, tag);
-      case ConstantInstruction ci ->
-          PROVIDER.handlerFor(ConstantInstruction.class).handle(ci, st, tag);
-      case StoreInstruction si -> PROVIDER.handlerFor(StoreInstruction.class).handle(si, st, tag);
-      case FieldInstruction fi -> PROVIDER.handlerFor(FieldInstruction.class).handle(fi, st, tag);
-      case ArrayLoadInstruction ali ->
-          PROVIDER.handlerFor(ArrayLoadInstruction.class).handle(ali, st, tag);
-      case ArrayStoreInstruction asi ->
-          PROVIDER.handlerFor(ArrayStoreInstruction.class).handle(asi, st, tag);
-      case TypeCheckInstruction tc ->
-          PROVIDER.handlerFor(TypeCheckInstruction.class).handle(tc, st, tag);
-      case ReturnInstruction ri -> PROVIDER.handlerFor(ReturnInstruction.class).handle(ri, st, tag);
+          callHandler(NewMultiArrayInstruction.class, nmai, st, tag);
+      case LoadInstruction li -> callHandler(LoadInstruction.class, li, st, tag);
+      case ConstantInstruction ci -> callHandler(ConstantInstruction.class, ci, st, tag);
+      case StoreInstruction si -> callHandler(StoreInstruction.class, si, st, tag);
+      case FieldInstruction fi -> callHandler(FieldInstruction.class, fi, st, tag);
+      case ArrayLoadInstruction ali -> callHandler(ArrayLoadInstruction.class, ali, st, tag);
+      case ArrayStoreInstruction asi -> callHandler(ArrayStoreInstruction.class, asi, st, tag);
+      case TypeCheckInstruction tc -> callHandler(TypeCheckInstruction.class, tc, st, tag);
+      case ReturnInstruction ri -> callHandler(ReturnInstruction.class, ri, st, tag);
+      case ThrowInstruction ti ->
+          callHandler(ThrowInstruction.class, ti, st, tag); // TODO implement
       case InvokeInstruction ii -> {
-        PROVIDER.handlerFor(InvokeInstruction.class).handle(ii, st, tag);
-        calls.add(
-            methodTag
-                + " -> "
-                + ii.owner().asInternalName()
-                + "."
-                + ii.name().stringValue()
-                + ii.type().stringValue());
+        callHandler(InvokeInstruction.class, ii, st, tag);
+        recordInvokeIfNeeded(ii);
       }
       case InvokeDynamicInstruction idi ->
-          PROVIDER.handlerFor(InvokeDynamicInstruction.class).handle(idi, st, tag);
-      case StackInstruction si -> PROVIDER.handlerFor(StackInstruction.class).handle(si, st, tag);
-      case OperatorInstruction oi ->
-          PROVIDER.handlerFor(OperatorInstruction.class).handle(oi, st, tag);
-      case BranchInstruction bi -> PROVIDER.handlerFor(BranchInstruction.class).handle(bi, st, tag);
-      case IncrementInstruction ii ->
-          PROVIDER.handlerFor(IncrementInstruction.class).handle(ii, st, tag);
-      default -> {}
+          callHandler(InvokeDynamicInstruction.class, idi, st, tag);
+      case StackInstruction ssi -> callHandler(StackInstruction.class, ssi, st, tag);
+      case OperatorInstruction oi -> callHandler(OperatorInstruction.class, oi, st, tag);
+      case BranchInstruction bi -> callHandler(BranchInstruction.class, bi, st, tag);
+      case TableSwitchInstruction tsi ->
+          callHandler(TableSwitchInstruction.class, tsi, st, tag); // TODO implement
+      case LookupSwitchInstruction lsi ->
+          callHandler(LookupSwitchInstruction.class, lsi, st, tag); // TODO implement
+      case IncrementInstruction inc -> callHandler(IncrementInstruction.class, inc, st, tag);
+      case ConvertInstruction ci ->
+          callHandler(ConvertInstruction.class, ci, st, tag); // TODO implement
+      case MonitorInstruction mi ->
+          callHandler(MonitorInstruction.class, mi, st, tag); // TODO implement
+      case NopInstruction _ -> {}
+      case DiscontinuedInstruction di ->
+          callHandler(DiscontinuedInstruction.class, di, st, tag); // TODO implement
     }
-
-    return st;
   }
 
   public String report() {
