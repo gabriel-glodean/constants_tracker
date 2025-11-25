@@ -4,6 +4,7 @@ import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.StackInstruction;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/** Handler for stack manipulation instructions (e.g., DUP). Models the simple DUP operation. */
 final class StackHandler implements InstructionHandler<StackInstruction> {
   @Override
   public void handle(StackInstruction si, State state, String tag) {

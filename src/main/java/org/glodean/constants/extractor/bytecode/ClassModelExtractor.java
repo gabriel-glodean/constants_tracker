@@ -12,6 +12,10 @@ import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 
+/**
+ * Extracts {@link ClassConstants} from a {@link java.lang.classfile.ClassModel} by analyzing each
+ * method's bytecode and merging discovered constants.
+ */
 public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
     implements ModelExtractor {
 

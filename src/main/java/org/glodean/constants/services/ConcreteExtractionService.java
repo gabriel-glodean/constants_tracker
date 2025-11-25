@@ -18,6 +18,11 @@ import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Concrete service implementation that provides ModelExtractor instances for different input
+ * formats (raw class file bytes or jar/zip bytes). Uses Jimfs to load jar contents into an
+ * in-memory filesystem.
+ */
 @Service
 public record ConcreteExtractionService(@Autowired AnalysisMerger merger)
     implements ExtractionService {

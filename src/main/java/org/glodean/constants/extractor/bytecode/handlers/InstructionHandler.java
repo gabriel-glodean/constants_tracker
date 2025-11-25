@@ -8,25 +8,7 @@ import org.glodean.constants.extractor.bytecode.types.State;
  *
  * @param <IT> the instruction type
  */
-public sealed interface InstructionHandler<IT extends Instruction>
-    permits InvokeDynamicHandler,
-        ArrayLoadHandler,
-        ArrayStoreHandler,
-        BranchHandler,
-        ConstantHandler,
-        FieldHandler,
-        IncrementHandler,
-        InvokeHandler,
-        LoadHandler,
-        NewMultiArrayHandler,
-        NewObjectIHandler,
-        NewPrimitiveArrayHandler,
-        NewReferenceArrayHandler,
-        OperatorHandler,
-        ReturnHandler,
-        StackHandler,
-        StoreHandler,
-        TypeCheckHandler {
+public interface InstructionHandler<IT extends Instruction> {
 
   /**
    * Handles the given instruction and updates the abstract JVN state.

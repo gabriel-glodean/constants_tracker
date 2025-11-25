@@ -13,6 +13,10 @@ import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstants;
 
+/**
+ * Walks a provided {@link FileSystem} and extracts {@link ClassConstants} for every discovered
+ * {@code .class} file using an {@link AnalysisMerger}.
+ */
 public record FileSystemModelExtractor(FileSystem fileSystem, AnalysisMerger merger)
     implements ModelExtractor {
   private static final Logger logger = LogManager.getLogger(FileSystemModelExtractor.class);

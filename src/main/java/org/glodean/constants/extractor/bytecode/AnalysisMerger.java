@@ -19,17 +19,42 @@ import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 import org.glodean.constants.model.ClassConstant;
 
+/**
+ * Merges per-instruction abstract states produced by the analyzer into a mapping of discovered
+ * constant values to their usage types.
+ *
+ * <p>The class accepts a pluggable {@code patternSplitter} function used to extract literal parts
+ * from invokedynamic string-concat patterns (the format depends on the JVM implementation).
+ */
 public class AnalysisMerger {
   private final Function<String, Set<String>> patternSplitter;
 
+  /**
+   * Create an AnalysisMerger.
+   *
+   * @param patternSplitter function that splits a string-concat pattern into a set of literal
+   *     substrings
+   */
   public AnalysisMerger(Function<String, Set<String>> patternSplitter) {
     this.patternSplitter = patternSplitter;
   }
 
+  /**
+   * Split the string-concat pattern using the configured splitter.
+   *
+   * @param pattern the concat pattern
+   * @return set of literal constants found in the pattern
+   */
   public Set<String> splitConstants(String pattern) {
     return patternSplitter.apply(pattern);
   }
 
+  /**
+   * Merge bytecode-level state information into a multimap of constant value -> usage type.
+   *
+   * @param code list of code elements in instruction order
+   * @param in corresponding IN states for each instruction
+   */
   public Multimap<Object, ClassConstant.UsageType> merge(
       List<CodeElement> code, final List<State> in) {
     Multimap<Object, ClassConstant.UsageType> map = HashMultimap.create();

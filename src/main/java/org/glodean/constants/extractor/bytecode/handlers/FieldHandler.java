@@ -4,6 +4,10 @@ import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.FieldInstruction;
 import org.glodean.constants.extractor.bytecode.types.*;
 
+/**
+ * Handles get/put field and static field instructions. Updates the abstract state for statics, heap
+ * fields and stack effects.
+ */
 final class FieldHandler implements InstructionHandler<FieldInstruction> {
   @Override
   public void handle(FieldInstruction fi, State state, String tag) {
@@ -34,7 +38,6 @@ final class FieldHandler implements InstructionHandler<FieldInstruction> {
         } else {
           res.add(StackAndParameterEntity.convert(fi.typeSymbol(), tag));
         }
-        ;
       }
       state.stack.addLast(res);
     } else if (m == Opcode.PUTFIELD) {

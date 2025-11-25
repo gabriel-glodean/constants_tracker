@@ -1,14 +1,15 @@
 package org.glodean.constants.extractor.bytecode;
 
-import static org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerProvider.PROVIDER;
-
 import java.lang.classfile.*;
 import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.instruction.*;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.AccessFlag;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerRegistry;
 import org.glodean.constants.extractor.bytecode.types.ObjectReference;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity;
@@ -24,12 +25,19 @@ final class ByteCodeMethodAnalyzer {
   final List<CodeElement> code;
   final int maxLocals;
   final List<String> calls = new ArrayList<>();
-  private final Map<Class<?>, InstructionHandler<Instruction>> handlerCache;
+  private final Map<Class<?>, InstructionHandler<? super Instruction>> handlerCache;
+  private final InstructionHandlerRegistry instructionHandlerRegistry;
+  private final Map<Label, ClassDesc> exceptionHandlerStarts;
 
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
+    this(cm, mm, InstructionHandlerRegistry.defaultRegistry());
+  }
+
+  ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
     this.cm = cm;
     this.methodModel = mm;
     this.handlerCache = new HashMap<>();
+    this.instructionHandlerRegistry = registry;
     this.methodTag =
         cm.thisClass().asInternalName()
             + "::"
@@ -45,6 +53,7 @@ final class ByteCodeMethodAnalyzer {
             .orElse(null);
     if (codeModel == null) {
       this.code = List.of();
+      this.exceptionHandlerStarts = Map.of();
       return;
     }
     this.code = codeModel.elementList();
@@ -54,19 +63,15 @@ final class ByteCodeMethodAnalyzer {
       successors.add(new ArrayList<>());
     }
     // delegate successor construction to SuccessorBuilder
-    List<List<Integer>> built = SuccessorBuilder.build(code, methodModel);
+    var successorRecord = SuccessorBuilder.build(code, codeModel.exceptionHandlers());
+    var built = successorRecord.successors();
+    this.exceptionHandlerStarts = successorRecord.handlerStarts();
     for (int i = 0; i < built.size() && i < successors.size(); i++) {
       successors.set(i, built.get(i));
     }
   }
 
-  private int indexOfLabel(Label t) {
-    for (int i = 0; i < code.size(); i++)
-      if (code.get(i) instanceof LabelTarget lt && lt.label().equals(t)) return i;
-    return -1;
-  }
-
-  public void run() {
+  public void run() throws ModelExtractor.ExtractionException {
     if (code.isEmpty()) return;
     var work = new ArrayDeque<Integer>();
     State entry = new State(maxLocals);
@@ -117,8 +122,27 @@ final class ByteCodeMethodAnalyzer {
     }
   }
 
-  private State transfer(int i, State st) {
-    dispatch(code.get(i), st, methodTag + "@" + i);
+  private State transfer(int i, State st) throws ModelExtractor.ExtractionException {
+    var e = code.get(i);
+    var tag = methodTag + "@" + i;
+    if (e instanceof Instruction ins) {
+      Class<? extends Instruction> runtime = ins.getClass();
+      var handler =
+          handlerCache.computeIfAbsent(runtime, instructionHandlerRegistry::findHandlerFor);
+      if (handler == null) {
+        throw new ModelExtractor.ExtractionException(
+            "No handler for instruction: " + runtime.getName());
+      }
+      handler.handle(ins, st, tag);
+      recordInvokeIfNeeded(ins);
+      return st;
+    }
+    if (e instanceof Label label) {
+      var catchTypeOpt = exceptionHandlerStarts.get(label);
+      if (catchTypeOpt != null) {
+        instructionHandlerRegistry.exceptionHandlerLabelHandler().handle(catchTypeOpt, st, tag);
+      }
+    }
     return st;
   }
 
@@ -131,51 +155,6 @@ final class ByteCodeMethodAnalyzer {
               + "."
               + ii.name().stringValue()
               + ii.type().stringValue());
-    }
-  }
-
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private void dispatch(CodeElement e, State st, String tag) {
-    if (e instanceof Instruction ins) {
-
-      Class<?> runtime = e.getClass();
-      var handler =
-          handlerCache.computeIfAbsent(
-              runtime,
-              k -> {
-                // exact registration
-                var h = PROVIDER.handlerFor((Class) k);
-                if (h != null) return h;
-                // try runtime interfaces
-                Queue<Class<?>> toCheck = new ArrayDeque<>();
-                for (Class<?> iface : k.getInterfaces()) {
-                  h = PROVIDER.handlerFor((Class) iface);
-                  if (h != null) return h;
-                  toCheck.offer(iface);
-                }
-                // walk superclasses and their interfaces
-                Class<?> s = k.getSuperclass();
-                while (s != null) {
-                  h = PROVIDER.handlerFor((Class) s);
-                  if (h != null) return h;
-                  for (Class<?> iface : s.getInterfaces()) {
-                    h = PROVIDER.handlerFor((Class) iface);
-                    if (h != null) return h;
-                    toCheck.offer(iface);
-                  }
-                  var superClass = s.getSuperclass();
-                  if (superClass != null) {
-                    toCheck.offer(superClass);
-                  }
-                  s = toCheck.poll();
-                }
-                return null;
-              });
-
-      if (handler != null) {
-        handler.handle(ins, st, tag);
-        recordInvokeIfNeeded(ins);
-      }
     }
   }
 

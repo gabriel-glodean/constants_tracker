@@ -7,6 +7,13 @@ import java.lang.classfile.instruction.BranchInstruction;
 import java.util.EnumSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handler for conditional and unconditional branch instructions.
+ *
+ * <p>It simulates the stack effects of branch instructions: most conditional branches pop one
+ * operand, integer comparison branches pop two operands. GOTO instructions are treated as having no
+ * stack pops because control flow transfers unconditionally.
+ */
 final class BranchHandler implements InstructionHandler<BranchInstruction> {
   private final EnumSet<Opcode> DOUBLE_POPPING_BRANCHES =
       EnumSet.of(

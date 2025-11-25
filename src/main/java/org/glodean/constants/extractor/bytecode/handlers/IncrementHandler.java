@@ -6,6 +6,10 @@ import org.glodean.constants.extractor.bytecode.types.NumericConstant;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handles IINC (increment) bytecode instruction by updating the local variable's points-to set
+ * using constant propagation semantics.
+ */
 final class IncrementHandler implements InstructionHandler<IncrementInstruction> {
   @Override
   public void handle(IncrementInstruction ii, State state, String tag) {

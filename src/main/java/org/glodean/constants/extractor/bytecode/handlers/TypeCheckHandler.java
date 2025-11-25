@@ -6,6 +6,10 @@ import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handler for type-checking instructions such as INSTANCEOF and CHECKCAST. Models the stack effects
+ * and pushes a typed value for instanceof results.
+ */
 final class TypeCheckHandler implements InstructionHandler<TypeCheckInstruction> {
   @Override
   public void handle(TypeCheckInstruction tc, State state, String tag) {

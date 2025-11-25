@@ -6,6 +6,11 @@ import org.glodean.constants.extractor.bytecode.types.ObjectConstant;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handler for constant load instructions (LDC and similar).
+ *
+ * <p>Pushes a numeric or object constant onto the abstract stack representation.
+ */
 final class ConstantHandler implements InstructionHandler<ConstantInstruction> {
   @Override
   public void handle(ConstantInstruction ci, State state, String tag) {

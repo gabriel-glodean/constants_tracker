@@ -11,10 +11,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.samples.GotoSample;
-import org.glodean.constants.samples.Greeter;
-import org.glodean.constants.samples.InvokeDynamicFunctionality;
-import org.glodean.constants.samples.SimpleIteration;
+import org.glodean.constants.samples.*;
 import org.junit.jupiter.api.Test;
 
 class ClassModelExtractorTest {
@@ -94,6 +91,26 @@ class ClassModelExtractorTest {
                 new ClassConstant(2, EnumSet.of(ARITHMETIC_OPERAND)),
                 new ClassConstant(3, EnumSet.of(METHOD_INVOCATION_PARAMETER)),
                 new ClassConstant(10, EnumSet.of(METHOD_INVOCATION_PARAMETER))));
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForTrowingMethods() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(ThrowingMethodSample.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants(
+            "org/glodean/constants/samples/ThrowingMethodSample",
+            Set.of(
+                new ClassConstant(
+                    "C:\\non_existent_file.txt", EnumSet.of(METHOD_INVOCATION_PARAMETER)),
+                new ClassConstant("", EnumSet.of(STRING_CONCATENATION_MEMBER)),
+                new ClassConstant("Caught exception: ", EnumSet.of(STRING_CONCATENATION_MEMBER))));
     assertEquals(expected, model);
   }
 }

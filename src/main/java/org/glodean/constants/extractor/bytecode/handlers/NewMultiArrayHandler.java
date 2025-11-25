@@ -5,6 +5,10 @@ import org.glodean.constants.extractor.bytecode.types.ObjectReference;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handler for multi-dimensional array creation instructions. Pops dimension counts and pushes a
+ * newly created array reference.
+ */
 final class NewMultiArrayHandler implements InstructionHandler<NewMultiArrayInstruction> {
   @Override
   public void handle(NewMultiArrayInstruction nmaInstruction, State state, String tag) {

@@ -10,6 +10,10 @@ import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.PrimitiveValue;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Handles operator / arithmetic instructions. Performs constant propagation for binary operations
+ * when possible and models arraylength.
+ */
 final class OperatorHandler implements InstructionHandler<OperatorInstruction> {
   @Override
   public void handle(OperatorInstruction oi, State state, String tag) {

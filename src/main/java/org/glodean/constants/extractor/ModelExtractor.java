@@ -7,14 +7,15 @@ import org.glodean.constants.model.ClassConstants;
 public interface ModelExtractor {
   Collection<ClassConstants> extract() throws ExtractionException;
 
+  /** Exception type representing extraction failures. */
   class ExtractionException extends IOException {
 
     public ExtractionException(Throwable cause) {
       super(cause);
     }
 
-    public ExtractionException(String message, Throwable cause) {
-      super(message, cause);
+    public ExtractionException(String message) {
+      super(message);
     }
   }
 }
