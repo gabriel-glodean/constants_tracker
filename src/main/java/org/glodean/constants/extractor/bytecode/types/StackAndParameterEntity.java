@@ -4,7 +4,12 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import java.lang.constant.ClassDesc;
 
-// ==== Abstract heap objects and PT sets (allocation-site abstraction) ====
+/**
+ * Abstract representation for objects/values that appear on the operand stack or in parameters.
+ *
+ * <p>Implemented by concrete allocation-site-like records (ObjectReference, PrimitiveValue) and by
+ * constant representations used during analysis.
+ */
 public sealed interface StackAndParameterEntity
     permits Constant,
         ConstantPropagatingEntity,

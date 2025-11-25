@@ -3,6 +3,7 @@ package org.glodean.constants.extractor.bytecode.types;
 import java.lang.constant.ClassDesc;
 import java.util.Objects;
 
+/** Allocation-site style representation of an object reference (descriptor + creation site tag). */
 public record ObjectReference(ClassDesc descriptor, String site)
     implements StackAndParameterEntity {
   @Override

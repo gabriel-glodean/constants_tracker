@@ -2,7 +2,12 @@ package org.glodean.constants.extractor.bytecode.types;
 
 import java.util.*;
 
-// ==== Per-instruction abstract state ====
+/**
+ * Represents the per-instruction abstract program state used by the bytecode analyzer.
+ *
+ * <p>Contains locals, operand stack, heap-like maps for fields/statics/array elements and
+ * operations to copy and union states.
+ */
 public final class State {
   public final List<PointsToSet> locals;
   public final List<PointsToSet> stack;

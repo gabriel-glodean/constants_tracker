@@ -3,6 +3,7 @@ package org.glodean.constants.extractor.bytecode.types;
 import java.lang.constant.ClassDesc;
 import java.util.Objects;
 
+/** Representation of a primitive (non-reference) value in the abstract state. */
 public record PrimitiveValue(ClassDesc descriptor, String site)
     implements ConstantPropagatingEntity {
 

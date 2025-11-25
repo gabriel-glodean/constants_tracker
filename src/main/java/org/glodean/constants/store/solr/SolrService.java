@@ -23,6 +23,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+/**
+ * Solr-backed implementation of {@link ClassConstantsStore} that stores class constants as a parent
+ * document with child documents for each constant usage.
+ */
 @Service
 public class SolrService implements ClassConstantsStore {
   private static final Logger logger = LogManager.getLogger(SolrService.class);

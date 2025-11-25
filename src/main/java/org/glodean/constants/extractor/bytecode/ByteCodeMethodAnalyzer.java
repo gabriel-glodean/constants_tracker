@@ -14,6 +14,15 @@ import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity;
 import org.glodean.constants.extractor.bytecode.types.State;
 
+/**
+ * Performs a per-method bytecode analysis producing IN/OUT abstract states and a list of discovered
+ * method calls.
+ *
+ * <p>The analyzer builds a conservative control-flow graph, then runs a worklist algorithm to
+ * compute per-instruction abstract states using the configured {@link InstructionHandlerRegistry}.
+ * The resulting {@code in} and {@code out} lists are public fields used by the merger to extract
+ * constant usage information.
+ */
 final class ByteCodeMethodAnalyzer {
   final ClassModel cm;
   final MethodModel methodModel;

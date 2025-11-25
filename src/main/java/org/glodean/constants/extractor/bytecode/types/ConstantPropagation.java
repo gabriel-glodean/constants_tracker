@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Objects;
 import java.util.Set;
 
+/** Represents a propagated set of numeric constants (merge of multiple numeric constants). */
 public record ConstantPropagation(Set<Number> values)
     implements StackAndParameterEntity, ConstantPropagatingEntity {
   @Override

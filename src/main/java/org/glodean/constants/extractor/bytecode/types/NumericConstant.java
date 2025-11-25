@@ -2,6 +2,7 @@ package org.glodean.constants.extractor.bytecode.types;
 
 import com.google.common.collect.ImmutableSet;
 
+/** Numeric constant wrapper supporting propagation operations. */
 public final class NumericConstant extends Constant<Number> implements ConstantPropagatingEntity {
   public NumericConstant(Number value) {
     super(value);

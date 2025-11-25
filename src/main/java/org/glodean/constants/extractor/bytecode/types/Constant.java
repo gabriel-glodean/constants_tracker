@@ -2,6 +2,11 @@ package org.glodean.constants.extractor.bytecode.types;
 
 import java.util.Objects;
 
+/**
+ * Base class for immutable constant values tracked by the analysis (numeric or object).
+ *
+ * @param <E> the underlying value type
+ */
 public abstract sealed class Constant<E> implements StackAndParameterEntity
     permits NumericConstant, ObjectConstant {
   private final E value;
