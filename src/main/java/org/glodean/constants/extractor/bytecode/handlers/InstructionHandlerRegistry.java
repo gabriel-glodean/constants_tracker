@@ -3,16 +3,17 @@ package org.glodean.constants.extractor.bytecode.handlers;
 import com.google.common.collect.ImmutableMap;
 import java.lang.classfile.Instruction;
 import java.lang.classfile.instruction.*;
-import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Queue;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Registry that maps instruction classes to their corresponding handlers. */
 @SuppressWarnings("NullableProblems")
 public final class InstructionHandlerRegistry {
   private final ImmutableMap<Class<? extends Instruction>, InstructionHandler<?>>
       instructionHandlerMap;
+  private final Map<Class<? extends Instruction>, InstructionHandler<?>> cache =
+      new ConcurrentHashMap<>();
+
   private final ExceptionHandlerLabelHandler exceptionHandlerLabelHandler =
       new ExceptionHandlerLabelHandler();
 
@@ -68,32 +69,44 @@ public final class InstructionHandlerRegistry {
   }
 
   @SuppressWarnings("unchecked")
-  public InstructionHandler<? super Instruction> findHandlerFor(Class<?> runtimeClass) {
-    if (!Instruction.class.isAssignableFrom(runtimeClass)) {
-      return null;
+  public InstructionHandler<? super Instruction> findHandlerFor(
+      Class<? extends Instruction> runtimeClass) {
+    // quick null/assignable guard (caller now should pass a subclass of Instruction)
+    if (runtimeClass == null) return null;
+
+    // check cache first
+    InstructionHandler<?> cached = cache.get(runtimeClass);
+    if (cached != null) {
+      return (InstructionHandler<? super Instruction>) cached;
     }
-    Class<? extends Instruction> key = (Class<? extends Instruction>) runtimeClass;
 
     // try exact match first
-    InstructionHandler<?> found = instructionHandlerMap.get(key);
-    if (found != null) return (InstructionHandler<? super Instruction>) found;
-
-    // BFS over interfaces and superclasses (only consider types assignable to Instruction)
-    Queue<Class<?>> toCheck = new ArrayDeque<>();
-    Collections.addAll(toCheck, key.getInterfaces());
-    Class<?> sup = key.getSuperclass();
-    if (sup != null) toCheck.offer(sup);
-
-    while (!toCheck.isEmpty()) {
-      Class<?> c = toCheck.poll();
-      if (!Instruction.class.isAssignableFrom(c)) continue;
-      Class<? extends Instruction> cc = (Class<? extends Instruction>) c;
-      found = instructionHandlerMap.get(cc);
-      if (found != null) return (InstructionHandler<? super Instruction>) found;
-      for (Class<?> interfaceClass : c.getInterfaces()) toCheck.offer(interfaceClass);
-      Class<?> sc = c.getSuperclass();
-      if (sc != null) toCheck.offer(sc);
+    InstructionHandler<?> found = instructionHandlerMap.get(runtimeClass);
+    if (found == null) {
+      // BFS over interfaces and superclasses (only consider types assignable to Instruction)
+      Queue<Class<?>> toCheck = new ArrayDeque<>();
+      Collections.addAll(toCheck, runtimeClass.getInterfaces());
+      Class<?> sup = runtimeClass.getSuperclass();
+      if (sup != null) toCheck.offer(sup);
+      Set<Class<?>> visited = new HashSet<>();
+      while (!toCheck.isEmpty()) {
+        Class<?> c = toCheck.poll();
+        if (!visited.add(c)) continue;
+        if (!Instruction.class.isAssignableFrom(c)) continue;
+        @SuppressWarnings("unchecked")
+        Class<? extends Instruction> cc = (Class<? extends Instruction>) c;
+        found = instructionHandlerMap.get(cc);
+        if (found != null) break;
+        for (Class<?> interfaceClass : c.getInterfaces()) toCheck.offer(interfaceClass);
+        Class<?> sc = c.getSuperclass();
+        if (sc != null) toCheck.offer(sc);
+      }
     }
-    return null;
+
+    // cache only positive results to avoid storing nulls
+    if (found != null) {
+      cache.put(runtimeClass, found);
+    }
+    return (InstructionHandler<? super Instruction>) found;
   }
 }

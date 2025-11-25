@@ -8,7 +8,6 @@ import java.lang.reflect.AccessFlag;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.glodean.constants.extractor.ModelExtractor;
-import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerRegistry;
 import org.glodean.constants.extractor.bytecode.types.ObjectReference;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
@@ -25,7 +24,6 @@ final class ByteCodeMethodAnalyzer {
   final List<CodeElement> code;
   final int maxLocals;
   final List<String> calls = new ArrayList<>();
-  private final Map<Class<?>, InstructionHandler<? super Instruction>> handlerCache;
   private final InstructionHandlerRegistry instructionHandlerRegistry;
   private final Map<Label, ClassDesc> exceptionHandlerStarts;
 
@@ -36,7 +34,6 @@ final class ByteCodeMethodAnalyzer {
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
     this.cm = cm;
     this.methodModel = mm;
-    this.handlerCache = new HashMap<>();
     this.instructionHandlerRegistry = registry;
     this.methodTag =
         cm.thisClass().asInternalName()
@@ -127,8 +124,7 @@ final class ByteCodeMethodAnalyzer {
     var tag = methodTag + "@" + i;
     if (e instanceof Instruction ins) {
       Class<? extends Instruction> runtime = ins.getClass();
-      var handler =
-          handlerCache.computeIfAbsent(runtime, instructionHandlerRegistry::findHandlerFor);
+      var handler = instructionHandlerRegistry.findHandlerFor(runtime);
       if (handler == null) {
         throw new ModelExtractor.ExtractionException(
             "No handler for instruction: " + runtime.getName());
