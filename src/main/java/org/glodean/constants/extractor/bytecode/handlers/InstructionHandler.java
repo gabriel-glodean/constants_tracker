@@ -20,7 +20,7 @@ public sealed interface InstructionHandler<IT extends Instruction>
         InvokeHandler,
         LoadHandler,
         LookupSwitchHandler,
-        MonitorHandler,
+        MonitorInstructionHandler,
         NewMultiArrayHandler,
         NewObjectIHandler,
         NewPrimitiveArrayHandler,

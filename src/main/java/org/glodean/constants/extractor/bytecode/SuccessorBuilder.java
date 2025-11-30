@@ -8,6 +8,7 @@ import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -96,20 +97,19 @@ final class SuccessorBuilder {
    * @param successors the mutable successor lists to populate; must be parallel to `code`
    * @return a map of handler Labels to their catch types
    */
-  @SuppressWarnings("NullableProblems")
   private static Map<Label, ClassDesc> addHandlerSuccessors(
       List<CodeElement> code,
       List<ExceptionCatch> exceptionCatches,
       List<List<Integer>> successors) {
     if (exceptionCatches == null) return Map.of();
-    var handlerMap = new ImmutableMap.Builder<Label, ClassDesc>();
+    var handlerMap = new HashMap<Label, ClassDesc>();
     for (ExceptionCatch exceptionCatch : exceptionCatches) {
       handlerMap.put(
           exceptionCatch.handler(),
           exceptionCatch
               .catchType()
               .map(ClassEntry::asSymbol)
-              .orElseGet(() -> ClassDesc.of("java/lang/Throwable")));
+              .orElseGet(() -> ClassDesc.ofInternalName("java/lang/Throwable")));
       int handlerIdx = indexOfLabel(exceptionCatch.handler(), code);
       if (handlerIdx <= 0) {
         continue;
@@ -126,7 +126,7 @@ final class SuccessorBuilder {
         if (!successor.contains(handlerIdx)) successor.add(handlerIdx);
       }
     }
-    return handlerMap.build();
+    return ImmutableMap.copyOf(handlerMap);
   }
 
   /**

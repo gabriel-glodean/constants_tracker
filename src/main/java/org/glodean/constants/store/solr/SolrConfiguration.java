@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/** Spring configuration that builds a Solr client used by the Solr-backed storage service. */
 @Configuration
 public class SolrConfiguration {
   @Bean

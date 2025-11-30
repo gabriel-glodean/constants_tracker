@@ -2,17 +2,19 @@ package org.glodean.constants.extractor.bytecode;
 
 import static org.glodean.constants.extractor.bytecode.TestUtils.convertClassToModel;
 import static org.glodean.constants.model.ClassConstant.UsageType.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.Iterables;
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.Set;
+import java.lang.classfile.ClassFile;
+import java.util.*;
+import java.util.function.Supplier;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 import org.glodean.constants.samples.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.FieldSource;
 
 class ClassModelExtractorTest {
 
@@ -95,7 +97,7 @@ class ClassModelExtractorTest {
   }
 
   @Test
-  void extractForTrowingMethods() throws IOException {
+  void extractForThrowingMethods() throws IOException {
     var model =
         Iterables.getFirst(
             new ClassModelExtractor(
@@ -112,5 +114,56 @@ class ClassModelExtractorTest {
                 new ClassConstant("", EnumSet.of(STRING_CONCATENATION_MEMBER)),
                 new ClassConstant("Caught exception: ", EnumSet.of(STRING_CONCATENATION_MEMBER))));
     assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForMonitorMethods() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(SyncSample.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants(
+            "org/glodean/constants/samples/SyncSample",
+            Set.of(
+                new ClassConstant(1L, EnumSet.of(STATIC_FIELD_STORE, ARITHMETIC_OPERAND)),
+                new ClassConstant(0L, EnumSet.of(STATIC_FIELD_STORE))));
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForStackOperations() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    ClassFile.of().parse(StackOperationsGenerator.generateClass()),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected = new ClassConstants(StackOperationsGenerator.CLASS_NAME, Set.of());
+    assertEquals(expected, model);
+  }
+
+  static List<Supplier<byte[]>> invalidInputs =
+      List.of(
+          StackOperationsGenerator::generateClassInvalidDupOnCat2,
+          StackOperationsGenerator::generateClassInvalidSwapOnCat2,
+          StackOperationsGenerator::generateClassInvalidDupX1OnCat2,
+          StackOperationsGenerator::generateClassInvalidDup21OnCat2,
+          StackOperationsGenerator::generateClassInvalidStack);
+
+  @ParameterizedTest
+  @FieldSource("invalidInputs")
+  void extractForFailingStackOperations(Supplier<byte[]> code) {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ClassModelExtractor(
+                    ClassFile.of().parse(code.get()),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract());
   }
 }

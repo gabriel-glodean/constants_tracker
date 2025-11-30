@@ -14,8 +14,13 @@ public sealed interface StackAndParameterEntity
     permits Constant,
         ConstantPropagatingEntity,
         ConstantPropagation,
+        ConvertibleEntity,
         NullReference,
         ObjectReference {
+  default SizeType size() {
+    return SizeType.SINGLE_CELL;
+  }
+
   static StackAndParameterEntity convert(ClassDesc type, String tag) {
     if (type.isPrimitive()) {
       return new PrimitiveValue(type, tag);

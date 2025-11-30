@@ -40,16 +40,6 @@ public class AnalysisMerger {
   }
 
   /**
-   * Split the string-concat pattern using the configured splitter.
-   *
-   * @param pattern the concat pattern
-   * @return set of literal constants found in the pattern
-   */
-  public Set<String> splitConstants(String pattern) {
-    return patternSplitter.apply(pattern);
-  }
-
-  /**
    * Merge bytecode-level state information into a multimap of constant value -> usage type.
    *
    * @param code list of code elements in instruction order
@@ -117,7 +107,7 @@ public class AnalysisMerger {
       if (entity instanceof Constant<?> constantEntity) {
         map.put(constantEntity.value(), usageType);
       }
-      if (entity instanceof ConstantPropagation(java.util.Set<Number> values)) {
+      if (entity instanceof ConstantPropagation(java.util.Set<Number> values, _)) {
         values.forEach(v -> map.put(v, usageType));
       }
     }

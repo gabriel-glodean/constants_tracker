@@ -51,24 +51,27 @@ public final class InstructionHandlerRegistry {
         .put(ArrayStoreInstruction.class, new ArrayStoreHandler())
         .put(BranchInstruction.class, new BranchHandler())
         .put(ConstantInstruction.class, new ConstantHandler())
+        .put(ConvertInstruction.class, new ConvertHandler())
         .put(FieldInstruction.class, new FieldHandler())
         .put(IncrementInstruction.class, new IncrementHandler())
         .put(InvokeInstruction.class, new InvokeHandler())
         .put(InvokeDynamicInstruction.class, new InvokeDynamicHandler())
         .put(LoadInstruction.class, new LoadHandler())
+        .put(MonitorInstruction.class, new MonitorInstructionHandler())
         .put(NewMultiArrayInstruction.class, new NewMultiArrayHandler())
         .put(NewObjectInstruction.class, new NewObjectIHandler())
         .put(NewPrimitiveArrayInstruction.class, new NewPrimitiveArrayHandler())
         .put(NewReferenceArrayInstruction.class, new NewReferenceArrayHandler())
+        .put(NopInstruction.class, new NopHandler())
         .put(OperatorInstruction.class, new OperatorHandler())
         .put(ReturnInstruction.class, new ReturnHandler())
         .put(StackInstruction.class, new StackHandler())
         .put(StoreInstruction.class, new StoreHandler())
+        .put(ThrowInstruction.class, new ThrowHandler())
         .put(TypeCheckInstruction.class, new TypeCheckHandler())
         .build();
   }
 
-  @SuppressWarnings("unchecked")
   public InstructionHandler<? super Instruction> findHandlerFor(
       Class<? extends Instruction> runtimeClass) {
     // quick null/assignable guard (caller now should pass a subclass of Instruction)
