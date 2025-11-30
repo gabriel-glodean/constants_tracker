@@ -1,6 +1,7 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import java.lang.classfile.instruction.TableSwitchInstruction;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.State;
 
 /**

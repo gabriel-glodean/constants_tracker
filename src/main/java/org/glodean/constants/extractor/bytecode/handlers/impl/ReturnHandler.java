@@ -1,7 +1,8 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import java.lang.classfile.TypeKind;
 import java.lang.classfile.instruction.ReturnInstruction;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.State;
 
 /** Handler for return instructions; pops the return value when present. */

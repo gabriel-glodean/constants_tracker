@@ -1,6 +1,7 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import java.lang.classfile.instruction.ConvertInstruction;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.ConvertibleEntity;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.State;

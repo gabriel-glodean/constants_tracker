@@ -2,7 +2,6 @@ package org.glodean.constants.extractor.bytecode.handlers;
 
 import com.google.common.collect.ImmutableMap;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.instruction.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,33 +44,7 @@ public final class InstructionHandlerRegistry {
     }
   }
 
-  public static InstructionHandlerRegistry defaultRegistry() {
-    return InstructionHandlerRegistry.builder()
-        .put(ArrayLoadInstruction.class, new ArrayLoadHandler())
-        .put(ArrayStoreInstruction.class, new ArrayStoreHandler())
-        .put(BranchInstruction.class, new BranchHandler())
-        .put(ConstantInstruction.class, new ConstantHandler())
-        .put(ConvertInstruction.class, new ConvertHandler())
-        .put(FieldInstruction.class, new FieldHandler())
-        .put(IncrementInstruction.class, new IncrementHandler())
-        .put(InvokeInstruction.class, new InvokeHandler())
-        .put(InvokeDynamicInstruction.class, new InvokeDynamicHandler())
-        .put(LoadInstruction.class, new LoadHandler())
-        .put(MonitorInstruction.class, new MonitorInstructionHandler())
-        .put(NewMultiArrayInstruction.class, new NewMultiArrayHandler())
-        .put(NewObjectInstruction.class, new NewObjectIHandler())
-        .put(NewPrimitiveArrayInstruction.class, new NewPrimitiveArrayHandler())
-        .put(NewReferenceArrayInstruction.class, new NewReferenceArrayHandler())
-        .put(NopInstruction.class, new NopHandler())
-        .put(OperatorInstruction.class, new OperatorHandler())
-        .put(ReturnInstruction.class, new ReturnHandler())
-        .put(StackInstruction.class, new StackHandler())
-        .put(StoreInstruction.class, new StoreHandler())
-        .put(ThrowInstruction.class, new ThrowHandler())
-        .put(TypeCheckInstruction.class, new TypeCheckHandler())
-        .build();
-  }
-
+  @SuppressWarnings("unchecked")
   public InstructionHandler<? super Instruction> findHandlerFor(
       Class<? extends Instruction> runtimeClass) {
     // quick null/assignable guard (caller now should pass a subclass of Instruction)
@@ -96,7 +69,6 @@ public final class InstructionHandlerRegistry {
         Class<?> c = toCheck.poll();
         if (!visited.add(c)) continue;
         if (!Instruction.class.isAssignableFrom(c)) continue;
-        @SuppressWarnings("unchecked")
         Class<? extends Instruction> cc = (Class<? extends Instruction>) c;
         found = instructionHandlerMap.get(cc);
         if (found != null) break;

@@ -1,10 +1,11 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import static java.lang.constant.ConstantDescs.CD_int;
 
 import com.google.common.collect.Streams;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.OperatorInstruction;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.ConstantPropagatingEntity;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.PrimitiveValue;

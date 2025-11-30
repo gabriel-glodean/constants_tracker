@@ -7,10 +7,7 @@ import java.lang.classfile.Opcode;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Builds a conservative control-flow successor mapping for a method body represented as a list of
@@ -80,7 +77,7 @@ final class SuccessorBuilder {
     return new Successors(successors, addHandlerSuccessors(code, exceptionCatches, successors));
   }
 
-  record Successors(List<List<Integer>> successors, Map<Label, ClassDesc> handlerStarts) {}
+  record Successors(List<List<Integer>> successors, Map<Label, Set<ClassDesc>> handlerStarts) {}
 
   /**
    * Best-effort: map exception-table handlers (if present) to handler indices and add the handler
@@ -97,19 +94,15 @@ final class SuccessorBuilder {
    * @param successors the mutable successor lists to populate; must be parallel to `code`
    * @return a map of handler Labels to their catch types
    */
-  private static Map<Label, ClassDesc> addHandlerSuccessors(
+  private static Map<Label, Set<ClassDesc>> addHandlerSuccessors(
       List<CodeElement> code,
       List<ExceptionCatch> exceptionCatches,
       List<List<Integer>> successors) {
     if (exceptionCatches == null) return Map.of();
-    var handlerMap = new HashMap<Label, ClassDesc>();
+    var handlerMap = new HashMap<Label, Set<ClassDesc>>();
     for (ExceptionCatch exceptionCatch : exceptionCatches) {
-      handlerMap.put(
-          exceptionCatch.handler(),
-          exceptionCatch
-              .catchType()
-              .map(ClassEntry::asSymbol)
-              .orElseGet(() -> ClassDesc.ofInternalName("java/lang/Throwable")));
+      var handler = handlerMap.computeIfAbsent(exceptionCatch.handler(), _ -> new HashSet<>());
+      exceptionCatch.catchType().map(ClassEntry::asSymbol).ifPresent(handler::add);
       int handlerIdx = indexOfLabel(exceptionCatch.handler(), code);
       if (handlerIdx <= 0) {
         continue;

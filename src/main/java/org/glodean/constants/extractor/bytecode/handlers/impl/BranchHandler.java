@@ -1,10 +1,11 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import static java.lang.classfile.Opcode.*;
 
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.BranchInstruction;
 import java.util.EnumSet;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.State;
 
 /**

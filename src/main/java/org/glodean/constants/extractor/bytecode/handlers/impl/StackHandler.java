@@ -1,4 +1,4 @@
-package org.glodean.constants.extractor.bytecode.handlers;
+package org.glodean.constants.extractor.bytecode.handlers.impl;
 
 import static org.apache.commons.lang3.function.Consumers.nop;
 
@@ -7,6 +7,7 @@ import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.StackInstruction;
 import java.util.EnumMap;
 import java.util.function.Consumer;
+import org.glodean.constants.extractor.bytecode.handlers.InstructionHandler;
 import org.glodean.constants.extractor.bytecode.types.SizeType;
 import org.glodean.constants.extractor.bytecode.types.State;
 

@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerRegistry;
+import org.glodean.constants.extractor.bytecode.handlers.impl.DefaultRegistrySource;
 import org.glodean.constants.extractor.bytecode.types.ObjectReference;
 import org.glodean.constants.extractor.bytecode.types.PointsToSet;
 import org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity;
@@ -34,10 +35,10 @@ final class ByteCodeMethodAnalyzer {
   final int maxLocals;
   final List<String> calls = new ArrayList<>();
   private final InstructionHandlerRegistry instructionHandlerRegistry;
-  private final Map<Label, ClassDesc> exceptionHandlerStarts;
+  private final Map<Label, Set<ClassDesc>> exceptionHandlerStarts;
 
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
-    this(cm, mm, InstructionHandlerRegistry.defaultRegistry());
+    this(cm, mm, DefaultRegistrySource.defaultRegistry());
   }
 
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
