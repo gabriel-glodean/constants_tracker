@@ -1,5 +1,6 @@
 package org.glodean.constants.extractor.bytecode;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Label;
@@ -59,22 +60,54 @@ final class SuccessorBuilder {
 
     for (int i = 0; i < code.size(); i++) {
       CodeElement element = code.get(i);
-      if (element instanceof ReturnInstruction || element instanceof ThrowInstruction) {
-        // no successors for returns or throws, assuming no one is catching its own throw
-        continue;
-      }
-      if (element instanceof BranchInstruction bi) {
-        if (bi.opcode() != Opcode.GOTO && bi.opcode() != Opcode.GOTO_W) {
-          successors.get(i).add(i + 1);
+      switch (element) {
+        case LookupSwitchInstruction lsi ->
+            handleSwitchInstruction(i, lsi.defaultTarget(), lsi.cases(), code, successors);
+        case TableSwitchInstruction tsi ->
+            handleSwitchInstruction(i, tsi.defaultTarget(), tsi.cases(), code, successors);
+        case ReturnInstruction _, ThrowInstruction _ -> {}
+        case BranchInstruction bi -> {
+          if (bi.opcode() != Opcode.GOTO && bi.opcode() != Opcode.GOTO_W) {
+            successors.get(i).add(i + 1);
+          }
+          int nextInstruction = indexOfLabel(bi.target(), code);
+          successors.get(i).add(nextInstruction);
         }
-        int nextInstruction = indexOfLabel(bi.target(), code);
-        successors.get(i).add(nextInstruction);
-      } else {
-        successors.get(i).add(i + 1);
+        default -> successors.get(i).add(i + 1);
       }
     }
 
     return new Successors(successors, addHandlerSuccessors(code, exceptionCatches, successors));
+  }
+
+  /**
+   * Resolve the default target and each case target for a switch instruction and add them as
+   * successors for the instruction at index `instrIdx`. The method is conservative: unresolved
+   * labels are represented as -1 and duplicates are avoided.
+   *
+   * @param instrIdx index of the switch instruction in the `code`/`successors` lists
+   * @param defaultLabel default branch Label (may be null)
+   * @param cases list of SwitchCase entries (may be null or empty)
+   * @param code the full code list, used to resolve labels to indices
+   * @param successors the successor lists to modify (must be parallel to `code`)
+   */
+  private static void handleSwitchInstruction(
+      int instrIdx,
+      Label defaultLabel,
+      List<SwitchCase> cases,
+      List<CodeElement> code,
+      List<List<Integer>> successors) {
+
+    List<Integer> succList = successors.get(instrIdx);
+    // Add default target first (even if unresolved -> -1)
+    int defaultIdx = indexOfLabel(defaultLabel, code);
+    succList.add(defaultIdx);
+
+    for (SwitchCase sc : MoreObjects.firstNonNull(cases, List.<SwitchCase>of())) {
+      Label target = sc.target(); // conservative assumption about API
+      int targetIdx = indexOfLabel(target, code);
+      if (!succList.contains(targetIdx)) succList.add(targetIdx);
+    }
   }
 
   record Successors(List<List<Integer>> successors, Map<Label, Set<ClassDesc>> handlerStarts) {}

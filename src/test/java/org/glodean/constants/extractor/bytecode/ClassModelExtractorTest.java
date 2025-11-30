@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.google.common.collect.Iterables;
 import java.io.IOException;
 import java.lang.classfile.ClassFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
 import org.glodean.constants.model.ClassConstant;
@@ -165,5 +167,72 @@ class ClassModelExtractorTest {
                     ClassFile.of().parse(code.get()),
                     new AnalysisMerger(new InternalStringConcatPatternSplitter()))
                 .extract());
+  }
+
+  @Test
+  void extractForNopOperations() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    ClassFile.of().parse(NopGenerator.generateNop()),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected = new ClassConstants(NopGenerator.CLASS_NAME, Set.of());
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForDiscontinuedOperations() throws IOException {
+    byte[] clazz = Files.readAllBytes(Path.of("src/test/resources/samples/JsrExample.class"));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            new ClassModelExtractor(
+                    ClassFile.of().parse(clazz),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract());
+  }
+
+  @Test
+  void extractForConversionMethods() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(ConversionFunctionality.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants("org/glodean/constants/samples/ConversionFunctionality", Set.of());
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForMultiArraysMethods() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(MultiArrayFunctionality.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants("org/glodean/constants/samples/MultiArrayFunctionality", Set.of());
+    assertEquals(expected, model);
+  }
+
+  @Test
+  void extractForSwitchMethods() throws IOException {
+    var model =
+        Iterables.getFirst(
+            new ClassModelExtractor(
+                    convertClassToModel(SwitchFunctionality.class),
+                    new AnalysisMerger(new InternalStringConcatPatternSplitter()))
+                .extract(),
+            null);
+    var expected =
+        new ClassConstants("org/glodean/constants/samples/SwitchFunctionality", Set.of());
+    assertEquals(expected, model);
   }
 }
