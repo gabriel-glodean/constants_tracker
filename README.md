@@ -69,7 +69,7 @@ Once started:
 
 ## 🧪 Tests
 
-- **Bytecode parser:** > 85+ % coverage (JaCoCo report under `build/reports/jacoco`)
+- **Bytecode parser:** > 90+ % coverage (JaCoCo report under `build/reports/jacoco`)
 - **Reactive API:** minimal tests verifying upload and integration
 - **Integration stack:** Terraform / Docker Compose for Solr + Redis environments
 
