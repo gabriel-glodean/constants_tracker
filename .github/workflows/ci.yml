@@ -50,13 +50,13 @@ jobs:
             sleep 2
           done
 
-      - name: Build & test
-        run: ./gradlew clean build
+      - name: Build & test all subprojects
+        run: ./gradlew clean build test --continue
 
   docker-build:
     name: Dockerfile sanity build
     runs-on: ubuntu-latest
-    needs: test  # Only build image if tests passed
+    needs: test
 
     steps:
       - name: Checkout

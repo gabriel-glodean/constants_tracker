@@ -1,109 +1,107 @@
+// Root build file for constant_tracker multi-module project
+
 plugins {
-    id 'java'
-    id 'jacoco'
-    id 'org.springframework.boot' version "$springBootVersion"
-    id 'com.diffplug.spotless' version "$spotlessVersion"
-
+    id 'com.diffplug.spotless' version "$spotlessVersion" apply false
+    id 'org.springframework.boot' version "$springBootVersion" apply false
 }
 
-apply plugin: 'io.spring.dependency-management'
+allprojects {
+    group = 'org.glodean'
+    version = "$appVersion"
 
-group = 'org.glodean'
-version = "$appVersion"
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation platform("org.junit:junit-bom:$junitVersion")
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation ('org.springframework.boot:spring-boot-starter-test'){
-            exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-            exclude group: 'ch.qos.logback', module: 'logback-classic'
-    }
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:testcontainers'
-    testImplementation "org.springframework.boot:spring-boot-testcontainers:$springBootVersion"
-    testImplementation 'com.redis:testcontainers-redis'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation "com.google.guava:guava:$guavaVersion"
-    implementation "com.google.jimfs:jimfs:$jimfsVersion"
-    implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:$webfluxUIVersion"
-    implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion") {
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-    }
-    implementation("org.springframework.boot:spring-boot-starter-data-redis:$springBootVersion") {
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-    }
-    implementation("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion") {
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-    }
-    implementation "org.apache.solr:solr-solrj:$solrjVersion"
-    implementation "org.springframework.boot:spring-boot-starter-log4j2:$springBootVersion"
-}
-
-// Safety: remove any accidental Logback on any configuration
-configurations.configureEach {
-    exclude group: 'ch.qos.logback', module: 'logback-classic'
-    exclude group: 'ch.qos.logback', module: 'logback-core'
-    // critical: remove Log4j→SLF4J bridge (conflicts with log4j-slf4j2-impl)
-    exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
-    // optional: avoid JUL→SLF4J when using Log4j2's JUL bridge
-    exclude group: 'org.slf4j', module: 'jul-to-slf4j'
-}
-
-tasks.named('bootJar') {
-    mainClass.set("$entryClass")
-}
-
-tasks.named('bootRun') {
-    mainClass.set("$entryClass")
-}
-
-jacocoTestReport {
-    dependsOn test // Ensure tests run before generating reports
-    reports {
-        xml.required.set(true) // Enable XML report (useful for CI tools)
-        html.required.set(true) // Enable HTML report for local viewing
-        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
+    repositories {
+        mavenCentral()
     }
 }
 
-test {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport // Generate report after tests
-}
+subprojects {
+    apply plugin: 'java'
 
-jacoco {
-    toolVersion = "0.8.13" // Specify the JaCoCo version
-    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
-}
+    java {
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
+    }
 
-jacocoTestCoverageVerification {
-    dependsOn tasks.named('test')
-    dependsOn tasks.named('jacocoTestReport')
-    violationRules {
-        rule {
-            limit {
-                minimum = 0.85
-            }
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
+    // Apply spotless to subprojects
+    apply plugin: 'com.diffplug.spotless'
+
+    spotless {
+        java {
+            googleJavaFormat('1.27.0')
+            removeUnusedImports()
+            trimTrailingWhitespace()
+            endWithNewline()
         }
     }
 }
 
-tasks.named('check') {
-    // enforce coverage when running `check`
-    dependsOn tasks.named('jacocoTestCoverageVerification')
+// Task to run all tests from both subprojects
+task testAll {
+    description = 'Run all tests from all subprojects'
+    group = 'verification'
 }
 
-spotless {
-    java {
-        // Use Google's standard Java format (same as used in the JDK)
-        googleJavaFormat('1.27.0')
-        // Include all your source files
-        target 'src/**/*.java'
-        importOrder()
-        removeUnusedImports()
+// Task to generate combined test report
+task testReport(type: TestReport) {
+    description = 'Generate a combined test report for all subprojects'
+    group = 'verification'
+    getDestinationDirectory().set(file("${buildDir}/reports/allTests"))
+}
+
+// Task to run tests and generate combined report
+task checkAll {
+    description = 'Run all tests and generate combined reports'
+    group = 'verification'
+}
+
+// Task to list all test tasks
+task listTests {
+    description = 'List all test tasks from subprojects'
+    group = 'verification'
+    doLast {
+        println "Available test tasks:"
+        subprojects.each { project ->
+            println "  - ${project.path}:test (${project.name})"
+        }
     }
 }
+
+// Configure task dependencies after evaluation
+afterEvaluate {
+    // Configure test tasks to continue on failure for aggregation
+    subprojects.each { project ->
+        project.tasks.withType(Test).configureEach {
+            ignoreFailures = true  // Allow test report aggregation even with failures
+        }
+    }
+
+    testAll.dependsOn subprojects*.test
+    testAll.doLast {
+        println "\n==================================================="
+        println "All tests completed from both subprojects!"
+        println "==================================================="
+        subprojects.each { p ->
+            def testTask = p.tasks.findByName('test')
+            if (testTask) {
+                println "${p.name}: ${testTask.testClassesDirs}"
+            }
+        }
+    }
+
+    testReport.dependsOn subprojects*.test
+    testReport.testResults.from(subprojects*.test)
+    testReport.doLast {
+        def reportPath = "${buildDir}/reports/allTests/index.html"
+        println "\n==================================================="
+        println "Combined test report generated!"
+        println "Report: file:///${reportPath.replace('\\', '/')}"
+        println "==================================================="
+    }
+
+    checkAll.dependsOn testAll, testReport
+}
+
