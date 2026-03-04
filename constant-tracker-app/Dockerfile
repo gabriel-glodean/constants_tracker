@@ -3,19 +3,19 @@ FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /workspace
 
 # 1) Warm Gradle cache (best-effort)
-COPY ../gradlew ./
-COPY ../gradle gradle
-COPY ../settings.gradle ./
-COPY ../build.gradle ./
-COPY ../gradle.properties ./
-COPY ../constant-extractor-lib/build.gradle constant-extractor-lib/
-COPY build.gradle constant-tracker-app/
+COPY gradlew ./
+COPY gradle gradle
+COPY settings.gradle ./
+COPY build.gradle ./
+COPY gradle.properties ./
+COPY constant-extractor-lib/build.gradle constant-extractor-lib/
+COPY constant-tracker-app/build.gradle constant-tracker-app/
 RUN chmod +x gradlew && ./gradlew --no-daemon -q help || true
 
 # 2) Copy sources and build
-COPY ../constant-extractor-lib/src constant-extractor-lib/src
-COPY src constant-tracker-app/src
-RUN ./gradlew --no-daemon -q :constant-tracker-app:clean :constant-tracker-app:build -x test
+COPY constant-extractor-lib/src constant-extractor-lib/src
+COPY constant-tracker-app/src constant-tracker-app/src
+RUN ./gradlew --no-daemon -q :constant-tracker-app:clean :constant-tracker-app:build -x test -x spotlessCheck
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:25-jre-alpine

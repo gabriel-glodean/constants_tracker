@@ -47,7 +47,7 @@ engine.
 
 ```bash
 # Build the image
-docker build -t constant_tracker:latest .
+docker build -f constant-tracker-app/Dockerfile -t constant_tracker:latest .
 
 # Option A: Docker Compose
 docker compose up -d

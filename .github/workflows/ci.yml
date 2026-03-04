@@ -63,4 +63,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t constant_tracker:ci .//constant-tracker-app
+        run: docker build -f constant-tracker-app/Dockerfile -t constant_tracker:ci .
