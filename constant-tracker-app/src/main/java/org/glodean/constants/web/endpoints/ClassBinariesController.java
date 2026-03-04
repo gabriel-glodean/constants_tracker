@@ -57,7 +57,8 @@ public record ClassBinariesController(
             IllegalArgumentException.class,
             _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
         .onErrorResume(
-            Exception.class, e -> {
+            Exception.class,
+            e -> {
               e.printStackTrace();
               return Mono.just(ResponseEntity.internalServerError().build());
             });
