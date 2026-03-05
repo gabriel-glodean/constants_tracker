@@ -1,5 +1,4 @@
 - add exception-flow analysis to handle exception handling code, ignored so far
-- handle all the stack operation
 - add document replacement handling
 - debug why terraform fails to create the app docker image
 
