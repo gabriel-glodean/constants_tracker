@@ -1,4 +1,4 @@
-package org.glodean.constants.services;
+package org.glodean.constants.heavy;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,6 +11,7 @@ import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.services.LoggingExtractionNotifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 

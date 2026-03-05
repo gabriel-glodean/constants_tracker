@@ -80,6 +80,50 @@ test {
     finalizedBy jacocoTestReport
 }
 
+// Heavy test task with 16GB memory for JRT filesystem analysis and other resource-intensive tests
+tasks.register('heavyTest', Test) {
+    description = 'Run heavy/resource-intensive tests with 16GB heap memory'
+    group = 'verification'
+
+    useJUnitPlatform()
+
+    // Set 16GB heap memory
+    minHeapSize = "8g"
+    maxHeapSize = "16g"
+
+    // Enable heavy tests via environment variable
+    environment 'java.vm.analyze.rt', 'true'
+
+    // Optional: increase metaspace and other JVM settings for heavy analysis
+    jvmArgs '-XX:MaxMetaspaceSize=512m', '-XX:+UseG1GC'
+
+    // Use the same test source sets as regular tests
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    // Only include tests from the heavy package
+    filter {
+        includeTestsMatching "org.glodean.constants.heavy.*"
+    }
+
+    // Show detailed test output
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
+
+    doFirst {
+        println "Running heavy tests with 16GB heap memory..."
+        println "Environment: java.vm.analyze.rt=true"
+        println "Including only: org.glodean.constants.heavy.*"
+    }
+
+    doLast {
+        println "Heavy tests completed!"
+    }
+}
+
 jacoco {
     toolVersion = "0.8.13"
     reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')

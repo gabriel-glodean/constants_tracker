@@ -16,7 +16,7 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * when possible and models arraylength.
  */
 final class OperatorHandler implements InstructionHandler<OperatorInstruction> {
-  private final EnumSet<Opcode> SKIPPED_OPCODES =
+  private static final EnumSet<Opcode> SKIPPED_OPCODES =
       EnumSet.of(
           Opcode.INEG,
           Opcode.LNEG,
@@ -35,7 +35,7 @@ final class OperatorHandler implements InstructionHandler<OperatorInstruction> {
           Opcode.IXOR,
           Opcode.LXOR);
 
-  private final EnumSet<Opcode> COMPARE_OPCODES =
+  private static final EnumSet<Opcode> COMPARE_OPCODES =
       EnumSet.of(Opcode.INEG, Opcode.LCMP, Opcode.FCMPG, Opcode.FCMPL, Opcode.DCMPG, Opcode.DCMPL);
 
   @Override

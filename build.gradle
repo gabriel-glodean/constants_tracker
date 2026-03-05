@@ -78,7 +78,21 @@ task listTests {
         println "Available test tasks:"
         subprojects.each { project ->
             println "  - ${project.path}:test (${project.name})"
+            if (project.tasks.findByName('heavyTest')) {
+                println "  - ${project.path}:heavyTest (${project.name}) [16GB heap]"
+            }
         }
+    }
+}
+
+// Task to run all heavy tests from subprojects with 16GB memory
+task heavyTestAll {
+    description = 'Run all heavy tests from all subprojects with 16GB heap memory'
+    group = 'verification'
+    doLast {
+        println "\n==================================================="
+        println "All heavy tests completed!"
+        println "==================================================="
     }
 }
 
@@ -102,6 +116,12 @@ afterEvaluate {
                 println "${p.name}: ${testTask.testClassesDirs}"
             }
         }
+    }
+
+    // Configure heavyTestAll dependencies
+    def heavyTestTasks = subprojects.collect { it.tasks.findByName('heavyTest') }.findAll { it != null }
+    if (!heavyTestTasks.isEmpty()) {
+        heavyTestAll.dependsOn heavyTestTasks
     }
 
     testReport.dependsOn subprojects*.test
