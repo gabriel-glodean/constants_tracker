@@ -18,67 +18,53 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'com.diffplug.spotless'
 
-    java {
-        sourceCompatibility = JavaVersion.VERSION_25
-        targetCompatibility = JavaVersion.VERSION_25
-    }
-
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
     }
 
-    spotless {
-        java {
-            target 'src/**/*.java'
-            googleJavaFormat('1.27.0')
-            removeUnusedImports()
-            trimTrailingWhitespace()
-            endWithNewline()
-        }
-    }
 }
 
 // Root level spotless task to run on all subprojects
 tasks.register('spotlessApplyAll') {
     description = 'Apply Spotless formatting to all subprojects'
     group = 'formatting'
-    dependsOn subprojects*.tasks*.findByName('spotlessApply')
+    dependsOn subprojects.collect { it.tasks.named('spotlessApply')}
 }
 
 tasks.register('spotlessCheckAll') {
     description = 'Check Spotless formatting in all subprojects'
     group = 'verification'
-    dependsOn subprojects*.tasks*.findByName('spotlessCheck')
+    dependsOn subprojects.collect { it.tasks.named('spotlessCheck')}
 }
 
 // Task to run all tests from both subprojects
-task testAll {
+tasks.register('testAll') {
     description = 'Run all tests from all subprojects'
     group = 'verification'
 }
 
 // Task to generate combined test report
-task testReport(type: TestReport) {
+tasks.register('testReport', TestReport) {
     description = 'Generate a combined test report for all subprojects'
     group = 'verification'
-    getDestinationDirectory().set(file("${buildDir}/reports/allTests"))
+    destinationDirectory.set(file("${layout.buildDirectory.get()}/reports/allTests"))
 }
 
 // Task to run tests and generate combined report
-task checkAll {
+tasks.register('checkAll') {
     description = 'Run all tests and generate combined reports'
     group = 'verification'
 }
 
 // Task to list all test tasks
-task listTests {
+tasks.register('listTests') {
     description = 'List all test tasks from subprojects'
     group = 'verification'
     doLast {
         println "Available test tasks:"
         subprojects.each { project ->
             println "  - ${project.path}:test (${project.name})"
-            if (project.tasks.findByName('heavyTest')) {
+            if (project.tasks.names.contains('heavyTest')) {
                 println "  - ${project.path}:heavyTest (${project.name}) [16GB heap]"
             }
         }
@@ -86,7 +72,7 @@ task listTests {
 }
 
 // Task to run all heavy tests from subprojects with 16GB memory
-task heavyTestAll {
+tasks.register('heavyTestAll') {
     description = 'Run all heavy tests from all subprojects with 16GB heap memory'
     group = 'verification'
     doLast {
@@ -94,45 +80,4 @@ task heavyTestAll {
         println "All heavy tests completed!"
         println "==================================================="
     }
-}
-
-// Configure task dependencies after evaluation
-afterEvaluate {
-    // Configure test tasks to continue on failure for aggregation
-    subprojects.each { project ->
-        project.tasks.withType(Test).configureEach {
-            ignoreFailures = true  // Allow test report aggregation even with failures
-        }
-    }
-
-    testAll.dependsOn subprojects*.test
-    testAll.doLast {
-        println "\n==================================================="
-        println "All tests completed from both subprojects!"
-        println "==================================================="
-        subprojects.each { p ->
-            def testTask = p.tasks.findByName('test')
-            if (testTask) {
-                println "${p.name}: ${testTask.testClassesDirs}"
-            }
-        }
-    }
-
-    // Configure heavyTestAll dependencies
-    def heavyTestTasks = subprojects.collect { it.tasks.findByName('heavyTest') }.findAll { it != null }
-    if (!heavyTestTasks.isEmpty()) {
-        heavyTestAll.dependsOn heavyTestTasks
-    }
-
-    testReport.dependsOn subprojects*.test
-    testReport.testResults.from(subprojects*.test)
-    testReport.doLast {
-        def reportPath = "${buildDir}/reports/allTests/index.html"
-        println "\n==================================================="
-        println "Combined test report generated!"
-        println "Report: file:///${reportPath.replace('\\', '/')}"
-        println "==================================================="
-    }
-
-    checkAll.dependsOn testAll, testReport
 }
