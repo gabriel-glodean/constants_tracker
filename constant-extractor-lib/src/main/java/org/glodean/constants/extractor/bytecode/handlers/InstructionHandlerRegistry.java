@@ -5,7 +5,29 @@ import java.lang.classfile.Instruction;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Registry that maps instruction classes to their corresponding handlers. */
+/**
+ * Registry that maps instruction classes to their corresponding handlers.
+ *
+ * <p>This registry provides efficient lookup of {@link InstructionHandler}s based on
+ * runtime instruction types. It supports:
+ * <ul>
+ *   <li>Direct class-to-handler mappings (registered via builder)</li>
+ *   <li>Inheritance-based lookup (finds handler for superclass if exact match not found)</li>
+ *   <li>Concurrent caching (avoids repeated reflection-based searches)</li>
+ * </ul>
+ *
+ * <p><b>Thread-safety:</b> The registry is immutable after construction. The internal cache
+ * uses {@link ConcurrentHashMap} for thread-safe handler resolution during parallel analysis.
+ *
+ * <p><b>Example usage:</b>
+ * <pre>{@code
+ * InstructionHandlerRegistry registry = InstructionHandlerRegistry.builder()
+ *     .put(LoadInstruction.class, new LoadHandler())
+ *     .put(StoreInstruction.class, new StoreHandler())
+ *     .build();
+ * InstructionHandler handler = registry.findHandlerFor(instruction.getClass());
+ * }</pre>
+ */
 @SuppressWarnings("NullableProblems")
 public final class InstructionHandlerRegistry {
   private final ImmutableMap<Class<? extends Instruction>, InstructionHandler<?>>

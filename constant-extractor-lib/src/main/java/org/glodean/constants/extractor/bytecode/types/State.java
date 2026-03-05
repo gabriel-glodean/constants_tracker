@@ -5,8 +5,21 @@ import java.util.*;
 /**
  * Represents the per-instruction abstract program state used by the bytecode analyzer.
  *
- * <p>Contains locals, operand stack, heap-like maps for fields/statics/array elements and
- * operations to copy and union states.
+ * <p>This is the core data structure for the dataflow analysis. It models:
+ * <ul>
+ *   <li><b>locals</b>: Local variable slots (points-to sets for each variable)</li>
+ *   <li><b>stack</b>: Operand stack (points-to sets for each stack position)</li>
+ *   <li><b>heap</b>: Instance field values (object ref → field → points-to set)</li>
+ *   <li><b>statics</b>: Static field values (class.field → points-to set)</li>
+ *   <li><b>arrayElements</b>: Array element values (array ref → points-to set)</li>
+ * </ul>
+ *
+ * <p>The analysis is flow-sensitive: each bytecode instruction has an IN state (before)
+ * and OUT state (after). States are joined at control flow merge points using
+ * {@link #unionWith(State)}.
+ *
+ * <p><b>Points-to sets</b> track possible runtime values. For constants, the set contains
+ * a {@link Constant}; for objects, it contains {@link ObjectReference}s.
  */
 public final class State {
   public final List<PointsToSet> stack;

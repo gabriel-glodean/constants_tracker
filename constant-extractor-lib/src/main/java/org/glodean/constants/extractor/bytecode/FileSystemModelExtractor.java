@@ -20,6 +20,23 @@ import org.glodean.constants.model.ClassConstants;
 /**
  * Walks a provided {@link FileSystem} and extracts {@link ClassConstants} for every discovered
  * {@code .class} file using an {@link AnalysisMerger}.
+ *
+ * <p>This extractor is designed for bulk analysis of JAR files or directory trees. It:
+ * <ul>
+ *   <li>Uses parallel processing (virtual threads) for performance on large codebases</li>
+ *   <li>Reports progress via {@link ExtractionNotifier} callbacks</li>
+ *   <li>Supports filtering paths (e.g., excluding test classes or specific packages)</li>
+ *   <li>Handles errors gracefully, continuing analysis of remaining classes</li>
+ * </ul>
+ *
+ * <p><b>Example usage:</b>
+ * <pre>{@code
+ * FileSystem jarFS = FileSystems.newFileSystem(jarPath, (ClassLoader)null);
+ * AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
+ * FileSystemModelExtractor extractor = new FileSystemModelExtractor(
+ *     jarFS, merger, "META-INF/", myNotifier);
+ * Collection<ClassConstants> results = extractor.extract();
+ * }</pre>
  */
 public final class FileSystemModelExtractor implements ModelExtractor {
   private final FileSystem fileSystem;
@@ -27,6 +44,14 @@ public final class FileSystemModelExtractor implements ModelExtractor {
   private final Predicate<Path> ignorePathPredicate;
   private final ExtractionNotifier notifier;
 
+  /**
+   * Creates an extractor with path filtering.
+   *
+   * @param fileSystem the file system to walk (e.g., JAR file system or default FS)
+   * @param merger the merger used to convert bytecode states to constant usage mappings
+   * @param ignorePathPrefix path prefix to exclude (e.g., "META-INF/" or "test/"), null to include all
+   * @param notifier callback for progress and error notifications
+   */
   public FileSystemModelExtractor(
       FileSystem fileSystem,
       AnalysisMerger merger,
@@ -45,6 +70,13 @@ public final class FileSystemModelExtractor implements ModelExtractor {
     this.ignorePathPredicate = predicate;
   }
 
+  /**
+   * Creates an extractor without path filtering (analyzes all .class files).
+   *
+   * @param fileSystem the file system to walk
+   * @param merger the merger used to convert bytecode states to constant usage mappings
+   * @param notifier callback for progress and error notifications
+   */
   public FileSystemModelExtractor(
       FileSystem fileSystem, AnalysisMerger merger, ExtractionNotifier notifier) {
     this(fileSystem, merger, null, notifier);

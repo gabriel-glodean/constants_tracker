@@ -20,8 +20,21 @@ import org.springframework.stereotype.Service;
 
 /**
  * Concrete service implementation that provides ModelExtractor instances for different input
- * formats (raw class file bytes or jar/zip bytes). Uses Jimfs to load jar contents into an
- * in-memory filesystem.
+ * formats (raw class file bytes or jar/zip bytes).
+ *
+ * <p>This service acts as a factory for creating configured {@link ModelExtractor}s. Key features:
+ * <ul>
+ *   <li><b>Class file support:</b> Directly parses .class bytes using Java 25 Class-File API</li>
+ *   <li><b>JAR file support:</b> Uses Jimfs (in-memory filesystem) to expand JAR contents</li>
+ *   <li><b>Dependency injection:</b> Shares a single {@link AnalysisMerger} across all extractors</li>
+ * </ul>
+ *
+ * <p><b>Why Jimfs?</b> Loading JAR files into an in-memory filesystem allows the
+ * {@link FileSystemModelExtractor} to walk and process all contained classes without
+ * disk I/O overhead. This is especially beneficial when analyzing many JARs repeatedly
+ * (e.g., CI/CD pipelines).
+ *
+ * @param merger the analysis merger shared by all created extractors
  */
 @Service
 public record ConcreteExtractionService(@Autowired AnalysisMerger merger)

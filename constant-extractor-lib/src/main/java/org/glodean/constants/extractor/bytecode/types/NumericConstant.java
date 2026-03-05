@@ -3,7 +3,20 @@ package org.glodean.constants.extractor.bytecode.types;
 import com.google.common.collect.ImmutableSet;
 import java.lang.classfile.TypeKind;
 
-/** Numeric constant wrapper supporting propagation operations. */
+/**
+ * Numeric constant wrapper supporting propagation operations.
+ *
+ * <p>Represents a numeric constant value (Integer, Long, Float, Double) discovered in bytecode.
+ * This class supports:
+ * <ul>
+ *   <li><b>Constant propagation:</b> Merging multiple possible numeric values at phi nodes</li>
+ *   <li><b>Type conversion:</b> Modeling JVM numeric widening/narrowing (e.g., int → long)</li>
+ *   <li><b>Size tracking:</b> Single-cell (int, float) vs double-cell (long, double) values</li>
+ * </ul>
+ *
+ * <p><b>Example:</b> If a local variable can be either {@code 42} or {@code 100} at a merge
+ * point, propagation creates a {@link ConstantPropagation} containing both values.
+ */
 public final class NumericConstant extends Constant<Number>
     implements ConstantPropagatingEntity, ConvertibleEntity {
   public NumericConstant(Number value) {

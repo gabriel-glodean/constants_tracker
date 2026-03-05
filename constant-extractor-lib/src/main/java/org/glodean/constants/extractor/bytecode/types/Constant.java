@@ -5,7 +5,18 @@ import java.util.Objects;
 /**
  * Base class for immutable constant values tracked by the analysis (numeric or object).
  *
- * @param <E> the underlying value type
+ * <p>In the abstract interpretation, constants represent compile-time known values that
+ * propagate through the program. This sealed hierarchy ensures type safety:
+ * <ul>
+ *   <li>{@link NumericConstant}: Integer, Long, Float, Double values</li>
+ *   <li>{@link ObjectConstant}: String literals, Class references, MethodType/MethodHandle constants</li>
+ * </ul>
+ *
+ * <p>Constants are distinguished from {@link ObjectReference}s: constants have known values
+ * at analysis time, while object references represent runtime-allocated objects with unknown
+ * identity (tracked by allocation site).
+ *
+ * @param <E> the underlying value type (Number for numeric constants, Object for object constants)
  */
 public abstract sealed class Constant<E> implements StackAndParameterEntity
     permits NumericConstant, ObjectConstant {

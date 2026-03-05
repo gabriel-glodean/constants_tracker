@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
@@ -54,19 +55,18 @@ public class SolrService implements ClassConstantsStore {
     parentDocument.setField("doc_type", "parent");
     parentDocument.setField("class_name", constants.name());
     parentDocument.setField("class_version", version);
-    int index = 0;
     for (var constant : constants.constants()) {
       var value = constant.value().toString();
-      for (var usage : constant.constantData()) {
+        constant.usages().stream().map(ClassConstant.ConstantUsage::structuralType).distinct()
+              .forEach(usage -> {
         SolrInputDocument childDocument = new SolrInputDocument();
         childDocument.setField("doc_type", "child");
         childDocument.setField("constant_value_s", value);
         childDocument.setField("usage_type_s", usage.name());
-        childDocument.setField("id", id + ":" + index);
+        childDocument.setField("id", id + ":" + System.nanoTime());
         childDocument.setField("_root_", id);
         parentDocument.addChildDocument(childDocument);
-        index++;
-      }
+      });
     }
     var request = new UpdateRequest();
     request.add(parentDocument);

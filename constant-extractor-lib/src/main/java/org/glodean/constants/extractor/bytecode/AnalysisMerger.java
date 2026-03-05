@@ -44,8 +44,20 @@ public class AnalysisMerger {
   /**
    * Merge bytecode-level state information into a multimap of constant value -> usage type.
    *
+   * <p>This method examines each instruction along with its IN state (the abstract state
+   * before the instruction executes) to determine:
+   * <ul>
+   *   <li>Which constants flow into the instruction (from stack or locals)</li>
+   *   <li>What usage type applies (e.g., is it a method parameter? field store?)</li>
+   *   <li>Whether string-concat patterns should be split into literals</li>
+   * </ul>
+   *
+   * <p>The resulting multimap may contain duplicate usage types per constant if the same
+   * constant appears in multiple contexts within the method.
+   *
    * @param code list of code elements in instruction order
-   * @param in corresponding IN states for each instruction
+   * @param in corresponding IN states for each instruction (must match code length)
+   * @return multimap of constant values to their structural usage types
    */
   public Multimap<Object, ClassConstant.UsageType> merge(
       List<CodeElement> code, final List<State> in) {

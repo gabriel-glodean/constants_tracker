@@ -7,8 +7,21 @@ import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.ExtractionNotifier;
 
 /**
- * An {@link ExtractionNotifier} implementation that logs all extraction events using Log4j. This
- * provides the same logging behavior as the original logger-based implementation.
+ * An {@link ExtractionNotifier} implementation that logs all extraction events using Log4j.
+ *
+ * <p>This notifier provides visibility into the extraction process through structured logging
+ * at various levels:
+ * <ul>
+ *   <li><b>INFO:</b> Extraction start, progress updates (every N classes)</li>
+ *   <li><b>DEBUG:</b> Individual class processing errors (continue on error)</li>
+ *   <li><b>TRACE:</b> Every class file being processed (verbose)</li>
+ *   <li><b>WARN:</b> Future/async task failures</li>
+ *   <li><b>ERROR:</b> Critical failures preventing continuation</li>
+ * </ul>
+ *
+ * <p>This implementation is production-ready and used by default in
+ * {@link ConcreteExtractionService}. For testing or custom monitoring, implement
+ * {@link ExtractionNotifier} directly.
  */
 public class LoggingExtractionNotifier implements ExtractionNotifier {
   private static final Logger logger = LogManager.getLogger(LoggingExtractionNotifier.class);

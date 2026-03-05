@@ -7,9 +7,21 @@ import java.util.HashSet;
  * Convenience set type representing possible abstract objects/values a variable or stack slot can
  * point to.
  *
- * <p>A widening limit ({@link #MAX_SIZE}) caps the maximum number of entries. Once the cap is
- * reached, further additions are silently dropped. This guarantees finite lattice height and
- * therefore worklist convergence, at the cost of precision for extremely polymorphic slots.
+ * <p>In the points-to analysis, each local variable or stack position holds a {@code PointsToSet}
+ * containing all possible runtime values at that program point. For example:
+ * <ul>
+ *   <li>A constant-initialized variable: {@code {Constant("hello")}}</li>
+ *   <li>A phi-merged variable: {@code {Constant("hello"), Constant("world")}}</li>
+ *   <li>An object reference: {@code {ObjectReference(String, "local#1")}}</li>
+ * </ul>
+ *
+ * <p><b>Widening:</b> A size limit ({@link #MAX_SIZE}) caps the maximum number of entries.
+ * Once the cap is reached, further additions are silently dropped (approximating "Top" in
+ * lattice terms). This guarantees termination of the dataflow analysis—without it, large
+ * switch statements or loops could create unbounded sets, preventing convergence.
+ *
+ * <p>The widening threshold is tuned for typical Java methods: high enough to be precise
+ * (32 distinct values), but low enough to ensure fast convergence even in pathological cases.
  */
 public final class PointsToSet extends HashSet<StackAndParameterEntity> {
 
