@@ -21,7 +21,6 @@ import java.util.Set;
  *   <li>Logger.trace(), Logger.fatal()</li>
  *   <li>System.out.println(), System.err.println()</li>
  * </ul>
- * </p>
  *
  * <p><strong>Usage:</strong></p>
  * <pre>

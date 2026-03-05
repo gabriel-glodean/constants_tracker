@@ -12,7 +12,6 @@ import org.glodean.constants.model.ClassConstant.UsageType;
  * This interpreter performs minimal processing and is useful as a fallback or placeholder.
  * It creates basic usage records with UNKNOWN semantic type and cannot interpret any
  * specific usage types by default.
- * </p>
  *
  * <p>
  * Use this implementation when:
@@ -21,7 +20,6 @@ import org.glodean.constants.model.ClassConstant.UsageType;
  *   <li>You want to disable interpretation temporarily</li>
  *   <li>You're testing infrastructure without semantic analysis</li>
  * </ul>
- * </p>
  *
  * <p><strong>Example usage:</strong></p>
  * <pre>
@@ -49,7 +47,6 @@ public class NoOpConstantUsageInterpreter implements ConstantUsageInterpreter {
      *   <li>Confidence: 0.0 (no confidence in classification)</li>
      *   <li>Metadata: empty map</li>
      * </ul>
-     * </p>
      *
      * @param location the location where the constant is used
      * @param context additional context information (ignored)
