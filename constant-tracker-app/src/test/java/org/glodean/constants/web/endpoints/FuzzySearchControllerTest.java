@@ -154,4 +154,24 @@ class FuzzySearchControllerTest {
         .expectStatus()
         .is5xxServerError();
   }
+
+  // ── blank parameter validation ────────────────────────────────────────────
+
+  @Test
+  void blankProjectReturns400() {
+    web.get()
+        .uri("/search?project=&term=SELECT")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void blankTermReturns400() {
+    web.get()
+        .uri("/search?project=my-app&term=")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
 }
