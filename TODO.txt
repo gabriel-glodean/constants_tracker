@@ -1,5 +1,24 @@
-- add exception-flow analysis to handle exception handling code, ignored so far
-- add document replacement handling
-- debug why terraform fails to create the app docker image
+## V1 — Ship a complete, demoable tool (target: 2-3 weekends)
 
-more? of course.
+- implement 4-5 more interpreters (SQL, URL, file path, config key, error message)    P0
+  → the entire semantic layer is dead weight until these exist
+- implement the constant diff analysis (compare two versions of the same class)        P0
+  → this is the killer feature; it's why version tracking exists
+- add a minimal search UI (single page, hits /search, shows results)                   P0
+  → without this you can't demo the tool to anyone non-technical
+- externalize credentials (env vars / Spring profiles, not hardcoded in YAML)           P0
+  → any reviewer will notice hardcoded postgres/postgres
+
+## V2 — Depth features
+
+- implement similar constant detection                                                  P1
+- implement the constant split analysis                                                 P1
+- implement the constant merge analysis                                                 P1
+- add Micrometer/Prometheus metrics for analysis throughput + latency                    P2
+
+## V3 — Polish
+
+- add a WebUI to display full analysis results (beyond search)                          P2
+- debug why terraform fails to create the app docker image                              P3
+- add exception-flow analysis to handle exception handling code                         P4
+- split lib into model and bytecode analysis, to have a hook for Java source analysis   P4
