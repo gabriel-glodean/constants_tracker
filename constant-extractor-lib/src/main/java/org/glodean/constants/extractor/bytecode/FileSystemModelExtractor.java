@@ -82,11 +82,25 @@ public final class FileSystemModelExtractor implements ModelExtractor {
     this(fileSystem, merger, null, notifier);
   }
 
+  /**
+   * Creates an extractor that ignores a specific path prefix and uses a silent notifier.
+   *
+   * @param fileSystem       the file system to walk
+   * @param merger           the merger used to convert bytecode states to constant usage mappings
+   * @param ignorePathPrefix path prefix to exclude (e.g., {@code "META-INF/"}); {@code null}
+   *                         to include all paths
+   */
   public FileSystemModelExtractor(
       FileSystem fileSystem, AnalysisMerger merger, String ignorePathPrefix) {
     this(fileSystem, merger, ignorePathPrefix, new ExtractionNotifier.Silent());
   }
 
+  /**
+   * Creates an extractor without path filtering and without a notifier.
+   *
+   * @param fileSystem the file system to walk
+   * @param merger     the merger used to convert bytecode states to constant usage mappings
+   */
   public FileSystemModelExtractor(FileSystem fileSystem, AnalysisMerger merger) {
     this(fileSystem, merger, null, new ExtractionNotifier.Silent());
   }

@@ -42,6 +42,11 @@ public record ObjectReference(ClassDesc descriptor, String site)
     return descriptor.descriptorString() + "@" + site;
   }
 
+  /**
+   * Returns {@code true} if this reference points to an array type.
+   *
+   * @return {@code true} if {@link #descriptor()} is an array descriptor
+   */
   public boolean isArrayReference() {
     return descriptor.isArray();
   }

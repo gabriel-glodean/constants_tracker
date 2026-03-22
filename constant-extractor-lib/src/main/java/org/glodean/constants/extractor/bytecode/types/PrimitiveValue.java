@@ -6,7 +6,16 @@ import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.util.Objects;
 
-/** Representation of a primitive (non-reference) value in the abstract state. */
+/**
+ * Represents a primitive (non-reference, non-constant) JVM value in the abstract state.
+ *
+ * <p>Used when the analysis knows the type of a value (e.g., {@code int}, {@code double})
+ * but does not know its compile-time magnitude. Common sources include method return values,
+ * arithmetic results that could not be constant-folded, and untracked local variables.
+ *
+ * @param descriptor the JVM primitive type descriptor (e.g., {@link java.lang.constant.ConstantDescs#CD_int})
+ * @param site       allocation-site tag that identifies where this value was produced
+ */
 public record PrimitiveValue(ClassDesc descriptor, String site)
     implements ConstantPropagatingEntity, ConvertibleEntity {
 

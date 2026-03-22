@@ -28,11 +28,22 @@ public final class State {
   public final Map<StaticFieldKey, PointsToSet> statics = new HashMap<>();
   public final Map<StackAndParameterEntity, PointsToSet> arrayElements = new HashMap<>();
 
+  /**
+   * Creates a new {@code State} with {@code maxLocals} local variable slots and an empty stack.
+   *
+   * @param maxLocals the number of local variable slots (from the method's {@code Code} attribute)
+   */
   public State(int maxLocals) {
     this.locals = new ArrayList<>(Collections.nCopies(maxLocals, null));
     this.stack = new ArrayList<>();
   }
 
+  /**
+   * Returns a deep copy of this state; all points-to sets are cloned so that mutations
+   * to the copy do not affect the original.
+   *
+   * @return an independent deep copy of this {@code State}
+   */
   public State copy() {
     State s = new State(locals.size());
     for (int i = 0; i < locals.size(); i++)
@@ -45,7 +56,16 @@ public final class State {
     return s;
   }
 
-  /** Component-wise union; returns true iff any set strictly increased. */
+  /**
+   * Performs a component-wise set-union of {@code src} into this state.
+   *
+   * <p>For each component (locals, stack, heap, statics, arrayElements) the points-to sets
+   * of {@code src} are merged into the corresponding sets of {@code this}. The widening
+   * threshold in {@link PointsToSet} guarantees that this operation always terminates.
+   *
+   * @param src the state to merge from; must have the same number of local-variable slots
+   * @return {@code true} if any points-to set in this state strictly grew as a result
+   */
   public boolean unionWith(State src) {
     boolean changed = false;
     // Locals

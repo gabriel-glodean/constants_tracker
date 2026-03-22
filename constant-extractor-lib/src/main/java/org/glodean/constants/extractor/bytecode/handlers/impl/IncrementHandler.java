@@ -15,6 +15,14 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * using constant propagation semantics.
  */
 final class IncrementHandler implements InstructionHandler<IncrementInstruction> {
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Propagates the increment constant through every {@link ConstantPropagatingEntity}
+   * in the local variable's points-to set. If no propagated values result (e.g., the local
+   * is an opaque reference), the local is replaced with a fresh {@link PrimitiveValue}.
+   */
   @Override
   public void handle(IncrementInstruction ii, State state, String tag) {
     int var = ii.slot();

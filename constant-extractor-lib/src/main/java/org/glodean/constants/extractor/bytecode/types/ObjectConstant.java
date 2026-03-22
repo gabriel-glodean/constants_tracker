@@ -15,6 +15,13 @@ package org.glodean.constants.extractor.bytecode.types;
  * values at compile-time, while references represent runtime-allocated objects.
  */
 public final class ObjectConstant extends Constant<Object> {
+
+  /**
+   * Creates an {@code ObjectConstant} wrapping the given compile-time object value.
+   *
+   * @param value the constant object value (e.g., a {@link String} literal or
+   *              a {@link java.lang.constant.ClassDesc})
+   */
   public ObjectConstant(Object value) {
     super(value);
   }

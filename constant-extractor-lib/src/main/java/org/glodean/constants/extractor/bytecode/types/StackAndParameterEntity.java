@@ -37,10 +37,28 @@ public sealed interface StackAndParameterEntity
         ConvertibleEntity,
         NullReference,
         ObjectReference {
+
+  /**
+   * Returns the JVM stack cell size of this entity.
+   *
+   * @return {@link SizeType#SINGLE_CELL} for most types; implementations may override
+   *         to return {@link SizeType#DOUBLE_CELL} for {@code long} and {@code double}
+   */
   default SizeType size() {
     return SizeType.SINGLE_CELL;
   }
 
+  /**
+   * Creates the appropriate abstract entity for a given JVM type descriptor and site tag.
+   *
+   * <p>Primitive types yield a {@link PrimitiveValue}; reference types yield an
+   * {@link ObjectReference}. {@code void} is not supported and throws.
+   *
+   * @param type the JVM type descriptor (must not be {@code void})
+   * @param tag  allocation-site tag used to distinguish entities created at different points
+   * @return a new {@link StackAndParameterEntity} of the appropriate subtype
+   * @throws IllegalArgumentException if {@code type} is the {@code void} descriptor
+   */
   static StackAndParameterEntity convert(ClassDesc type, String tag) {
     if (type.isPrimitive()) {
       return new PrimitiveValue(type, tag);

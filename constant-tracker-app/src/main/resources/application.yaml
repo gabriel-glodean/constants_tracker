@@ -11,6 +11,17 @@ spring:
   data.redis:
     host: localhost
     port: 6379
+  # R2DBC – reactive PostgreSQL connection (full model store)
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/constant_tracker
+    username: postgres
+    password: postgres
+  # Flyway – JDBC-based schema migrations (separate from R2DBC)
+  flyway:
+    url: jdbc:postgresql://localhost:5432/constant_tracker
+    user: postgres
+    password: postgres
+    locations: classpath:db/migration
 logging.level:
   org.springframework.web: DEBUG
 management:
@@ -27,4 +38,3 @@ management:
 constants:
   solr:
     url: http://localhost:8983/solr/
-

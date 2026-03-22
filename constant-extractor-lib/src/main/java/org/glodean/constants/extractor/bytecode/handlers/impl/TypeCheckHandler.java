@@ -12,6 +12,16 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * and pushes a typed value for instanceof results.
  */
 final class TypeCheckHandler implements InstructionHandler<TypeCheckInstruction> {
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>For {@code instanceof}: pops the subject reference and pushes a typed
+   * {@link org.glodean.constants.extractor.bytecode.types.StackAndParameterEntity}
+   * representing the boolean result.
+   * For {@code checkcast}: the stack is left unchanged (cast does not change the
+   * points-to information conservatively).
+   */
   @Override
   public void handle(TypeCheckInstruction tc, State state, String tag) {
     if (tc.opcode() == Opcode.INSTANCEOF) {

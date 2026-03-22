@@ -8,6 +8,12 @@ import java.util.Set;
 /** Represents a propagated set of numeric constants (merge of multiple numeric constants). */
 public record ConstantPropagation(Set<Number> values, SizeType size)
     implements StackAndParameterEntity, ConstantPropagatingEntity, ConvertibleEntity {
+
+  /**
+   * Creates a single-cell {@code ConstantPropagation} from the given value set.
+   *
+   * @param values the set of possible numeric values
+   */
   public ConstantPropagation(Set<Number> values) {
     this(values, SizeType.SINGLE_CELL);
   }
@@ -34,6 +40,13 @@ public record ConstantPropagation(Set<Number> values, SizeType size)
     return values.toString();
   }
 
+  /**
+   * Returns a copy of this {@code ConstantPropagation} with the given {@link SizeType},
+   * or {@code this} if the size is already correct.
+   *
+   * @param size the desired cell size
+   * @return a {@code ConstantPropagation} with the requested size
+   */
   public ConstantPropagation toSize(SizeType size) {
     if (this.size == size) {
       return this;

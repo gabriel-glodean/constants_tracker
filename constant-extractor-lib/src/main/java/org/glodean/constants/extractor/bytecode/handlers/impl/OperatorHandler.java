@@ -38,6 +38,19 @@ final class OperatorHandler implements InstructionHandler<OperatorInstruction> {
   private static final EnumSet<Opcode> COMPARE_OPCODES =
       EnumSet.of(Opcode.INEG, Opcode.LCMP, Opcode.FCMPG, Opcode.FCMPL, Opcode.DCMPG, Opcode.DCMPL);
 
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Handles four categories:
+   * <ul>
+   *   <li>Unary/shift/bit opcodes ({@link #SKIPPED_OPCODES}) — no stack change (nop).</li>
+   *   <li>Compare opcodes ({@link #COMPARE_OPCODES}) — pops two, pushes int result.</li>
+   *   <li>{@code arraylength} — pops the array reference, pushes int length.</li>
+   *   <li>Binary arithmetic — pops two operands, performs constant propagation if both
+   *       are {@link ConstantPropagatingEntity}s, otherwise pushes a typed primitive.</li>
+   * </ul>
+   */
   @Override
   public void handle(OperatorInstruction oi, State state, String tag) {
     var opcode = oi.opcode();

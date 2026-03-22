@@ -20,6 +20,13 @@ final class BranchHandler implements InstructionHandler<BranchInstruction> {
       EnumSet.of(
           IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE);
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Pops one operand for single-operand conditional branches (e.g., IFEQ),
+   * two operands for comparison branches (e.g., IF_ICMPEQ), and nothing for
+   * unconditional GOTOs.
+   */
   @Override
   public void handle(BranchInstruction bi, State state, String tag) {
     var opcode = bi.opcode();

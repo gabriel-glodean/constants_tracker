@@ -1,40 +1,35 @@
 package org.glodean.constants.web.endpoints;
 
-import static org.glodean.constants.store.Constants.DATA_LOCATION;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.EnumSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
-import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.model.ClassConstant;
-import org.junit.jupiter.api.BeforeEach;
+import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.store.ClassConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 
 @WebFluxTest(controllers = ClassBinariesController.class)
 @Import(InMemoryCacheTestConfig.class)
 @TestPropertySource(
     properties = {
       "management.endpoints.enabled-by-default=false",
-      "management.endpoint.health.enabled=false"
+      "management.endpoint.health.enabled=false",
+      "constants.solr.url=http://localhost:8983/solr/"
     })
 class ClassBinariesControllerTest {
   public static final String GET_URL =
@@ -42,27 +37,16 @@ class ClassBinariesControllerTest {
   public static final String PUT_URL = "/class?project=demo&version=1";
   public static final String POST_URL = "/class?project=demo";
   public static final Path SAMPLE_PATH = Path.of("src/test/resources/samples/Greeter.class");
+
   @Autowired WebTestClient web;
 
-  @MockitoBean RedisConnectionFactory redisConnectionFactory;
-
-  @MockitoBean HttpSolrClientBase solrClient;
-
-  @Autowired CacheManager cacheManager;
-
-  Map<String, AtomicLong> store;
-
-  @BeforeEach
-  void setup() {
-    store = new ConcurrentHashMap<>();
-    Objects.requireNonNull(cacheManager.getCache(DATA_LOCATION)).clear();
-  }
+  @MockitoBean ClassConstantsStore storage;
 
   @Test
   void storeClass() throws IOException {
     byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
+    when(storage.store(any(ClassConstants.class), anyString()))
+        .thenAnswer(inv -> Mono.just(inv.getArgument(0, ClassConstants.class)));
     web.post()
         .uri(POST_URL)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -76,8 +60,6 @@ class ClassBinariesControllerTest {
   void storeBadClass() throws IOException {
     byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
     clazz[0] = 'x';
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
     web.post()
         .uri(POST_URL)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -90,8 +72,8 @@ class ClassBinariesControllerTest {
   @Test
   void storeClassWithVersion() throws IOException {
     byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
+    when(storage.store(any(ClassConstants.class), anyString(), anyInt()))
+        .thenAnswer(inv -> Mono.just(inv.getArgument(0, ClassConstants.class)));
     web.put()
         .uri(PUT_URL)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -103,18 +85,12 @@ class ClassBinariesControllerTest {
 
   @Test
   void classConstants() {
-    var response = new NamedList<>();
-    response.add(
-        "response",
-        List.of(
-            Map.of(
-                "constant_value_s",
-                "1",
-                "usage_type_s",
-                ClassConstant.UsageType.ARITHMETIC_OPERAND.name())));
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.completedFuture(response));
-    // first call, not cached
+    when(storage.find(anyString()))
+        .thenReturn(
+            Mono.just(
+                Map.of(
+                    "1",
+                    EnumSet.of(ClassConstant.UsageType.ARITHMETIC_OPERAND))));
     web.get()
         .uri(GET_URL)
         .exchange()
@@ -123,33 +99,18 @@ class ClassBinariesControllerTest {
         .expectBody()
         .jsonPath("$.constants")
         .isNotEmpty();
-    verify(solrClient, only()).requestAsync(any(), anyString());
-
-    // second call, cached
-    web.get()
-        .uri(GET_URL)
-        .exchange()
-        .expectStatus()
-        .isOk()
-        .expectBody()
-        .jsonPath("$.constants")
-        .isNotEmpty();
-    verify(solrClient, only()).requestAsync(any(), anyString());
   }
 
   @Test
   void classConstantsNotFound() {
-    var response = new NamedList<>();
-    response.add("response", List.of());
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.completedFuture(response));
+    when(storage.find(anyString()))
+        .thenReturn(Mono.error(new IllegalArgumentException("Unknown class!")));
     web.get().uri(GET_URL).exchange().expectStatus().isNotFound();
   }
 
   @Test
-  void classConstantsWithSolrException() {
-    when(solrClient.requestAsync(any(), anyString()))
-        .thenReturn(CompletableFuture.failedFuture(new IOException()));
+  void classConstantsWithStorageException() {
+    when(storage.find(anyString())).thenReturn(Mono.error(new RuntimeException()));
     web.get().uri(GET_URL).exchange().expectStatus().is5xxServerError();
   }
 }

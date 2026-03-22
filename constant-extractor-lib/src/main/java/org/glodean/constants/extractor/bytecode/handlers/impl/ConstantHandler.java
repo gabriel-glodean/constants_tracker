@@ -13,6 +13,13 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * <p>Pushes a numeric or object constant onto the abstract stack representation.
  */
 final class ConstantHandler implements InstructionHandler<ConstantInstruction> {
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Pushes a {@link NumericConstant} for numeric values or an {@link ObjectConstant}
+   * for all other constant types (e.g., {@link String}, {@link Class}) onto the operand stack.
+   */
   @Override
   public void handle(ConstantInstruction ci, State state, String tag) {
     var value = ci.constantValue();

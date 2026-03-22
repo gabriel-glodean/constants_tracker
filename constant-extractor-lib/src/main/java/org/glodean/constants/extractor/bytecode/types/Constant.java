@@ -22,6 +22,11 @@ public abstract sealed class Constant<E> implements StackAndParameterEntity
     permits NumericConstant, ObjectConstant {
   private final E value;
 
+  /**
+   * Constructs a {@code Constant} wrapping the given value.
+   *
+   * @param value the compile-time constant value; must not be {@code null}
+   */
   protected Constant(E value) {
     this.value = value;
   }
@@ -31,6 +36,11 @@ public abstract sealed class Constant<E> implements StackAndParameterEntity
     return Objects.toString(value);
   }
 
+  /**
+   * Returns the wrapped compile-time constant value.
+   *
+   * @return the constant value; never {@code null}
+   */
   public final E value() {
     return value;
   }

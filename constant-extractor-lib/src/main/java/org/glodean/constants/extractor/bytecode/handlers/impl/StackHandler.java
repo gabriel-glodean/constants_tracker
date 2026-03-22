@@ -221,6 +221,15 @@ final class StackHandler implements InstructionHandler<StackInstruction> {
     return sizes.size() == 1 ? sizes.getFirst() : SizeType.SINGLE_CELL;
   }
 
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Dispatches to the appropriate stack-manipulation routine based on the operand's
+   * {@link SizeType} (single- or double-cell) and opcode. Supported opcodes include
+   * {@code dup}, {@code dup_x1}, {@code dup_x2}, {@code dup2}, {@code dup2_x1},
+   * {@code dup2_x2}, {@code pop}, {@code pop2}, and {@code swap}.
+   */
   @Override
   public void handle(StackInstruction si, State state, String tag) {
     var handler = HANDLERS.get(getSizeType(state.stack.getLast())).getOrDefault(si.opcode(), nop());

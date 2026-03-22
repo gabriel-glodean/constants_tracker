@@ -43,10 +43,21 @@ public final class InstructionHandlerRegistry {
     this.instructionHandlerMap = Objects.requireNonNull(instructionHandlerMap);
   }
 
+  /**
+   * Creates a new {@link Builder} for constructing an {@code InstructionHandlerRegistry}.
+   *
+   * @return a fresh, empty builder instance
+   */
   public static Builder builder() {
     return new Builder();
   }
 
+  /**
+   * Returns the singleton {@link ExceptionHandlerLabelHandler} used to model the stack
+   * effect at exception-handler entry points.
+   *
+   * @return the exception handler label handler
+   */
   public ExceptionHandlerLabelHandler exceptionHandlerLabelHandler() {
     return exceptionHandlerLabelHandler;
   }
@@ -55,17 +66,41 @@ public final class InstructionHandlerRegistry {
     private final ImmutableMap.Builder<Class<? extends Instruction>, InstructionHandler<?>>
         mapBuilder = ImmutableMap.builder();
 
+    /**
+     * Associates the given {@link InstructionHandler} with the specified instruction class.
+     *
+     * @param <T>              the concrete instruction subtype
+     * @param instructionClass the instruction interface or class to handle
+     * @param handler          the handler to register
+     * @return this builder for chaining
+     * @throws NullPointerException if either argument is {@code null}
+     */
     public <T extends Instruction> Builder put(
         Class<T> instructionClass, InstructionHandler<? super T> handler) {
       mapBuilder.put(Objects.requireNonNull(instructionClass), Objects.requireNonNull(handler));
       return this;
     }
 
+    /**
+     * Builds an immutable {@link InstructionHandlerRegistry} from all registered mappings.
+     *
+     * @return a new, immutable {@code InstructionHandlerRegistry}
+     */
     public InstructionHandlerRegistry build() {
       return new InstructionHandlerRegistry(mapBuilder.build());
     }
   }
 
+  /**
+   * Finds the best-matching {@link InstructionHandler} for the given runtime instruction class.
+   *
+   * <p>First tries an exact match; if none is found, performs a BFS over the class hierarchy
+   * (interfaces and superclasses) looking for a registered handler. Results of successful
+   * lookups are cached for subsequent calls.
+   *
+   * @param runtimeClass the concrete runtime class of the instruction
+   * @return the matching handler, or {@code null} if no handler is registered for the type
+   */
   @SuppressWarnings("unchecked")
   public InstructionHandler<? super Instruction> findHandlerFor(
       Class<? extends Instruction> runtimeClass) {

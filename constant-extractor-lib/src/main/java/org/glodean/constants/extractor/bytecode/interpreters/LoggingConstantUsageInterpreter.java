@@ -1,7 +1,7 @@
-package org.glodean.constants.extractor.bytecode;
+package org.glodean.constants.extractor.bytecode.interpreters;
 
-import org.glodean.constants.extractor.ConstantUsageInterpreter;
-import org.glodean.constants.extractor.MethodCallContext;
+import org.glodean.constants.interpreter.ConstantUsageInterpreter;
+import org.glodean.constants.interpreter.MethodCallContext;
 import org.glodean.constants.model.ClassConstant.ConstantUsage;
 import org.glodean.constants.model.ClassConstant.CoreSemanticType;
 import org.glodean.constants.model.ClassConstant.UsageLocation;
@@ -72,7 +72,7 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
      */
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (!(context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor))) {
+        if (!(context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _))) {
             // Cannot interpret without method call context
             return new ConstantUsage(
                     UsageType.METHOD_INVOCATION_PARAMETER,
@@ -82,9 +82,7 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
             );
         }
 
-        boolean isLoggingCall = isLoggingMethod(targetClass, targetMethod);
-
-        if (isLoggingCall) {
+        if ( isLoggingMethod(targetClass, targetMethod)) {
             double confidence = calculateConfidence(targetClass);
 
             return new ConstantUsage(

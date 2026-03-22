@@ -11,6 +11,14 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * convertible entities at the top of the stack.
  */
 final class ConvertHandler implements InstructionHandler<ConvertInstruction> {
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Pops the top points-to set, applies {@link ConvertibleEntity#convertTo} to each
+   * convertible entity within it, and pushes the resulting set back. Entities that are not
+   * {@link ConvertibleEntity} are passed through unchanged.
+   */
   @Override
   public void handle(ConvertInstruction ci, State state, String tag) {
     var newSet = new PointsToSet();

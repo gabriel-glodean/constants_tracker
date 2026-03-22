@@ -2,6 +2,7 @@ package org.glodean.constants.store;
 
 import java.util.Collection;
 import java.util.Map;
+import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 import reactor.core.publisher.Mono;
@@ -59,4 +60,26 @@ public interface ClassConstantsStore {
    * @return a {@link Mono} emitting a map of usages grouped by type
    */
   Mono<Map<Object, Collection<ClassConstant.UsageType>>> find(String key);
+
+  /**
+   * Full-text / fuzzy search for class snapshots whose constant values match {@code term}.
+   *
+   * <p>The caller supplies a plain-text search term; no Lucene syntax knowledge is required.
+   * Search-engine specific query construction (escaping, fuzzy suffixes, field boosting) is
+   * handled internally by the backing implementation.
+   *
+   * <p>The default implementation delegates the operation as unsupported. Implementations backed
+   * by a search engine (e.g. Solr) should override this method.
+   *
+   * @param project      project to restrict results to; use {@code "*"} for cross-project search
+   * @param term         plain-text search term (special characters are escaped automatically)
+   * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo,
+   *                     {@code 2} = two typos
+   * @param maxRows      maximum number of hits to return
+   * @return {@link Mono} emitting a {@link FuzzySearchResponse}
+   */
+  default Mono<FuzzySearchResponse> fuzzySearch(
+      String project, String term, int editDistance, int maxRows) {
+    return Mono.error(new UnsupportedOperationException("Fuzzy search not supported by this store"));
+  }
 }

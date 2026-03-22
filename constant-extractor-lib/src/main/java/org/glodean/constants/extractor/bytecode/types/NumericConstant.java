@@ -19,6 +19,12 @@ import java.lang.classfile.TypeKind;
  */
 public final class NumericConstant extends Constant<Number>
     implements ConstantPropagatingEntity, ConvertibleEntity {
+
+  /**
+   * Creates a {@code NumericConstant} wrapping the given numeric value.
+   *
+   * @param value the compile-time numeric constant (Integer, Long, Float, or Double)
+   */
   public NumericConstant(Number value) {
     super(value);
   }
@@ -46,6 +52,14 @@ public final class NumericConstant extends Constant<Number>
     };
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Converts the wrapped numeric value to the target JVM type (e.g., int → long)
+   * and returns a new {@code NumericConstant} with the converted value.
+   *
+   * @throws IllegalArgumentException if {@code targetType} is not a supported numeric kind
+   */
   @Override
   public ConvertibleEntity convertTo(TypeKind targetType, String site) {
     Number convertedValue =

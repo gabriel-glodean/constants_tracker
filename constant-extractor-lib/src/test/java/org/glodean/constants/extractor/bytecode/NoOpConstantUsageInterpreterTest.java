@@ -1,6 +1,7 @@
 package org.glodean.constants.extractor.bytecode;
 
-import org.glodean.constants.extractor.MethodCallContext;
+import org.glodean.constants.interpreter.MethodCallContext;
+import org.glodean.constants.interpreter.ReceiverKind;
 import org.glodean.constants.model.ClassConstant.CoreSemanticType;
 import org.glodean.constants.model.ClassConstant.ConstantUsage;
 import org.glodean.constants.model.ClassConstant.UsageLocation;
@@ -14,16 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class NoOpConstantUsageInterpreterTest {
 
-    private final NoOpConstantUsageInterpreter interpreter = new NoOpConstantUsageInterpreter();
-
-    @Test
-    void testCanInterpret() {
-        // NoOp interpreter doesn't claim to interpret any types
-        assertFalse(interpreter.canInterpret(UsageType.METHOD_INVOCATION_PARAMETER));
-        assertFalse(interpreter.canInterpret(UsageType.FIELD_STORE));
-        assertFalse(interpreter.canInterpret(UsageType.ARITHMETIC_OPERAND));
-        assertFalse(interpreter.canInterpret(UsageType.STRING_CONCATENATION_MEMBER));
-    }
+    private final ConstantUsageInterpreterRegistry.NoOpConstantUsageInterpreter interpreter = ConstantUsageInterpreterRegistry.NoOpConstantUsageInterpreter.METHOD_INVOCATION_PARAMETER_INTERPRETER;
 
     @Test
     void testInterpretReturnsUnknown() {
@@ -58,7 +50,8 @@ class NoOpConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "org/slf4j/Logger",
                 "info",
-                "(Ljava/lang/String;)V"
+                "(Ljava/lang/String;)V",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);

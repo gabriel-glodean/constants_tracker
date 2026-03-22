@@ -32,8 +32,15 @@ public final class PointsToSet extends HashSet<StackAndParameterEntity> {
    */
   static final int MAX_SIZE = 32;
 
+  /** Creates an empty {@code PointsToSet}. */
   public PointsToSet() {}
 
+  /**
+   * Creates a {@code PointsToSet} pre-populated with the elements of {@code c}.
+   * Elements beyond {@link #MAX_SIZE} are silently dropped.
+   *
+   * @param c the initial collection of entities
+   */
   public PointsToSet(Collection<StackAndParameterEntity> c) {
     super(c);
   }
@@ -55,16 +62,33 @@ public final class PointsToSet extends HashSet<StackAndParameterEntity> {
     return changed;
   }
 
+  /**
+   * Factory: creates a singleton {@code PointsToSet} containing {@code o}.
+   *
+   * @param o the sole entity in the new set
+   * @return a new {@code PointsToSet} with exactly one element
+   */
   public static PointsToSet of(StackAndParameterEntity o) {
     var s = new PointsToSet();
     s.add(o);
     return s;
   }
 
+  /**
+   * Returns a shallow copy of this set (same elements, independent capacity counter).
+   *
+   * @return a new {@code PointsToSet} containing the same entities
+   */
   public PointsToSet copy() {
     return new PointsToSet(this);
   }
 
+  /**
+   * Adds all elements from {@code other} into this set, respecting {@link #MAX_SIZE}.
+   * Does nothing if {@code other} is {@code null}.
+   *
+   * @param other the set whose elements are merged in; may be {@code null}
+   */
   public void addAllFrom(PointsToSet other) {
     if (other != null) this.addAll(other);
   }

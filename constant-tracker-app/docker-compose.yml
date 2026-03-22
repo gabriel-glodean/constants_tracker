@@ -1,4 +1,18 @@
 services:
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    environment:
+      POSTGRES_DB: constant_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - "${POSTGRES_HOST_PATH:-./.postgres_data}:/var/lib/postgresql/data"
+    networks:
+      - app_network
+
   solr:
     image: solr:latest
     container_name: solr
@@ -34,15 +48,25 @@ services:
     depends_on:
       - solr
       - redis
+      - postgres
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:
       - SERVER_PORT=8080
       # Solr base URL for Spring Data Solr / SolrJ
       - SPRING_DATA_SOLR_HOST=http://solr:8983/solr
+      - CONSTANTS_SOLR_URL=http://solr:8983/solr/
       # Redis wiring
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      # PostgreSQL R2DBC
+      - SPRING_R2DBC_URL=r2dbc:postgresql://postgres:5432/constant_tracker
+      - SPRING_R2DBC_USERNAME=postgres
+      - SPRING_R2DBC_PASSWORD=postgres
+      # Flyway (JDBC for schema migrations)
+      - SPRING_FLYWAY_URL=jdbc:postgresql://postgres:5432/constant_tracker
+      - SPRING_FLYWAY_USER=postgres
+      - SPRING_FLYWAY_PASSWORD=postgres
     networks:
       - app_network
 

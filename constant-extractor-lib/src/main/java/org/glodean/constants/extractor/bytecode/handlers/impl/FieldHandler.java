@@ -10,6 +10,18 @@ import org.glodean.constants.extractor.bytecode.types.*;
  * fields and stack effects.
  */
 final class FieldHandler implements InstructionHandler<FieldInstruction> {
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Dispatches on opcode:
+   * <ul>
+   *   <li>{@code GETSTATIC} / {@code GETFIELD} — pops any required receiver and pushes the
+   *       field's current points-to set (defaulting to a fresh typed reference).</li>
+   *   <li>{@code PUTSTATIC} / {@code PUTFIELD} — pops the value (and receiver for instance
+   *       stores) and widens the field's tracked set.</li>
+   * </ul>
+   */
   @Override
   public void handle(FieldInstruction fi, State state, String tag) {
     String owner = fi.owner().asInternalName();

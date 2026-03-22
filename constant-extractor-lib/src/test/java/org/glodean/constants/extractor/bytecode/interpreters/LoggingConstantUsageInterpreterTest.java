@@ -1,6 +1,7 @@
-package org.glodean.constants.extractor.bytecode;
+package org.glodean.constants.extractor.bytecode.interpreters;
 
-import org.glodean.constants.extractor.MethodCallContext;
+import org.glodean.constants.interpreter.MethodCallContext;
+import org.glodean.constants.interpreter.ReceiverKind;
 import org.glodean.constants.model.ClassConstant.CoreSemanticType;
 import org.glodean.constants.model.ClassConstant.ConstantUsage;
 import org.glodean.constants.model.ClassConstant.UsageLocation;
@@ -36,7 +37,8 @@ class LoggingConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "org/slf4j/Logger",
                 "info",
-                "(Ljava/lang/String;)V"
+                "(Ljava/lang/String;)V",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);
@@ -62,7 +64,8 @@ class LoggingConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "org/apache/logging/log4j/Logger",
                 "error",
-                "(Ljava/lang/String;)V"
+                "(Ljava/lang/String;)V",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);
@@ -84,7 +87,8 @@ class LoggingConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "java/io/PrintStream",
                 "println",
-                "(Ljava/lang/String;)V"
+                "(Ljava/lang/String;)V",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);
@@ -107,7 +111,8 @@ class LoggingConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "com/mycompany/CustomLogger",
                 "debug",
-                "(Ljava/lang/String;)V"
+                "(Ljava/lang/String;)V",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);
@@ -130,7 +135,8 @@ class LoggingConstantUsageInterpreterTest {
         MethodCallContext context = new MethodCallContext(
                 "java/lang/String",
                 "valueOf",
-                "(I)Ljava/lang/String;"
+                "(I)Ljava/lang/String;",
+                ReceiverKind.EXTERNAL_OBJECT
         );
 
         ConstantUsage usage = interpreter.interpret(location, context);

@@ -46,6 +46,20 @@ dependencies {
     }
     implementation "org.apache.solr:solr-solrj:$solrjVersion"
     implementation "org.springframework.boot:spring-boot-starter-log4j2:$springBootVersion"
+
+    // PostgreSQL – R2DBC (reactive driver, version from Spring Boot BOM)
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation "org.postgresql:r2dbc-postgresql"
+
+    // Flyway – schema migrations via JDBC (runs at startup alongside R2DBC)
+    implementation "org.flywaydb:flyway-core"
+    implementation "org.flywaydb:flyway-database-postgresql"
+    runtimeOnly "org.postgresql:postgresql" // JDBC driver used exclusively by Flyway
+
+    // Testcontainers – PostgreSQL for integration tests
+    testImplementation 'org.testcontainers:postgresql'
 }
 
 // Safety: remove any accidental Logback on any configuration

@@ -16,6 +16,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -25,8 +26,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class E2EIngestTest {
 
   // --- Redis ---
-  @Container @ServiceConnection // Spring Boot 3.1+ auto-configures spring.data.redis.*
+  @Container
+  @ServiceConnection
   static RedisContainer redis = new RedisContainer("redis:7");
+
+  // --- PostgreSQL ---
+  @Container
+  static PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:17").withDatabaseName("constant_tracker");
 
   // --- Solr (standalone) ---
   @Container
@@ -35,7 +42,6 @@ class E2EIngestTest {
           .withExposedPorts(8983)
           .withNetworkAliases("solar")
           .withCommand("solr-precreate", "Constants", "/var/solr/configsets/constants_conf")
-          // put your configset under /var/solr/configsets/constants_conf (writable)
           .withCopyFileToContainer(
               org.testcontainers.utility.MountableFile.forHostPath(
                   Paths.get("").resolve("solr"), 0777),
@@ -43,12 +49,29 @@ class E2EIngestTest {
           .waitingFor(Wait.forHttp("/solr/admin/cores?action=STATUS").forStatusCode(200))
           .withStartupTimeout(Duration.ofMinutes(2));
 
-  ;
-
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry r) {
+    // Solr
     String solrUrl = "http://" + solr.getHost() + ":" + solr.getMappedPort(8983) + "/solr/";
-    r.add("constants.solr.url", () -> solrUrl); // <-- adapt to your property name
+    r.add("constants.solr.url", () -> solrUrl);
+
+    // PostgreSQL – R2DBC (app)
+    r.add(
+        "spring.r2dbc.url",
+        () ->
+            "r2dbc:postgresql://"
+                + postgres.getHost()
+                + ":"
+                + postgres.getMappedPort(5432)
+                + "/"
+                + postgres.getDatabaseName());
+    r.add("spring.r2dbc.username", postgres::getUsername);
+    r.add("spring.r2dbc.password", postgres::getPassword);
+
+    // PostgreSQL – Flyway JDBC (schema migrations)
+    r.add("spring.flyway.url", postgres::getJdbcUrl);
+    r.add("spring.flyway.user", postgres::getUsername);
+    r.add("spring.flyway.password", postgres::getPassword);
   }
 
   @Autowired WebTestClient web;
@@ -76,7 +99,7 @@ class E2EIngestTest {
         .isNotEmpty();
 
     if (rcf instanceof LettuceConnectionFactory lcf) {
-      lcf.destroy(); // closes native connections and client resources
+      lcf.destroy();
     }
   }
 }

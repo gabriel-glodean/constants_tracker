@@ -37,10 +37,23 @@ final class ByteCodeMethodAnalyzer {
   private final InstructionHandlerRegistry instructionHandlerRegistry;
   private final Map<Label, Set<ClassDesc>> exceptionHandlerStarts;
 
+  /**
+   * Creates an analyzer with the default instruction handler registry.
+   *
+   * @param cm the class model containing the method
+   * @param mm the method to analyze
+   */
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
     this(cm, mm, DefaultRegistrySource.defaultRegistry());
   }
 
+  /**
+   * Creates an analyzer with a custom instruction handler registry.
+   *
+   * @param cm       the class model containing the method
+   * @param mm       the method to analyze
+   * @param registry the instruction handler registry to use during transfer
+   */
   ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
     this.cm = cm;
     this.methodModel = mm;
@@ -78,6 +91,15 @@ final class ByteCodeMethodAnalyzer {
     }
   }
 
+  /**
+   * Runs the worklist-based dataflow analysis over the method body.
+   *
+   * <p>On return, {@link #in} and {@link #out} are populated with per-instruction abstract
+   * states. Methods with no bytecode (abstract/native) are silently skipped.
+   *
+   * @throws org.glodean.constants.extractor.ModelExtractor.ExtractionException if an
+   *         instruction is encountered for which no handler is registered
+   */
   public void run() throws ModelExtractor.ExtractionException {
     if (code.isEmpty()) {
       return;
@@ -188,6 +210,12 @@ final class ByteCodeMethodAnalyzer {
     }
   }
 
+  /**
+   * Returns a human-readable analysis report for the method, showing per-instruction IN/OUT
+   * states and the list of outgoing call edges.
+   *
+   * @return formatted multi-line report string
+   */
   public String report() {
     StringBuilder sb = new StringBuilder();
     sb.append("\n=== Analysis Report for ").append(methodTag).append(" ===\n");

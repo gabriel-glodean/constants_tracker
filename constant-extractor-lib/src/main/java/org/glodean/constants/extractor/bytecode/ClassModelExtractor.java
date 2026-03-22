@@ -6,10 +6,12 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeModel;
 import java.lang.classfile.MethodModel;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstant;
+import org.glodean.constants.model.ClassConstant.ConstantUsage;
 import org.glodean.constants.model.ClassConstants;
 
 /**
@@ -36,35 +38,23 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
 
   @Override
   public Collection<ClassConstants> extract() throws ExtractionException {
-    Multimap<Object, ClassConstant.UsageType> joinedMap = HashMultimap.create();
+    Multimap<Object, ConstantUsage> joinedMap = HashMultimap.create();
     for (MethodModel mm : model.methods()) {
       if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
         continue;
       }
       var analysis = new ByteCodeMethodAnalyzer(model, mm);
       analysis.run();
-      joinedMap.putAll(merger.merge(analysis.code, analysis.in));
+      joinedMap.putAll(merger.merge(
+          model.thisClass().asInternalName(),
+          mm.methodName().stringValue(),
+          mm.methodType().stringValue(),
+          analysis.code,
+          analysis.in));
     }
 
-    // Convert UsageType multimap to Set<ConstantUsage> for new model
     Set<ClassConstant> constants = joinedMap.asMap().entrySet().stream()
-        .map(entry -> {
-          Set<ClassConstant.ConstantUsage> usages = entry.getValue().stream()
-              .map(usageType -> new ClassConstant.ConstantUsage(
-                  usageType,
-                  ClassConstant.CoreSemanticType.UNKNOWN, // TODO: Implement semantic inference
-                  new ClassConstant.UsageLocation(
-                      model.thisClass().asInternalName(),
-                      "<multiple>", // TODO: Track per-method location
-                      "()V",
-                      0,
-                      null
-                  ),
-                  0.5 // TODO: Implement confidence scoring
-              ))
-              .collect(Collectors.toSet());
-          return new ClassConstant(entry.getKey(), usages);
-        })
+        .map(entry -> new ClassConstant(entry.getKey(), new HashSet<>(entry.getValue())))
         .collect(Collectors.toSet());
 
     return Set.of(new ClassConstants(model.thisClass().asInternalName(), constants));
