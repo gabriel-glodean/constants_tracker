@@ -1,24 +1,50 @@
-## V1 — Ship a complete, demoable tool (target: 2-3 weekends)
+## V1 — Ship a complete, demoable tool
+##   At 10 hrs/week: ~5-7 weeks | At 20 hrs/week: ~3-4 weeks
 
 - implement 4-5 more interpreters (SQL, URL, file path, config key, error message)    P0
-  → the entire semantic layer is dead weight until these exist
+  → ~12-18 hrs total (first one ~4-5 hrs to nail the pattern + tests,
+    then ~2-3 hrs each — the LoggingConstantUsageInterpreter + test is 335 lines,
+    each new one follows the same shape: class sets, method sets, confidence calc)
+
 - implement the constant diff analysis (compare two versions of the same class)        P0
-  → this is the killer feature; it's why version tracking exists
-- add a minimal search UI (single page, hits /search, shows results)                   P0
-  → without this you can't demo the tool to anyone non-technical
-- externalize credentials (env vars / Spring profiles, not hardcoded in YAML)           P0
-  → any reviewer will notice hardcoded postgres/postgres
+  → ~15-20 hrs (the hard part: designing the diff model + a new endpoint +
+    querying Postgres for two versions via the existing snapshot/constant/usage repos;
+    the storage layer already supports versioned lookups)
 
 ## V2 — Depth features
+##   At 10 hrs/week: ~4-6 weeks | At 20 hrs/week: ~2-3 weeks
 
 - implement similar constant detection                                                  P1
+  → ~12-15 hrs (string similarity algo + new endpoint + Solr or Postgres query;
+    Solr's MLT could help but may need a custom approach for constant values)
+
 - implement the constant split analysis                                                 P1
+  → ~10-15 hrs (detect when one constant in version N became multiple in N+1;
+    depends on diff being done first — reuses that infrastructure)
+
 - implement the constant merge analysis                                                 P1
+  → ~8-10 hrs (reverse of split; faster if split is done first, same patterns)
+
 - add Micrometer/Prometheus metrics for analysis throughput + latency                    P2
+  → ~4-6 hrs (add dependency, @Timed on key methods, /actuator/prometheus endpoint)
 
 ## V3 — Polish
+##   At 10 hrs/week: ~5-8 weeks | At 20 hrs/week: ~3-4 weeks
 
 - add a WebUI to display full analysis results (beyond search)                          P2
+  → ~15-25 hrs (depends on ambition — basic Thymeleaf or a small React app)
+
 - debug why terraform fails to create the app docker image                              P3
+  → ~2-4 hrs (likely just the image reference in main.tf)
+
 - add exception-flow analysis to handle exception handling code                         P4
+  → ~15-20 hrs (complex bytecode work — handler starts are tracked in
+    SuccessorBuilder but the semantic interpretation isn't wired)
+
 - split lib into model and bytecode analysis, to have a hook for Java source analysis   P4
+  → ~8-12 hrs (Gradle module refactoring + moving classes + fixing imports + tests)
+
+## Total estimate: ~105-155 hrs
+##   At 10 hrs/week: ~11-16 weeks (all of it)
+##   At 20 hrs/week: ~6-8 weeks (all of it)
+##   V1 alone is ~33-47 hrs — that's your 2-3 weekends target if weekends are long

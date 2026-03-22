@@ -26,7 +26,7 @@ dependencies {
             exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation "org.testcontainers:testcontainers:$testcontainersVersion"
     testImplementation "org.springframework.boot:spring-boot-testcontainers:$springBootVersion"
     testImplementation 'com.redis:testcontainers-redis'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -59,7 +59,7 @@ dependencies {
     runtimeOnly "org.postgresql:postgresql" // JDBC driver used exclusively by Flyway
 
     // Testcontainers – PostgreSQL for integration tests
-    testImplementation 'org.testcontainers:postgresql'
+    testImplementation "org.testcontainers:postgresql"
 }
 
 // Safety: remove any accidental Logback on any configuration

@@ -9,18 +9,18 @@ spring:
   cache:
     type: redis
   data.redis:
-    host: localhost
-    port: 6379
+    host: ${SPRING_DATA_REDIS_HOST:localhost}
+    port: ${SPRING_DATA_REDIS_PORT:6379}
   # R2DBC – reactive PostgreSQL connection (full model store)
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/constant_tracker
-    username: postgres
-    password: postgres
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://localhost:5432/constant_tracker}
+    username: ${SPRING_R2DBC_USERNAME:postgres}
+    password: ${SPRING_R2DBC_PASSWORD:}
   # Flyway – JDBC-based schema migrations (separate from R2DBC)
   flyway:
-    url: jdbc:postgresql://localhost:5432/constant_tracker
-    user: postgres
-    password: postgres
+    url: ${SPRING_FLYWAY_URL:jdbc:postgresql://localhost:5432/constant_tracker}
+    user: ${SPRING_FLYWAY_USER:postgres}
+    password: ${SPRING_FLYWAY_PASSWORD:}
     locations: classpath:db/migration
 logging.level:
   org.springframework.web: DEBUG
@@ -37,4 +37,6 @@ management:
 #our config
 constants:
   solr:
-    url: http://localhost:8983/solr/
+    url: ${CONSTANTS_SOLR_URL:http://localhost:8983/solr/}
+  cors:
+    allowed-origin: http://localhost:5173

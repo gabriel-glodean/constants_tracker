@@ -4,8 +4,8 @@ services:
     container_name: postgres
     environment:
       POSTGRES_DB: constant_tracker
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -61,15 +61,16 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       # PostgreSQL R2DBC
       - SPRING_R2DBC_URL=r2dbc:postgresql://postgres:5432/constant_tracker
-      - SPRING_R2DBC_USERNAME=postgres
-      - SPRING_R2DBC_PASSWORD=postgres
+      - SPRING_R2DBC_USERNAME=${SPRING_R2DBC_USERNAME}
+      - SPRING_R2DBC_PASSWORD=${SPRING_R2DBC_PASSWORD}
       # Flyway (JDBC for schema migrations)
       - SPRING_FLYWAY_URL=jdbc:postgresql://postgres:5432/constant_tracker
-      - SPRING_FLYWAY_USER=postgres
-      - SPRING_FLYWAY_PASSWORD=postgres
+      - SPRING_FLYWAY_USER=${SPRING_FLYWAY_USER}
+      - SPRING_FLYWAY_PASSWORD=${SPRING_FLYWAY_PASSWORD}
     networks:
       - app_network
 
 networks:
   app_network:
     driver: bridge
+
