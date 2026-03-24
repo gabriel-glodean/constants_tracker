@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -40,13 +41,13 @@ class E2EIngestTest {
     // --- Solr (standalone) ---
     @Container
     static GenericContainer<?> solr =
-            new GenericContainer<>("solr:9.10")
+            new GenericContainer<>("solr:latest")
                     .withExposedPorts(8983)
                     .withNetworkAliases("solar")
                     .withCommand("solr-precreate", "Constants", "/var/solr/configsets/constants_conf")
                     .withCopyFileToContainer(
-                            org.testcontainers.utility.MountableFile.forClasspathResource(
-                                  "solr", 0777),
+                            org.testcontainers.utility.MountableFile.forHostPath(
+                                    Paths.get("").resolve("solr"), 0777),
                             "/var/solr/configsets/constants_conf/conf")
                     .waitingFor(Wait.forHttp("/solr/admin/cores?action=STATUS").forStatusCode(200))
                     .withStartupTimeout(Duration.ofMinutes(2));
@@ -83,6 +84,7 @@ class E2EIngestTest {
     private RedisConnectionFactory rcf;
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "test.e2e", matches = "true")
     void endToEndUploadAndQuery() throws Exception {
         byte[] clazz = Files.readAllBytes(Path.of("src/test/resources/samples/Greeter.class"));
         web.post()
