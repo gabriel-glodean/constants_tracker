@@ -2,7 +2,6 @@ package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
 import org.glodean.constants.dto.GetClassConstantsReply;
-import org.glodean.constants.dto.GetClassConstantsRequest;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.ClassConstants;
 import org.glodean.constants.services.ExtractionService;
