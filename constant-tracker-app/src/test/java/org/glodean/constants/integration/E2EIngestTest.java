@@ -26,6 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@EnabledIfEnvironmentVariable(named = "test.e2e", matches = "true")
 class E2EIngestTest {
 
     // --- Redis ---
@@ -84,7 +85,6 @@ class E2EIngestTest {
     private RedisConnectionFactory rcf;
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "test.e2e", matches = "true")
     void endToEndUploadAndQuery() throws Exception {
         byte[] clazz = Files.readAllBytes(Path.of("src/test/resources/samples/Greeter.class"));
         web.post()
