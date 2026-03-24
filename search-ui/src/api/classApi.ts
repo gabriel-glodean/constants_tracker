@@ -11,10 +11,12 @@ export interface ClassConstantsReply {
 export async function getClassConstants(
   params: ClassConstantsLookup
 ): Promise<ClassConstantsReply> {
-  const res = await fetch('/class', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+  const stringParams: Record<string, string> = Object.fromEntries(
+    Object.entries(params).map(([k, v]) => [k, String(v)])
+  );
+  const query = new URLSearchParams(stringParams).toString();
+  const res = await fetch(`/class?${query}`, {
+    method: 'GET',
   });
   if (!res.ok) {
     if (res.status === 404) throw new Error('Class/version not found.');

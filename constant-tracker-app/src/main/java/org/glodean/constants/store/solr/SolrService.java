@@ -24,6 +24,7 @@ import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstants;
 import org.glodean.constants.store.ClassConstantsStore;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -131,6 +132,14 @@ public class SolrService implements ClassConstantsStore {
         "Fuzzy search: project={} term={} editDistance={} rows={} query={}",
         project, term, editDistance, maxRows, queryText);
 
+    QueryRequest query = getQueryRequest(project, maxRows, queryText);
+    query.setPath("/select");
+
+    return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
+        .map(SolrService::parseFuzzyResponse);
+  }
+
+  private static @NonNull QueryRequest getQueryRequest(String project, int maxRows, String queryText) {
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.set("q", queryText);
     params.set("defType", "edismax");
@@ -142,11 +151,7 @@ public class SolrService implements ClassConstantsStore {
     params.set("fl", "project,class_name,class_version,constant_values_t");
     params.set("rows", maxRows);
 
-    QueryRequest query = new QueryRequest(params);
-    query.setPath("/select");
-
-    return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
-        .map(SolrService::parseFuzzyResponse);
+    return new QueryRequest(params);
   }
 
   /**

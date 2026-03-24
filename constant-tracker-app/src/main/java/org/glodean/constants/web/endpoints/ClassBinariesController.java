@@ -152,20 +152,22 @@ public record ClassBinariesController(
     }
 
     /**
-     * Lookup constants for a class using a request describing project/class/version.
+     * Lookup constants for a class using query parameters (GET /class?project=...&className=...&version=...).
      *
-     * @param request a {@link Mono} carrying the {@link GetClassConstantsRequest} query parameters
+     * @param project the project identifier
+     * @param className the class internal or binary name (slash-separated, e.g., "java/lang/String")
+     * @param version the project version number
      * @return 200 OK with a {@link GetClassConstantsReply} if the class is found,
      *         404 Not Found if no matching snapshot exists,
      *         500 Internal Server Error for other failures
      */
     @GetMapping
-    @ModelAttribute
     public Mono<ResponseEntity<GetClassConstantsReply>> classConstants(
-            Mono<GetClassConstantsRequest> request) {
-        return request
-                .map(GetClassConstantsRequest::key)
-                .flatMap(storage::find)
+            @RequestParam("project") String project,
+            @RequestParam("className") String className,
+            @RequestParam("version") int version) {
+        String key = project + ":" + className + ":" + version;
+        return storage.find(key)
                 .map(GetClassConstantsReply::new)
                 .map(ResponseEntity::ok)
                 .onErrorResume(

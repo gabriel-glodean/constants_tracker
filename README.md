@@ -11,11 +11,11 @@ table.
 
 ## 🧠 Design Focus
 
-This project is split into **two modules** for clean separation and reusability:
+This project is split into **three modules** for clean separation and reusability:
 
-The **`constant-extractor-lib`** module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor. It's tested at over **90% coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
-
-The **`constant-tracker-app`** module provides a reactive web service built with WebFlux. The Redis and Solr layers are intentionally minimal; they serve as integration and caching shells for the core analysis engine.
+- The **`constant-extractor-lib`** module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor. It's tested at over **90% coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
+- The **`constant-tracker-app`** module provides a reactive web service built with WebFlux. The Redis and Solr layers are intentionally minimal; they serve as integration and caching shells for the core analysis engine.
+- The **`search-ui`** module is a lightweight web UI for searching and browsing indexed constants. It is served as a static site and communicates with the backend API.
 
 The library can be used **standalone** in any Java project that needs bytecode analysis capabilities.
 
@@ -23,7 +23,7 @@ The library can be used **standalone** in any Java project that needs bytecode a
 
 ## 🧩 Architecture
 
-This is a **multi-module Gradle project** with clear separation of concerns:
+This is a **multi-module Gradle project** with clear separation of concerns. In addition to the backend modules, the project includes a small search UI for browsing and querying indexed constants:
 
 ### Modules
 
@@ -36,15 +36,22 @@ This is a **multi-module Gradle project** with clear separation of concerns:
 
 2. **`constant-tracker-app`** – Spring Boot application
    - Reactive REST API (WebFlux)
-   - Redis caching layer
+   - Redis caching layer + versioning
    - Solr indexing integration
+   - Database persistence with Postgres
    - Docker and Terraform deployment
    - Depends on `constant-extractor-lib`
 
+3. **`search-ui`** – Web-based search interface
+   - Lightweight static web UI for searching and browsing indexed constants
+   - Communicates with the backend API
+   - Located in the `search-ui/` directory (served as a static site)
+
 ### Data Flow
 
+**Class/JAR Upload and Indexing:**
 ```
-[ .class upload ]
+[ .class/.jar upload ]
        │
        ▼
 [ WebFlux Controller ] (constant-tracker-app)
@@ -53,43 +60,142 @@ This is a **multi-module Gradle project** with clear separation of concerns:
 [ Analysis Engine ] (constant-extractor-lib)
        │
        ▼
+[ Redis Cache ] → [ Solr Index + Postgres DB ] (constant-tracker-app)
+```
+
+**Class and Project Query:**
+```
+[ class and project query ]
+       │
+       ▼
+[ WebFlux Controller ] (constant-tracker-app)
+       │
+       ▼
+[ Redis Cache ] → [ Postgres DB ] (constant-tracker-app)
+```
+
+**Fuzzy Search Constant Query:**
+```
+[ fuzzy search constant query ]
+       │
+       ▼
+[ WebFlux Controller ] (constant-tracker-app)
+       │
+       ▼
 [ Redis Cache ] → [ Solr Index ] (constant-tracker-app)
 ```
 
 ### Technology Stack
 
-- **Spring Boot 3 / WebFlux** – reactive REST interface
-- **Solr 9** – full-text indexing of constant references
-- **Redis 7** – caching
-- **Java 25** – uses latest features including ClassFile API
+**Backend:**
+- Spring Boot 3 / WebFlux – reactive REST interface
+- Solr 10 – full-text indexing of constant references
+- Postgres 18 – relational storage for detailed class constants usage
+- Redis 7 – caching
+- Java 25 – uses latest features including ClassFile API
+
+**Frontend (search-ui):**
+- React 19 + TypeScript – UI framework and language
+- Vite 8 – build tool and dev server
+- Tailwind CSS v4 – utility-first CSS framework
+- Lucide React – icon library
+- Native fetch API – for backend communication
+- ESLint – code linting
+- Nginx – static file serving in production Docker
+- Docker – containerization for deployment
 
 ---
 
-## 🚀 Quick Start
+## 🖥️ UI
 
-```bash
-# Build the image
-docker build -f constant-tracker-app/Dockerfile -t constant_tracker:latest .
+This project includes a simple search UI for browsing and querying indexed constants.
 
-# Option A: Docker Compose
-docker compose -f constant-tracker-app/docker-compose.yml up -d
+- **Location:** `search-ui/` directory (served as a static site)
+- **Access:**
+  - When running with Docker Compose, the UI is available at: [http://localhost:5173](http://localhost:5173)
+  - The UI communicates with the backend API at [http://localhost:8080](http://localhost:8080)
 
-# Option B: Terraform (advanced)
-terraform init && terraform apply -auto-approve
+---
 
-# Upload a class file for analysis
-curl -X POST "http://localhost:8080/class?project=demo" \
-  -H "Content-Type: application/octet-stream" \
-  --data-binary @constant-extractor-lib/src/test/resources/samples/Greeter.class
+## 🗄️ Database
+
+
+The application uses three main data stores:
+
+- **Solr 9/10**: Full-text search and indexing of constant references.
+  - Default URL: [http://localhost:8983/solr/](http://localhost:8983/solr/)
+  - Collection: `Constants`
+  - Schema: `constant-tracker-app/solr/managed-schema.xml`
+  - ⚠️ Before starting Solr, copy the schema file to the Solr data folder (see below).
+- **Postgres**: Relational database for persistent storage of metadata and application state.
+  - Default URL: `jdbc:postgresql://localhost:5432/constants`
+  -  ⚠️ Before starting  Postgres, ensure the database credentials are specified in the environment variables.
+- **Redis 7**: Caching and versioning.
+  - Default URL: `localhost:6379`
+
+All services are started automatically with Docker Compose for local development.
+
+**Solr schema setup:**
+Copy the schema file before starting Solr:
+
+**Solr core setup (REQUIRED):**
+
+Before starting Solr, copy the following files to your Solr core's config directory. This step is required for correct indexing and search functionality:
+
+- `constant-tracker-app/solr/managed-schema.xml` → `<solr_core_dir>/conf/managed-schema.xml`
+- `constant-tracker-app/solr/solrconfig.xml` → `<solr_core_dir>/conf/solrconfig.xml`
+- `constant-tracker-app/solr/core.properties` → `<solr_core_dir>/core.properties`
+
+Replace `<solr_core_dir>` with your Solr core directory (for example, `constant-tracker-app/solr/data/Constants`).
+
+**PowerShell (Windows):**
+```powershell
+Copy-Item constant-tracker-app/solr/managed-schema.xml <solr_core_dir>/conf/managed-schema.xml -Force
+Copy-Item constant-tracker-app/solr/solrconfig.xml <solr_core_dir>/conf/solrconfig.xml -Force
+Copy-Item constant-tracker-app/solr/core.properties <solr_core_dir>/core.properties -Force
 ```
 
-Once started:
+**Bash (Linux/macOS):**
+```bash
+cp constant-tracker-app/solr/managed-schema.xml <solr_core_dir>/conf/managed-schema.xml
+cp constant-tracker-app/solr/solrconfig.xml <solr_core_dir>/conf/solrconfig.xml
+cp constant-tracker-app/solr/core.properties <solr_core_dir>/core.properties
+```
+Replace `<solr_core_dir>` with your Solr core directory (e.g., `constant-tracker-app/solr/data/Constants/conf` for config files and `constant-tracker-app/solr/data/Constants` for core.properties).
 
-- API → http://localhost:8080
-- Solr UI → http://localhost:8983/solr/#/
-- Swagger UI → http://localhost:8080/swagger-ui.html
 
 ---
+
+## 🐳 Getting Started with Docker Compose
+
+To launch the full stack (backend, Solr, Postgres, Redis, and UI) locally, you must first build both the backend and frontend (UI) Docker images:
+
+**1. Build the backend container:**
+```bash
+docker build -f constant-tracker-app/Dockerfile -t constant_tracker:latest .
+```
+
+**2. Build the frontend (UI) container:**
+```bash
+docker build -f search-ui/Dockerfile -t search_ui:latest ./search-ui
+```
+
+**3. Start all services with Docker Compose:**
+```bash
+docker compose -f constant-tracker-app/docker-compose.yml up -d
+```
+
+This will start:
+- **API**: [http://localhost:8080](http://localhost:8080)
+- **Solr UI**: [http://localhost:8983/solr/#/](http://localhost:8983/solr/#/)
+- **Postgres**: `localhost:5432`
+- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **Search UI**: [http://localhost:5173](http://localhost:5173)
+- **Redis**: `localhost:6379` (no web UI)
+
+You can now upload `.class` or `.jar` files and use the UI to search indexed constants.
+
+
 
 ## 🧪 Tests
 
@@ -106,7 +212,7 @@ Once started:
 ```
 
 ### Module-Specific Tests
-- **`constant-extractor-lib`:** > 90% coverage (JaCoCo report under `constant-extractor-lib/build/jacocoHtml`)
+- **`constant-extractor-lib`:** > 85% coverage (JaCoCo report under `constant-extractor-lib/build/jacocoHtml`)
 - **`constant-tracker-app`:** Integration tests verifying upload, caching, and Solr indexing
 
 ### Test Reports
@@ -139,6 +245,9 @@ You can check if it was store using Postman:
 ![Application screenshot](./docs/postman-get.jpg)
 or with the Solr UI:
 ![Application screenshot](./docs/solr.jpg)
+
+The UI layer looks like this:
+![Application screenshot](./docs/search-ui.png)
 
 ---
 
@@ -179,14 +288,6 @@ java -jar constant-tracker-app/build/libs/constant-tracker-app-0.1.0-SNAPSHOT.ja
 ```
 
 The library JAR will be available at `constant-extractor-lib/build/libs/`
-
----
-
-## 🧭 Future Work
-
-- Enrich analysis with method flow graphs
-- Extend Solr schema for cross-reference search
-- Optional GraalVM native image
 
 ---
 
