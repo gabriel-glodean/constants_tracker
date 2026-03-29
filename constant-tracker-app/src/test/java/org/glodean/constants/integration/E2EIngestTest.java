@@ -40,8 +40,9 @@ class E2EIngestTest {
     // --- Solr (standalone) ---
     @Container
     static GenericContainer<?> solr =
-            new GenericContainer<>("solr:9")
+            new GenericContainer<>("solr:10")
                     .withExposedPorts(8983)
+                    .withLogConsumer(new org.testcontainers.containers.output.Slf4jLogConsumer(org.slf4j.LoggerFactory.getLogger("SolrContainer")))
                     .withNetworkAliases("solar")
                     .withCommand("solr-precreate", "Constants", "/var/solr/configsets/constants_conf")
                     .withCopyFileToContainer(
