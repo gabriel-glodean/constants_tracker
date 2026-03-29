@@ -5,7 +5,9 @@ import com.redis.testcontainers.RedisContainer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,20 +39,43 @@ class E2EIngestTest {
     static PostgreSQLContainer<?> postgres =
             new PostgreSQLContainer<>("postgres:17").withDatabaseName("constant_tracker");
 
+    static Path createConfigsetTempDir() throws Exception {
+        Path configsetDir = Files.createTempDirectory("solr-configset");
+        // Use absolute path for the configset source directory
+        Path sourceDir = Paths.get(System.getProperty("user.dir"), "solr");
+        try (Stream<Path> files = Files.list(sourceDir)) {
+            files.filter(p -> !p.getFileName().toString().equals("core.properties"))
+                    .forEach(p -> {
+                        try {
+                            Files.copy(p, configsetDir.resolve(p.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
+        return configsetDir;
+    }
+
     // --- Solr (standalone) ---
     @Container
-    static GenericContainer<?> solr =
-            new GenericContainer<>("solr:10")
+    static GenericContainer<?> solr;
+    static {
+        try {
+            Path configsetDir = createConfigsetTempDir();
+            solr = new GenericContainer<>("solr:10")
                     .withExposedPorts(8983)
                     .withLogConsumer(new org.testcontainers.containers.output.Slf4jLogConsumer(org.slf4j.LoggerFactory.getLogger("SolrContainer")))
                     .withNetworkAliases("solar")
                     .withCommand("solr-precreate", "Constants", "/var/solr/configsets/constants_conf")
                     .withCopyFileToContainer(
-                            org.testcontainers.utility.MountableFile.forHostPath(
-                                    Paths.get("").resolve("solr"), 0777),
-                            "/var/solr/configsets/constants_conf/conf")
+                            org.testcontainers.utility.MountableFile.forHostPath(configsetDir, 0777),
+                            "/var/solr/configsets/constants_conf")
                     .waitingFor(Wait.forHttp("/solr/admin/cores?action=STATUS").forStatusCode(200))
                     .withStartupTimeout(Duration.ofMinutes(2));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry r) {
