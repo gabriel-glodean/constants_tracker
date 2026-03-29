@@ -44,20 +44,6 @@ jobs:
         working-directory: search-ui
         run: npm test -- --ci --coverage
 
-      - name: Wait for Redis & Solr
-        run: |
-          echo "Waiting for Redis..."
-          for i in {1..30}; do
-            if nc -z localhost 6379; then echo "Redis is up"; break; fi
-            sleep 2
-          done
-
-          echo "Waiting for Solr..."
-          for i in {1..30}; do
-            if nc -z localhost 8983; then echo "Solr is up"; break; fi
-            sleep 2
-          done
-
       - name: Build & test all subprojects
         run: ./gradlew clean build test --continue
 
