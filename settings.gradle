@@ -1,4 +1,12 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
 rootProject.name = 'constant_tracker'
 
 include 'constant-extractor-lib'
 include 'constant-tracker-app'
+include 'demo-crud-server'
