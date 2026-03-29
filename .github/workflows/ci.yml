@@ -47,6 +47,26 @@ jobs:
       - name: Build & test all subprojects
         run: ./gradlew clean build test --continue
 
+      - name: Upload logs and test results (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-app-logs
+          path: |
+            logs/app-*.log
+            build/test-results/
+            build/reports/
+            build/logs/
+            build/testcontainers-logs/
+            constant-extractor-lib/build/test-results/
+            constant-extractor-lib/build/reports/
+            constant-extractor-lib/build/logs/
+            constant-extractor-lib/build/testcontainers-logs/
+            constant-tracker-app/build/test-results/
+            constant-tracker-app/build/reports/
+            constant-tracker-app/build/logs/
+            constant-tracker-app/build/testcontainers-logs/
+
   docker-build:
     name: Dockerfile sanity build
     runs-on: ubuntu-latest
