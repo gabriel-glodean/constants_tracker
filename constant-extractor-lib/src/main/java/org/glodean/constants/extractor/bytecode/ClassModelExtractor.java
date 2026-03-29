@@ -14,6 +14,8 @@ import org.glodean.constants.model.ClassConstant;
 import org.glodean.constants.model.ClassConstant.ConstantUsage;
 import org.glodean.constants.model.ClassConstants;
 
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
+
 /**
  * Extracts {@link ClassConstants} from a {@link java.lang.classfile.ClassModel} by analyzing each
  * method's bytecode and merging discovered constants.
@@ -39,6 +41,7 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
   @Override
   public Collection<ClassConstants> extract() throws ExtractionException {
     Multimap<Object, ConstantUsage> joinedMap = HashMultimap.create();
+    String javaClassName = toJavaName(model.thisClass().asSymbol());
     for (MethodModel mm : model.methods()) {
       if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
         continue;
@@ -46,7 +49,7 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
       var analysis = new ByteCodeMethodAnalyzer(model, mm);
       analysis.run();
       joinedMap.putAll(merger.merge(
-          model.thisClass().asInternalName(),
+          javaClassName,
           mm.methodName().stringValue(),
           mm.methodType().stringValue(),
           analysis.code,
@@ -57,6 +60,6 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
         .map(entry -> new ClassConstant(entry.getKey(), new HashSet<>(entry.getValue())))
         .collect(Collectors.toSet());
 
-    return Set.of(new ClassConstants(model.thisClass().asInternalName(), constants));
+    return Set.of(new ClassConstants(javaClassName, constants));
   }
 }

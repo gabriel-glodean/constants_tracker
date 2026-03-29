@@ -1,6 +1,8 @@
 package org.glodean.constants.extractor.bytecode;
 
 import static java.lang.classfile.Opcode.*;
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaDescriptor;
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 import static org.glodean.constants.model.ClassConstant.UsageType.*;
 
 import com.google.common.collect.HashMultimap;
@@ -293,45 +295,6 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
         boolean isThis = slot.stream()
                 .anyMatch(e -> e instanceof ObjectReference or && or.site().endsWith("::<this>"));
         return isThis ? ReceiverKind.THIS : ReceiverKind.EXTERNAL_OBJECT;
-    }
-
-    /**
-     * Converts a {@link ClassDesc} to its dot-separated Java class name.
-     *
-     * <p>Examples:
-     * <ul>
-     *   <li>{@code Ljava/lang/String;} → {@code java.lang.String}</li>
-     *   <li>{@code I} → {@code int}</li>
-     *   <li>{@code [Ljava/lang/String;} → {@code java.lang.String[]}</li>
-     *   <li>{@code V} → {@code void}</li>
-     * </ul>
-     *
-     * @param desc the class descriptor
-     * @return the Java class name
-     */
-    private static String toJavaName(ClassDesc desc) {
-        if (desc.isPrimitive()) return desc.displayName();
-        if (desc.isArray()) return toJavaName(desc.componentType()) + "[]";
-        String d = desc.descriptorString(); // Lcom/example/Foo;
-        return d.substring(1, d.length() - 1).replace('/', '.');
-    }
-
-    /**
-     * Converts a {@link MethodTypeDesc} to a readable Java method signature.
-     *
-     * <p>Examples:
-     * <ul>
-     *   <li>{@code (Ljava/lang/String;I)V} → {@code (java.lang.String, int): void}</li>
-     *   <li>{@code ()Ljava/lang/String;} → {@code (): java.lang.String}</li>
-     * </ul>
-     *
-     * @param desc the method type descriptor
-     * @return a human-readable Java method signature
-     */
-    private static String toJavaDescriptor(MethodTypeDesc desc) {
-        StringJoiner params = new StringJoiner(", ", "(", ")");
-        desc.parameterList().forEach(p -> params.add(toJavaName(p)));
-        return params + ": " + toJavaName(desc.returnType());
     }
 
     /**

@@ -8,7 +8,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -26,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@EnabledIfEnvironmentVariable(named = "test.e2e", matches = "true")
 class E2EIngestTest {
 
     // --- Redis ---
@@ -42,7 +40,7 @@ class E2EIngestTest {
     // --- Solr (standalone) ---
     @Container
     static GenericContainer<?> solr =
-            new GenericContainer<>("solr:latest")
+            new GenericContainer<>("solr:9")
                     .withExposedPorts(8983)
                     .withNetworkAliases("solar")
                     .withCommand("solr-precreate", "Constants", "/var/solr/configsets/constants_conf")
@@ -96,7 +94,7 @@ class E2EIngestTest {
                 .is2xxSuccessful();
 
         web.get()
-                .uri("/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter")
+                .uri("/class?project=demo&version=1&className=org.glodean.constants.samples.Greeter")
                 .exchange()
                 .expectStatus()
                 .isOk()

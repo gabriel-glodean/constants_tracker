@@ -135,7 +135,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/SimpleIteration",
+          "org.glodean.constants.samples.SimpleIteration",
           Set.of(
               constant(0, ARITHMETIC_OPERAND),
               constant(1, ARITHMETIC_OPERAND)));
@@ -153,7 +153,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/Greeter",
+          "org.glodean.constants.samples.Greeter",
           Set.of(
               constant("Default", METHOD_INVOCATION_PARAMETER),
               constant(Greeter.FORMAT, METHOD_INVOCATION_TARGET),
@@ -167,7 +167,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/InvokeDynamicFunctionality",
+          "org.glodean.constants.samples.InvokeDynamicFunctionality",
           Set.of(constant("", METHOD_INVOCATION_PARAMETER, STRING_CONCATENATION_MEMBER)));
     }
 
@@ -178,7 +178,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/ThrowingMethodSample",
+          "org.glodean.constants.samples.ThrowingMethodSample",
           Set.of(
               constant("C:\\non_existent_file.txt", METHOD_INVOCATION_PARAMETER),
               constant("", STRING_CONCATENATION_MEMBER),
@@ -197,7 +197,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/GotoSample",
+          "org.glodean.constants.samples.GotoSample",
           Set.of(
               constant(0, METHOD_INVOCATION_PARAMETER, ARITHMETIC_OPERAND),
               constant(1, METHOD_INVOCATION_PARAMETER, ARITHMETIC_OPERAND),
@@ -212,7 +212,7 @@ class ClassModelExtractorTest {
       var actual = extractConstants(SwitchFunctionality.class);
 
       assertExtractedConstants(
-          actual, "org/glodean/constants/samples/SwitchFunctionality", Set.of());
+          actual, "org.glodean.constants.samples.SwitchFunctionality", Set.of());
     }
   }
 
@@ -227,7 +227,7 @@ class ClassModelExtractorTest {
 
       assertExtractedConstants(
           actual,
-          "org/glodean/constants/samples/SyncSample",
+          "org.glodean.constants.samples.SyncSample",
           Set.of(
               constant(1L, STATIC_FIELD_STORE, ARITHMETIC_OPERAND),
               constant(0L, STATIC_FIELD_STORE)));
@@ -243,7 +243,7 @@ class ClassModelExtractorTest {
     void extractForStackOperations() throws IOException {
       var actual = extractConstants(ClassFile.of().parse(StackOperationsGenerator.generateClass()));
 
-      assertExtractedConstants(actual, StackOperationsGenerator.CLASS_NAME, Set.of());
+      assertExtractedConstants(actual, StackOperationsGenerator.CLASS_NAME.replace('/', '.'), Set.of());
     }
 
     static List<Supplier<byte[]>> invalidInputs =
@@ -273,7 +273,7 @@ class ClassModelExtractorTest {
     void extractForNopOperations() throws IOException {
       var actual = extractConstants(ClassFile.of().parse(NopGenerator.generateNop()));
 
-      assertExtractedConstants(actual, NopGenerator.CLASS_NAME, Set.of());
+      assertExtractedConstants(actual, NopGenerator.CLASS_NAME.replace('/', '.'), Set.of());
     }
 
     @Test
@@ -292,7 +292,7 @@ class ClassModelExtractorTest {
       var actual = extractConstants(ConversionFunctionality.class);
 
       assertExtractedConstants(
-          actual, "org/glodean/constants/samples/ConversionFunctionality", Set.of());
+          actual, "org.glodean.constants.samples.ConversionFunctionality", Set.of());
     }
 
     @Test
@@ -301,7 +301,7 @@ class ClassModelExtractorTest {
       var actual = extractConstants(MultiArrayFunctionality.class);
 
       assertExtractedConstants(
-          actual, "org/glodean/constants/samples/MultiArrayFunctionality", Set.of());
+          actual, "org.glodean.constants.samples.MultiArrayFunctionality", Set.of());
     }
   }
 }

@@ -1,5 +1,6 @@
 package org.glodean.constants.extractor.bytecode;
 
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.classfile.ClassFile;
@@ -49,7 +50,7 @@ class SpecificRTClassDebugTest {
 
     System.out.println(
         "Analyzing: "
-            + classModel.thisClass().asInternalName()
+            + toJavaName(classModel.thisClass().asSymbol())
             + "::"
             + METHOD_NAME
             + METHOD_DESCRIPTOR);
