@@ -52,13 +52,6 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
     );
 
     /**
-     * Creates a new logging constant usage interpreter.
-     */
-    public LoggingConstantUsageInterpreter() {
-        // No initialization needed
-    }
-
-    /**
      * Interprets a constant usage location and determines if it represents a log message.
      * <p>
      * Analyzes the context to identify if the constant is being passed to a logging method.

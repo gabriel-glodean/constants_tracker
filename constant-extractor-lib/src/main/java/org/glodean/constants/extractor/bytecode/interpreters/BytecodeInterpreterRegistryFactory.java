@@ -28,6 +28,11 @@ public final class BytecodeInterpreterRegistryFactory {
   public static ConstantUsageInterpreterRegistry registry() {
     return ConstantUsageInterpreterRegistry.builder()
         .register(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, new LoggingConstantUsageInterpreter())
+        .register(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, new SqlConstantUsageInterpreter())
+        .register(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, new ErrorMessageConstantUsageInterpreter())
+        .register(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, new FilePathConstantUsageInterpreter())
+        .register(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, new UrlResourceConstantUsageInterpreter())
+        .register(ClassConstant.UsageType.ANNOTATION_VALUE, new AnnotationConstantUsageInterpreter())
         .build();
   }
 }

@@ -43,7 +43,10 @@ public record ClassConstant(Object value, Set<ConstantUsage> usages) {
         METHOD_INVOCATION_TARGET,
 
         /** Constant is passed as a parameter to a method call */
-        METHOD_INVOCATION_PARAMETER
+        METHOD_INVOCATION_PARAMETER,
+
+        /** Constant appears as an annotation element value (e.g., {@code @Table(name = "users")}) */
+        ANNOTATION_VALUE
     }
 
     /**

@@ -143,7 +143,9 @@ public class ConstantUsageInterpreterRegistry {
 
         METHOD_INVOCATION_TARGET_INTERPRETER(ClassConstant.UsageType.METHOD_INVOCATION_TARGET),
 
-        METHOD_INVOCATION_PARAMETER_INTERPRETER(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER);
+         METHOD_INVOCATION_PARAMETER_INTERPRETER(ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER),
+
+         ANNOTATION_VALUE_INTERPRETER(ClassConstant.UsageType.ANNOTATION_VALUE);
 
         private final ClassConstant.UsageType usageType;
 
@@ -153,7 +155,8 @@ public class ConstantUsageInterpreterRegistry {
                 ClassConstant.UsageType.STATIC_FIELD_STORE, STATIC_FIELD_STORE_INTERPRETER,
                 ClassConstant.UsageType.FIELD_STORE, FIELD_STORE_INTERPRETER,
                 ClassConstant.UsageType.METHOD_INVOCATION_TARGET, METHOD_INVOCATION_TARGET_INTERPRETER,
-                ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, METHOD_INVOCATION_PARAMETER_INTERPRETER
+                ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER, METHOD_INVOCATION_PARAMETER_INTERPRETER,
+                ClassConstant.UsageType.ANNOTATION_VALUE, ANNOTATION_VALUE_INTERPRETER
         );
 
         static NoOpConstantUsageInterpreter forType(ClassConstant.UsageType usageType) {

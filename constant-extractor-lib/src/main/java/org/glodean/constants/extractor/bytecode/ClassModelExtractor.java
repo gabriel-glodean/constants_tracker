@@ -42,6 +42,11 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
   public Collection<ClassConstants> extract() throws ExtractionException {
     Multimap<Object, ConstantUsage> joinedMap = HashMultimap.create();
     String javaClassName = toJavaName(model.thisClass().asSymbol());
+
+    // Extract constants from annotations (class, field, method, parameter level)
+    var annotationExtractor = new AnnotationConstantExtractor(merger.usageInterpreterRegistry());
+    joinedMap.putAll(annotationExtractor.extract(model, javaClassName));
+
     for (MethodModel mm : model.methods()) {
       if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
         continue;

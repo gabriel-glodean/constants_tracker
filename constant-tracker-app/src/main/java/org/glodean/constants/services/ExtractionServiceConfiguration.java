@@ -4,7 +4,12 @@ import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.ConstantUsageInterpreterRegistry;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.glodean.constants.extractor.bytecode.StringConcatPatternSplitter;
+import org.glodean.constants.extractor.bytecode.interpreters.AnnotationConstantUsageInterpreter;
+import org.glodean.constants.extractor.bytecode.interpreters.ErrorMessageConstantUsageInterpreter;
+import org.glodean.constants.extractor.bytecode.interpreters.FilePathConstantUsageInterpreter;
 import org.glodean.constants.extractor.bytecode.interpreters.LoggingConstantUsageInterpreter;
+import org.glodean.constants.extractor.bytecode.interpreters.SqlConstantUsageInterpreter;
+import org.glodean.constants.extractor.bytecode.interpreters.UrlResourceConstantUsageInterpreter;
 import org.glodean.constants.model.ClassConstant.UsageType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -53,6 +58,11 @@ public class ExtractionServiceConfiguration {
   ConstantUsageInterpreterRegistry interpreterRegistry() {
     return ConstantUsageInterpreterRegistry.builder()
         .register(UsageType.METHOD_INVOCATION_PARAMETER, new LoggingConstantUsageInterpreter())
+        .register(UsageType.METHOD_INVOCATION_PARAMETER, new SqlConstantUsageInterpreter())
+        .register(UsageType.METHOD_INVOCATION_PARAMETER, new ErrorMessageConstantUsageInterpreter())
+        .register(UsageType.METHOD_INVOCATION_PARAMETER, new FilePathConstantUsageInterpreter())
+        .register(UsageType.METHOD_INVOCATION_PARAMETER, new UrlResourceConstantUsageInterpreter())
+        .register(UsageType.ANNOTATION_VALUE, new AnnotationConstantUsageInterpreter())
         .build();
   }
 
