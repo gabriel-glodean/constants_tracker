@@ -15,7 +15,7 @@ public interface ConstantUsageRepository
   /**
    * Finds all usage entities associated with the given constant.
    *
-   * @param constantId the primary key of the owning {@link ClassConstantEntity}
+   * @param constantId the primary key of the owning {@link UnitConstantEntity}
    * @return a {@link Flux} emitting every {@link ConstantUsageEntity} for that constant
    */
   Flux<ConstantUsageEntity> findAllByConstantId(Long constantId);

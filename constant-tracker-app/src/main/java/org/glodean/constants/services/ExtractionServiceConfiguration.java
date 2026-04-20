@@ -10,7 +10,7 @@ import org.glodean.constants.extractor.bytecode.interpreters.FilePathConstantUsa
 import org.glodean.constants.extractor.bytecode.interpreters.LoggingConstantUsageInterpreter;
 import org.glodean.constants.extractor.bytecode.interpreters.SqlConstantUsageInterpreter;
 import org.glodean.constants.extractor.bytecode.interpreters.UrlResourceConstantUsageInterpreter;
-import org.glodean.constants.model.ClassConstant.UsageType;
+import org.glodean.constants.model.UnitConstant.UsageType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

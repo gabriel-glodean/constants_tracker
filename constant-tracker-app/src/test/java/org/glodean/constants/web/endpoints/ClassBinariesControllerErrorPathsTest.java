@@ -7,14 +7,14 @@ import static org.mockito.Mockito.when;
 
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.ModelExtractor.ExtractionException;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstant.ConstantUsage;
-import org.glodean.constants.model.ClassConstant.CoreSemanticType;
-import org.glodean.constants.model.ClassConstant.UsageLocation;
-import org.glodean.constants.model.ClassConstant.UsageType;
-import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstant.ConstantUsage;
+import org.glodean.constants.model.UnitConstant.CoreSemanticType;
+import org.glodean.constants.model.UnitConstant.UsageLocation;
+import org.glodean.constants.model.UnitConstant.UsageType;
+import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -47,26 +47,27 @@ class ClassBinariesControllerErrorPathsTest {
 
   @Autowired WebTestClient web;
 
-  @MockitoBean ClassConstantsStore storage;
+  @MockitoBean UnitConstantsStore storage;
 
   @MockitoBean(enforceOverride = true)
   ExtractionService extractionService;
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  static ClassConstants sampleConstants() {
+  static UnitConstants sampleConstants() {
     var loc = new UsageLocation("com/example/Greeter", "greet", "()V", 0, null);
     var usage = new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER,
         CoreSemanticType.LOG_MESSAGE, loc, 0.9);
-    var cc = new ClassConstant("Hello", Set.of(usage));
-    return new ClassConstants("com/example/Greeter", Set.of(cc));
+    var cc = new UnitConstant("Hello", Set.of(usage));
+    var descriptor = new org.glodean.constants.model.UnitDescriptor(org.glodean.constants.extractor.bytecode.BytecodeSourceKind.CLASS_FILE, "com/example/Greeter");
+    return new UnitConstants(descriptor, Set.of(cc));
   }
 
   // ── ExtractionException → 422 ─────────────────────────────────────────────
 
   @Test
   void putWithExtractionExceptionReturns422() {
-    ModelExtractor mockExtractor = () -> {
+    ModelExtractor mockExtractor = (src) -> {
       throw new ExtractionException("bad bytecode");
     };
     when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
@@ -82,7 +83,7 @@ class ClassBinariesControllerErrorPathsTest {
 
   @Test
   void postWithExtractionExceptionReturns422() {
-    ModelExtractor mockExtractor = () -> {
+    ModelExtractor mockExtractor = (src) -> {
       throw new ExtractionException("bad bytecode");
     };
     when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
@@ -100,10 +101,10 @@ class ClassBinariesControllerErrorPathsTest {
 
   @Test
   void putWithStorageExceptionReturns500() {
-    ClassConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = () -> List.of(constants);
+    UnitConstants constants = sampleConstants();
+    ModelExtractor mockExtractor = (src) -> List.of(constants);
     when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
-    when(storage.store(any(ClassConstants.class), anyString(), anyInt()))
+    when(storage.store(any(UnitConstants.class), anyString(), anyInt()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
 
     web.put()
@@ -119,10 +120,10 @@ class ClassBinariesControllerErrorPathsTest {
 
   @Test
   void postWithStorageExceptionReturns500() {
-    ClassConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = () -> List.of(constants);
+    UnitConstants constants = sampleConstants();
+    ModelExtractor mockExtractor = (src) -> List.of(constants);
     when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
-    when(storage.store(any(ClassConstants.class), anyString()))
+    when(storage.store(any(UnitConstants.class), anyString()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
 
     web.post()
@@ -138,10 +139,10 @@ class ClassBinariesControllerErrorPathsTest {
 
   @Test
   void postWithMockedExtractorSucceeds() {
-    ClassConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = () -> List.of(constants);
+    UnitConstants constants = sampleConstants();
+    ModelExtractor mockExtractor = (src) -> List.of(constants);
     when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
-    when(storage.store(any(ClassConstants.class), anyString()))
+    when(storage.store(any(UnitConstants.class), anyString()))
         .thenReturn(Mono.just(constants));
 
     web.post()

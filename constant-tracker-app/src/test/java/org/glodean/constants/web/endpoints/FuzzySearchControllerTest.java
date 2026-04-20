@@ -6,7 +6,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import org.glodean.constants.dto.FuzzySearchHit;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -28,7 +28,7 @@ class FuzzySearchControllerTest {
 
   @Autowired WebTestClient web;
 
-  @MockitoBean ClassConstantsStore store;
+  @MockitoBean UnitConstantsStore store;
 
   // ── happy path ──────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ class FuzzySearchControllerTest {
         new FuzzySearchResponse(
             List.of(
                 new FuzzySearchHit(
-                    "my-app", "org/example/Repo", 1, List.of("SELECT * FROM users"))),
+                    "my-app", "org/example/Repo", 1, "CLASS_FILE", List.of("SELECT * FROM users"))),
             1L);
     // default fuzzy=1, rows=10
     when(store.fuzzySearch(eq("my-app"), eq("SELECT"), eq(1), eq(10)))
@@ -52,7 +52,7 @@ class FuzzySearchControllerTest {
         .expectBody()
         .jsonPath("$.totalFound")
         .isEqualTo(1)
-        .jsonPath("$.hits[0].className")
+        .jsonPath("$.hits[0].unitName")
         .isEqualTo("org/example/Repo")
         .jsonPath("$.hits[0].constantValues[0]")
         .isEqualTo("SELECT * FROM users");

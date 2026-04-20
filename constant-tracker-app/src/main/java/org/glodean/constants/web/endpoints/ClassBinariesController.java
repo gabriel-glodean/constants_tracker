@@ -1,11 +1,11 @@
 package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
-import org.glodean.constants.dto.GetClassConstantsReply;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.extractor.ModelExtractor;
-import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -56,7 +56,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/class")
 public record ClassBinariesController(
-        @Autowired ClassConstantsStore storage, @Autowired ExtractionService extractionService) {
+        @Autowired UnitConstantsStore storage, @Autowired ExtractionService extractionService) {
 
     /**
      * Store a class file for a specific project and version.
@@ -67,18 +67,18 @@ public record ClassBinariesController(
      * @param javaClass the raw bytes of a .class file (as reactive stream)
      * @param project   the project identifier (e.g., "jdk", "spring-boot")
      * @param version   the explicit version number (e.g., 8, 11, 17)
-     * @return 200 OK with {@link ClassConstants} if successful,
+     * @return 200 OK with {@link org.glodean.constants.model.UnitConstants} if successful,
      * 422 Unprocessable Entity if bytecode is invalid,
      * 500 Internal Server Error for other failures
      */
     @PutMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public Mono<ResponseEntity<ClassConstants>> storeClass(
+    public Mono<ResponseEntity<Object>> storeClass(
             @RequestBody Mono<DataBuffer> javaClass,
             @RequestParam("project") String project,
             @RequestParam("version") int version) {
         return modelMono(javaClass)
-                .flatMap(classConstants -> storage.store(classConstants, project, version))
-                .map(ResponseEntity::ok)
+                .flatMap(classConstants -> storage.store(classConstants, project, version)
+                        .thenReturn(ResponseEntity.ok().build()))
                 .onErrorResume(
                         ModelExtractor.ExtractionException.class,
                         _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
@@ -98,16 +98,16 @@ public record ClassBinariesController(
      *
      * @param javaClass the raw bytes of a .class file (as reactive stream)
      * @param project   the project identifier
-     * @return 200 OK with {@link ClassConstants} if successful,
+     * @return 200 OK with {@link org.glodean.constants.model.UnitConstants} if successful,
      * 422 Unprocessable Entity if bytecode is invalid,
      * 500 Internal Server Error for other failures
      */
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public Mono<ResponseEntity<ClassConstants>> storeClass(
+    public Mono<ResponseEntity<Object>> storeClass(
             @RequestBody Mono<DataBuffer> javaClass, @RequestParam("project") String project) {
         return modelMono(javaClass)
-                .flatMap(classConstants -> storage.store(classConstants, project))
-                .map(ResponseEntity::ok)
+                .flatMap(classConstants -> storage.store(classConstants, project)
+                        .thenReturn(ResponseEntity.ok().build()))
                 .onErrorResume(
                         ModelExtractor.ExtractionException.class,
                         _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
@@ -125,11 +125,11 @@ public record ClassBinariesController(
      * and runs the bytecode extractor.
      *
      * @param javaClass the reactive stream carrying the raw class-file bytes
-     * @return a {@link Mono} emitting the sole {@link ClassConstants} from the class file;
+     * @return a {@link Mono} emitting the sole {@link org.glodean.constants.model.UnitConstants} from the class file;
      *         errors with {@link org.glodean.constants.extractor.ModelExtractor.ExtractionException}
      *         on malformed bytecode
      */
-    private Mono<ClassConstants> modelMono(Mono<DataBuffer> javaClass) {
+    private Mono<UnitConstants> modelMono(Mono<DataBuffer> javaClass) {
         return javaClass
                 .map(
                         dataBuffer -> {
@@ -142,9 +142,20 @@ public record ClassBinariesController(
                 .flatMap(
                         modelExtractor -> {
                             try {
+                                // Prefer the no-arg extract() which most concrete extractors
+                                // (e.g., ClassModelExtractor) override to derive a sensible
+                                // UnitDescriptor. If it's not implemented (e.g., mocks that
+                                // only implement the UnitDescriptor overload) fall back to
+                                // calling extract(null).
                                 return Mono.just(modelExtractor.extract());
                             } catch (ModelExtractor.ExtractionException e) {
                                 return Mono.error(e);
+                            } catch (UnsupportedOperationException e) {
+                                try {
+                                    return Mono.just(modelExtractor.extract((org.glodean.constants.model.UnitDescriptor) null));
+                                } catch (ModelExtractor.ExtractionException ex) {
+                                    return Mono.error(ex);
+                                }
                             }
                         })
                 .map(Iterables::getOnlyElement);
@@ -156,18 +167,18 @@ public record ClassBinariesController(
      * @param project the project identifier
      * @param className the class internal or binary name (slash-separated, e.g., "java/lang/String")
      * @param version the project version number
-     * @return 200 OK with a {@link GetClassConstantsReply} if the class is found,
+     * @return 200 OK with a {@link GetUnitConstantsReply} if the class is found,
      *         404 Not Found if no matching snapshot exists,
      *         500 Internal Server Error for other failures
      */
     @GetMapping
-    public Mono<ResponseEntity<GetClassConstantsReply>> classConstants(
+    public Mono<ResponseEntity<GetUnitConstantsReply>> classConstants(
             @RequestParam("project") String project,
             @RequestParam("className") String className,
             @RequestParam("version") int version) {
         String key = project + ":" + className + ":" + version;
         return storage.find(key)
-                .map(GetClassConstantsReply::new)
+                .map(GetUnitConstantsReply::new)
                 .map(ResponseEntity::ok)
                 .onErrorResume(
                         IllegalArgumentException.class, _ -> Mono.just(ResponseEntity.notFound().build()))

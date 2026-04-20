@@ -8,48 +8,60 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstant.CoreSemanticType;
-import org.glodean.constants.model.ClassConstant.CustomSemanticType;
-import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstant.CoreSemanticType;
+import org.glodean.constants.model.UnitConstant.CustomSemanticType;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.glodean.constants.store.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * PostgreSQL R2DBC-backed implementation of {@link ClassConstantsStore}.
+ * PostgreSQL R2DBC-backed implementation of {@link UnitConstantsStore}.
  *
- * <p>Stores the full {@link ClassConstants} model across three tables:
- * {@code class_snapshots}, {@code class_constants}, and {@code constant_usages}.
- * Version assignment is delegated to {@code CompositeClassConstantsStore};
- * the {@link #store(ClassConstants, String)} overload throws {@link UnsupportedOperationException}.
+ * <p>Persists a {@link org.glodean.constants.model.UnitDescriptor} as a row in
+ * {@code unit_descriptors} (project + version + source metadata) and stores the full
+ * {@link UnitConstants} JSON in a child {@code unit_snapshots} row.
+ *
+ * <p>Version assignment is delegated to {@code CompositeUnitConstantsStore};
+ * the {@link #store(UnitConstants, String)} overload throws {@link UnsupportedOperationException}.
  */
 @Service
-public class PostgresService implements ClassConstantsStore {
+public class PostgresService implements UnitConstantsStore {
 
   private static final Logger logger = LogManager.getLogger(PostgresService.class);
-  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final ObjectMapper JSON = createMapper();
 
-  private final ClassSnapshotRepository snapshotRepo;
-  private final ClassConstantRepository constantRepo;
+  private static ObjectMapper createMapper() {
+    var mapper = new ObjectMapper();
+    mapper.addMixIn(UnitConstant.SemanticType.class, SemanticTypeMixin.class);
+    return mapper;
+  }
+
+  @com.fasterxml.jackson.annotation.JsonTypeInfo(
+      use = com.fasterxml.jackson.annotation.JsonTypeInfo.Id.NAME,
+      property = "@semanticTypeKind")
+  @com.fasterxml.jackson.annotation.JsonSubTypes({
+    @com.fasterxml.jackson.annotation.JsonSubTypes.Type(value = CoreSemanticType.class, name = "core"),
+    @com.fasterxml.jackson.annotation.JsonSubTypes.Type(value = CustomSemanticType.class, name = "custom")
+  })
+  private interface SemanticTypeMixin {}
+
+  private final UnitDescriptorRepository descriptorRepo;
+  private final UnitSnapshotRepository snapshotRepo;
+  private final UnitConstantRepository constantRepo;
   private final ConstantUsageRepository usageRepo;
 
-  /**
-   * Constructs a {@code PostgresService} with the three required repositories.
-   *
-   * @param snapshotRepo  repository for {@code class_snapshots} rows
-   * @param constantRepo  repository for {@code class_constants} rows
-   * @param usageRepo     repository for {@code constant_usages} rows
-   */
   public PostgresService(
-      @Autowired ClassSnapshotRepository snapshotRepo,
-      @Autowired ClassConstantRepository constantRepo,
+      @Autowired UnitDescriptorRepository descriptorRepo,
+      @Autowired UnitSnapshotRepository snapshotRepo,
+      @Autowired UnitConstantRepository constantRepo,
       @Autowired ConstantUsageRepository usageRepo) {
+    this.descriptorRepo = descriptorRepo;
     this.snapshotRepo = snapshotRepo;
     this.constantRepo = constantRepo;
     this.usageRepo = usageRepo;
@@ -57,59 +69,71 @@ public class PostgresService implements ClassConstantsStore {
 
   @Override
   @Transactional
-  public Mono<ClassConstants> store(ClassConstants constants, String project, int version) {
+  public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
+    var source = constants.source();
+    String sourcePath = source.path();
+    String sourceKind = source.sourceKind().name();
+    long sizeBytes = source.sizeBytes();
+    String contentHash = source.contentHash();
+
     logger.atInfo().log(
-        "Storing to PostgreSQL: {} project={} version={}", constants.name(), project, version);
-    var snapshot = new ClassSnapshotEntity(null, project, constants.name(), version);
-    return snapshotRepo
-        .save(snapshot)
-        .flatMap(
-            saved ->
-                Flux.fromIterable(constants.constants())
-                    .flatMap(
-                        cc -> {
-                          String value = cc.value().toString();
-                          String valueType = cc.value().getClass().getSimpleName();
-                          var entity =
-                              new ClassConstantEntity(null, saved.id(), value, valueType);
-                          return constantRepo
-                              .save(entity)
-                              .flatMapMany(
-                                  savedConst ->
-                                      Flux.fromIterable(cc.usages())
-                                          .flatMap(
-                                              usage ->
-                                                  usageRepo.save(
-                                                      toEntity(savedConst.id(), usage))));
-                        })
-                    .then(Mono.just(constants)));
+        "Storing to PostgreSQL: {} (kind={}, size={}) project={} version={}",
+        sourcePath, sourceKind, sizeBytes, project, version);
+
+    String unitConstantsJson;
+    try {
+      var payload = new java.util.HashMap<String, Object>();
+      payload.put("source", source);
+      payload.put("sourceKind", sourceKind);
+      payload.put("constants", constants.constants());
+      unitConstantsJson = JSON.writeValueAsString(payload);
+    } catch (JsonProcessingException e) {
+      logger.atWarn().withThrowable(e).log("Failed to serialise UnitConstants to JSON; storing empty object");
+      unitConstantsJson = "{}";
+    }
+
+    var descriptorEntity = new UnitDescriptorEntity(
+        null, project, version, sourceKind, sourcePath, sizeBytes, contentHash);
+
+    String json = unitConstantsJson;
+    return descriptorRepo
+        .save(descriptorEntity)
+        .flatMap(savedDescriptor -> {
+          var snapshotEntity = new UnitSnapshotEntity(
+              null, savedDescriptor.id(), sourcePath, json);
+          return snapshotRepo.save(snapshotEntity);
+        })
+        .doOnNext(saved -> logger.atInfo().log(
+            "Saved snapshot id={} for descriptor project={} path={} v{}",
+            saved.id(), project, sourcePath, version))
+        .thenReturn(constants);
   }
 
   /**
    * Not supported — version assignment is the responsibility of
-   * {@link org.glodean.constants.store.CompositeClassConstantsStore}.
+   * {@link org.glodean.constants.store.CompositeUnitConstantsStore}.
    *
    * @throws UnsupportedOperationException always
    */
   @Override
-  public Mono<ClassConstants> store(ClassConstants constants, String project) {
+  public Mono<UnitConstants> store(UnitConstants constants, String project) {
     throw new UnsupportedOperationException(
-        "PostgresService does not manage version assignment; use CompositeClassConstantsStore");
+        "PostgresService does not manage version assignment; use CompositeUnitConstantsStore");
   }
 
   /**
-   * Looks up constants for a versioned class key ({@code project:className:version}).
+   * Looks up constants for a versioned unit key ({@code project:unitPath:version}).
    * Results are cached in the {@value Constants#DATA_LOCATION} cache.
    */
   @Override
   @Cacheable(cacheNames = Constants.DATA_LOCATION, key = "#key")
-  public Mono<Map<Object, Collection<ClassConstant.UsageType>>> find(String key) {
+  public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
     String[] parts = key.split(":", 3);
     if (parts.length != 3) {
       return Mono.error(new IllegalArgumentException("Invalid key format: " + key));
     }
     String project = parts[0];
-    String className = parts[1];
+    String unitPath = parts[1];
     int version;
     try {
       version = Integer.parseInt(parts[2]);
@@ -117,88 +141,37 @@ public class PostgresService implements ClassConstantsStore {
       return Mono.error(new IllegalArgumentException("Invalid version in key: " + key));
     }
 
-    return snapshotRepo
-        .findByProjectAndClassNameAndVersion(project, className, version)
-        .switchIfEmpty(Mono.error(new IllegalArgumentException("Unknown class!")))
-        .flatMapMany(snapshot -> constantRepo.findAllBySnapshotId(snapshot.id()))
-        .flatMap(
-            cc ->
-                usageRepo
-                    .findAllByConstantId(cc.id())
-                    .map(
-                        u ->
-                            Map.entry(
-                                (Object) cc.constantValue(),
-                                ClassConstant.UsageType.valueOf(u.structuralType()))))
-        .collectList()
-        .map(
-            entries -> {
-              Map<Object, Collection<ClassConstant.UsageType>> result =
-                  HashMap.newHashMap(entries.size());
-              for (var entry : entries) {
-                result
-                    .computeIfAbsent(
-                        entry.getKey(), _ -> EnumSet.noneOf(ClassConstant.UsageType.class))
-                    .add(entry.getValue());
-              }
-              return result;
-            });
-  }
-
-  /**
-   * Converts a domain {@link ClassConstant.ConstantUsage} into a storable
-   * {@link ConstantUsageEntity}, serialising the semantic-type hierarchy and
-   * the metadata map to JSON.
-   *
-   * @param constantId the foreign key referencing the owning {@link ClassConstantEntity}
-   * @param usage      the domain usage to convert
-   * @return a fully populated {@link ConstantUsageEntity} ready for persistence
-   */
-  private static ConstantUsageEntity toEntity(Long constantId, ClassConstant.ConstantUsage usage) {
-    var loc = usage.location();
-    String kind;
-    String name;
-    String displayName;
-    String description;
-    if (usage.semanticType() instanceof CoreSemanticType cst) {
-      kind = "CORE";
-      name = cst.name();
-      displayName = null;
-      description = null;
-    } else if (usage.semanticType() instanceof CustomSemanticType(
-            String category, String displayName1, String description1
-    )) {
-      kind = "CUSTOM";
-      name = category;
-      displayName = displayName1;
-      description = description1;
-    } else {
-      kind = "CORE";
-      name = "UNKNOWN";
-      displayName = null;
-      description = null;
-    }
-    String metadataJson;
-    try {
-      metadataJson = JSON.writeValueAsString(usage.metadata());
-    } catch (JsonProcessingException e) {
-      metadataJson = "{}";
-    }
-    return new ConstantUsageEntity(
-        null,
-        constantId,
-        usage.structuralType().name(),
-        kind,
-        name,
-        displayName,
-        description,
-        loc.className(),
-        loc.methodName(),
-        loc.methodDescriptor(),
-        loc.bytecodeOffset(),
-        loc.lineNumber(),
-        usage.confidence(),
-        metadataJson);
+    return descriptorRepo
+        .findByProjectAndPathAndVersion(project, unitPath, version)
+        .doFirst(() -> logger.atInfo().log(
+            "Querying descriptor project={} path={} v{}", project, unitPath, version))
+        .switchIfEmpty(Mono.error(new IllegalArgumentException("Unknown unit!")))
+        .flatMap(descriptor -> snapshotRepo.findByDescriptorIdAndUnitName(descriptor.id(), unitPath))
+        .switchIfEmpty(Mono.error(new IllegalArgumentException("No snapshot found!")))
+        .flatMap(snapshot -> {
+          String json = snapshot.unitConstantsJson();
+          java.util.Set<UnitConstant> constantsSet;
+          try {
+            var node = JSON.readTree(json);
+            var constantsNode = node.has("constants") ? node.get("constants") : null;
+            if (constantsNode == null || constantsNode.isNull()) {
+              constantsSet = java.util.Set.of();
+            } else {
+              constantsSet = JSON.convertValue(
+                  constantsNode, JSON.getTypeFactory().constructCollectionType(java.util.Set.class, UnitConstant.class));
+            }
+          } catch (JsonProcessingException | IllegalArgumentException e) {
+            return Mono.error(new IllegalStateException("Failed to parse stored UnitConstants JSON", e));
+          }
+          Map<Object, Collection<UnitConstant.UsageType>> result = HashMap.newHashMap(constantsSet.size());
+          for (var uc : constantsSet) {
+            for (var usage : uc.usages()) {
+              result.computeIfAbsent(uc.value(), _ -> EnumSet.noneOf(UnitConstant.UsageType.class))
+                  .add(usage.structuralType());
+            }
+          }
+          return Mono.just(result);
+        });
   }
 }
 

@@ -1,0 +1,79 @@
+package org.glodean.constants.extractor.bytecode;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeModel;
+import java.lang.classfile.MethodModel;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.glodean.constants.extractor.ModelExtractor;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstant.ConstantUsage;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
+
+
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
+
+/**
+ * Extracts {@link UnitConstants} from a {@link java.lang.classfile.ClassModel} by analyzing each
+ * method's bytecode and merging discovered constants.
+ *
+ * <p>This extractor performs per-method bytecode analysis using {@link ByteCodeMethodAnalyzer}
+ * to compute abstract states (constant propagation, points-to information), then uses
+ * {@link AnalysisMerger} to extract constant usage patterns from those states.
+ *
+ * <p>The analysis is conservative and inter-procedural within a single class:
+ * <ul>
+ *   <li>Tracks constants through local variables and the operand stack</li>
+ *   <li>Identifies usage contexts (method parameters, field stores, arithmetic)</li>
+ *   <li>Handles control flow (branches, loops, exception handlers)</li>
+ *   <li>Does not perform cross-class analysis (each class analyzed independently)</li>
+ * </ul>
+ *
+ * @param model the Java class model to analyze (from Class-File API)
+ * @param merger the merger that converts bytecode states to constant usage mappings
+ */
+public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
+    implements ModelExtractor {
+
+  @Override
+  public Collection<UnitConstants> extract() throws ExtractionException {
+    // derive a sensible UnitDescriptor from the parsed class model
+    var javaClassName = toJavaName(model.thisClass().asSymbol());
+    return extract(new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, javaClassName));
+  }
+
+  @Override
+  public Collection<UnitConstants> extract(UnitDescriptor source) throws ExtractionException {
+    Multimap<Object, ConstantUsage> joinedMap = HashMultimap.create();
+    String javaClassName = toJavaName(model.thisClass().asSymbol());
+
+    // Extract constants from annotations (class, field, method, parameter level)
+    var annotationExtractor = new AnnotationConstantExtractor(merger.usageInterpreterRegistry());
+    joinedMap.putAll(annotationExtractor.extract(model, javaClassName));
+
+    for (MethodModel mm : model.methods()) {
+      if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
+        continue;
+      }
+      var analysis = new ByteCodeMethodAnalyzer(model, mm);
+      analysis.run();
+      joinedMap.putAll(merger.merge(
+          javaClassName,
+          mm.methodName().stringValue(),
+          mm.methodType().stringValue(),
+          analysis.code,
+          analysis.in));
+    }
+
+    Set<UnitConstant> constants = joinedMap.asMap().entrySet().stream()
+        .map(entry -> new UnitConstant(entry.getKey(), new HashSet<>(entry.getValue())))
+        .collect(Collectors.toSet());
+
+    return Set.of(new UnitConstants(source, constants));
+  }
+}

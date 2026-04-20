@@ -119,6 +119,7 @@ class E2EIngestTest {
                 .expectStatus()
                 .is2xxSuccessful();
 
+
         web.get()
                 .uri("/class?project=demo&version=1&className=org.glodean.constants.samples.Greeter")
                 .exchange()

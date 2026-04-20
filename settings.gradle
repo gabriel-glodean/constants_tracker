@@ -7,5 +7,6 @@ pluginManagement {
 
 rootProject.name = 'constant_tracker'
 
-include 'constant-extractor-lib'
+include 'constant-extractor-bytecode'
 include 'constant-tracker-app'
+include 'constant-extractor-api'

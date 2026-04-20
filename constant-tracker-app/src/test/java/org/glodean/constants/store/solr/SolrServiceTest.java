@@ -16,12 +16,12 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstant.ConstantUsage;
-import org.glodean.constants.model.ClassConstant.CoreSemanticType;
-import org.glodean.constants.model.ClassConstant.UsageLocation;
-import org.glodean.constants.model.ClassConstant.UsageType;
-import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstant.ConstantUsage;
+import org.glodean.constants.model.UnitConstant.CoreSemanticType;
+import org.glodean.constants.model.UnitConstant.UsageLocation;
+import org.glodean.constants.model.UnitConstant.UsageType;
+import org.glodean.constants.model.UnitConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,27 +42,29 @@ class SolrServiceTest {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  static ClassConstants sampleConstants() {
+  static UnitConstants sampleConstants() {
     var location = new UsageLocation("com/example/Greeter", "greet", "()V", 5, null);
     var usage =
         new ConstantUsage(
             UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.LOG_MESSAGE, location, 0.9);
-    var cc = new ClassConstant("Hello, world!", Set.of(usage));
-    return new ClassConstants("com/example/Greeter", Set.of(cc));
+    var cc = new UnitConstant("Hello, world!", Set.of(usage));
+    var descriptor = new org.glodean.constants.model.UnitDescriptor(org.glodean.constants.extractor.bytecode.BytecodeSourceKind.CLASS_FILE, "com/example/Greeter");
+    return new UnitConstants(descriptor, Set.of(cc));
   }
 
-  static ClassConstants multiConstantClass() {
+  static UnitConstants multiConstantClass() {
     var loc = new UsageLocation("com/example/Repo", "query", "()V", 10, null);
     var u1 =
         new ConstantUsage(
             UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.SQL_FRAGMENT, loc, 0.95);
     var u2 = new ConstantUsage(UsageType.FIELD_STORE, CoreSemanticType.LOG_MESSAGE, loc, 0.8);
-    var cc1 = new ClassConstant("SELECT * FROM users", Set.of(u1));
-    var cc2 = new ClassConstant("https://api.example.com", Set.of(u2));
-    return new ClassConstants("com/example/Repo", Set.of(cc1, cc2));
+    var cc1 = new UnitConstant("SELECT * FROM users", Set.of(u1));
+    var cc2 = new UnitConstant("https://api.example.com", Set.of(u2));
+    var descriptor = new org.glodean.constants.model.UnitDescriptor(org.glodean.constants.extractor.bytecode.BytecodeSourceKind.CLASS_FILE, "com/example/Repo");
+    return new UnitConstants(descriptor, Set.of(cc1, cc2));
   }
 
-  // ── store(ClassConstants, String) – auto-version overload ─────────────────
+  // ── store(UnitConstants, String) – auto-version overload ─────────────────
 
   @Test
   void storeWithoutVersionThrowsUnsupported() {
@@ -70,16 +72,16 @@ class SolrServiceTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  // ── store(ClassConstants, String, int) ─────────────────────────────────────
+  // ── store(UnitConstants, String, int) ─────────────────────────────────────
 
   @Test
   void storeWithVersionSucceedsAndReturnsOriginalConstants() {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
 
-    ClassConstants result = svc.store(sampleConstants(), "proj", 1).block();
+    UnitConstants result = svc.store(sampleConstants(), "proj", 1).block();
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("com/example/Greeter");
+    assertThat(result.source().path()).isEqualTo("com/example/Greeter");
   }
 
   @Test
@@ -87,9 +89,9 @@ class SolrServiceTest {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
 
-    ClassConstants result = svc.store(multiConstantClass(), "proj", 2).block();
+    UnitConstants result = svc.store(multiConstantClass(), "proj", 2).block();
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("com/example/Repo");
+    assertThat(result.source().path()).isEqualTo("com/example/Repo");
   }
 
   @Test
@@ -158,7 +160,7 @@ class SolrServiceTest {
 
     assertThatThrownBy(() -> svc.find("proj:com/example/Greeter:1").block())
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unknown class!");
+        .hasMessageContaining("Unknown unit!");
   }
 
   @Test
@@ -215,8 +217,8 @@ class SolrServiceTest {
     SolrDocumentList docs = new SolrDocumentList();
     SolrDocument doc = new SolrDocument();
     doc.setField("project", "proj");
-    doc.setField("class_name", "com/example/Repo");
-    doc.setField("class_version", 1);
+    doc.setField("unit_name", "com/example/Repo");
+    doc.setField("unit_version", 1);
     doc.addField("constant_values_t", "SELECT * FROM users");
     docs.add(doc);
     docs.setNumFound(1L);
@@ -233,7 +235,7 @@ class SolrServiceTest {
     assertThat(result.totalFound()).isEqualTo(1L);
     assertThat(result.hits()).hasSize(1);
     assertThat(result.hits().get(0).project()).isEqualTo("proj");
-    assertThat(result.hits().get(0).className()).isEqualTo("com/example/Repo");
+    assertThat(result.hits().get(0).unitName()).isEqualTo("com/example/Repo");
     assertThat(result.hits().get(0).version()).isEqualTo(1);
     assertThat(result.hits().get(0).constantValues()).contains("SELECT * FROM users");
   }
@@ -283,8 +285,8 @@ class SolrServiceTest {
     SolrDocumentList docs = new SolrDocumentList();
     SolrDocument doc = new SolrDocument();
     doc.setField("project", "proj");
-    doc.setField("class_name", "com/example/Empty");
-    doc.setField("class_version", 3);
+    doc.setField("unit_name", "com/example/Empty");
+    doc.setField("unit_version", 3);
     // no constant_values_t field → getFieldValues returns null
     docs.add(doc);
     docs.setNumFound(1L);
@@ -307,8 +309,8 @@ class SolrServiceTest {
     SolrDocumentList docs = new SolrDocumentList();
     SolrDocument doc = new SolrDocument();
     doc.setField("project", "proj");
-    doc.setField("class_name", "com/example/Greeter");
-    doc.setField("class_version", "not-a-number"); // non-Number version → defaults to 0
+    doc.setField("unit_name", "com/example/Greeter");
+    doc.setField("unit_version", "not-a-number"); // non-Number version → defaults to 0
     docs.add(doc);
     docs.setNumFound(1L);
 

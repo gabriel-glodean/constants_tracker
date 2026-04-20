@@ -1,0 +1,76 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'com.diffplug.spotless' version "$spotlessVersion"
+}
+
+group = 'org.glodean'
+version = "$appVersion"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform("org.junit:junit-bom:$junitVersion")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation "com.google.guava:guava:$guavaVersion"
+    implementation "com.google.jimfs:jimfs:$jimfsVersion"
+    implementation "org.apache.commons:commons-lang3:3.17.0"
+    implementation project(':constant-extractor-api')
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// Exclude model types from this module now that they live in the new API module.
+sourceSets {
+    main {
+        java {
+            exclude 'org/glodean/constants/model/**'
+            exclude 'org/glodean/constants/interpreter/**'
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.13"
+    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+
+jacocoTestCoverageVerification {
+    dependsOn tasks.named('test')
+    dependsOn tasks.named('jacocoTestReport')
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.85
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+

@@ -7,10 +7,10 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Set;
 import org.glodean.constants.extractor.ModelExtractor;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -31,27 +31,28 @@ import reactor.core.publisher.Mono;
 class JarBinariesControllerTest {
     @Autowired WebTestClient web;
 
-    @MockitoBean ClassConstantsStore storage;
+    @MockitoBean UnitConstantsStore storage;
     @MockitoBean ExtractionService extractionService;
 
     static final String POST_URL = "/jar?project=demo";
 
-    static ClassConstants sampleConstants() {
-        var usage = new ClassConstant.ConstantUsage(
-            ClassConstant.UsageType.METHOD_INVOCATION_PARAMETER,
-            ClassConstant.CoreSemanticType.LOG_MESSAGE,
-            new ClassConstant.UsageLocation("com/example/Greeter", "greet", "()V", 0, null),
+    static UnitConstants sampleConstants() {
+        var usage = new UnitConstant.ConstantUsage(
+            UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER,
+            UnitConstant.CoreSemanticType.LOG_MESSAGE,
+            new UnitConstant.UsageLocation("com/example/Greeter", "greet", "()V", 0, null),
             0.9);
-        var cc = new ClassConstant("Hello", Set.of(usage));
-        return new ClassConstants("com/example/Greeter", Set.of(cc));
+        var cc = new UnitConstant("Hello", Set.of(usage));
+        var descriptor = new org.glodean.constants.model.UnitDescriptor(org.glodean.constants.extractor.bytecode.BytecodeSourceKind.CLASS_FILE, "com/example/Greeter");
+        return new UnitConstants(descriptor, Set.of(cc));
     }
 
     @Test
     void postJarSuccess() {
-        ClassConstants constants = sampleConstants();
-        ModelExtractor mockExtractor = () -> List.of(constants);
+        UnitConstants constants = sampleConstants();
+        ModelExtractor mockExtractor = (src) -> List.of(constants);
         when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
-        when(storage.store(any(ClassConstants.class), anyString())).thenReturn(Mono.just(constants));
+        when(storage.store(any(UnitConstants.class), anyString())).thenReturn(Mono.just(constants));
 
         web.post()
             .uri(POST_URL)
@@ -63,7 +64,7 @@ class JarBinariesControllerTest {
 
     @Test
     void postJarExtractionExceptionReturns422() {
-        ModelExtractor mockExtractor = () -> { throw new ModelExtractor.ExtractionException("bad jar"); };
+            ModelExtractor mockExtractor = (src) -> { throw new ModelExtractor.ExtractionException("bad jar"); };
         when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
 
         web.post()
@@ -88,10 +89,10 @@ class JarBinariesControllerTest {
 
     @Test
     void postJarStorageExceptionReturns500() {
-        ClassConstants constants = sampleConstants();
-        ModelExtractor mockExtractor = () -> List.of(constants);
+        UnitConstants constants = sampleConstants();
+        ModelExtractor mockExtractor = (src) -> List.of(constants);
         when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
-        when(storage.store(any(ClassConstants.class), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
+        when(storage.store(any(UnitConstants.class), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
 
         web.post()
             .uri(POST_URL)

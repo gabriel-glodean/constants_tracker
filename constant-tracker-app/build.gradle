@@ -15,8 +15,10 @@ repositories {
 }
 
 dependencies {
-    // Library dependency
-    implementation project(':constant-extractor-lib')
+    // Library dependency (bytecode extractor project)
+    implementation project(':constant-extractor-bytecode')
+    // API module containing models and SPI
+    implementation project(':constant-extractor-api')
 
     // Test dependencies
     testImplementation platform("org.junit:junit-bom:$junitVersion")

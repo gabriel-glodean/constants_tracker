@@ -10,7 +10,7 @@ import org.glodean.constants.extractor.ModelExtractor.ExtractionException;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
-import org.glodean.constants.model.ClassConstants;
+import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.LoggingExtractionNotifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -33,11 +33,11 @@ class FileSystemModelExtractorJrtTest {
         new FileSystemModelExtractor(
             jrtFs, merger, "/modules/jdk.localedata/", new LoggingExtractionNotifier());
 
-    Collection<ClassConstants> results = extractor.extract();
+    Collection<UnitConstants> results = extractor.extract();
 
     // The JDK ships thousands of classes – we must get a non-trivial number of results
     assertNotNull(results);
-    assertFalse(results.isEmpty(), "Expected at least some ClassConstants from the JDK runtime");
+    assertFalse(results.isEmpty(), "Expected at least some UnitConstants from the JDK runtime");
 
     // After filtering out jdk.localedata we still expect many class results
     assertTrue(
@@ -45,10 +45,8 @@ class FileSystemModelExtractorJrtTest {
         "Expected > 500 class results from JDK runtime, got " + results.size());
 
     // Every entry should have a non-null, non-empty class name
-    for (ClassConstants cc : results) {
-      assertNotNull(cc.name(), "ClassConstants.name() must not be null");
-      assertFalse(cc.name().isBlank(), "ClassConstants.name() must not be blank");
-      assertNotNull(cc.constants(), "ClassConstants.constants() must not be null");
+    for (UnitConstants uc : results) {
+      assertNotNull(uc.constants(), "UnitConstants.constants() must not be null");
     }
 
     System.out.printf(

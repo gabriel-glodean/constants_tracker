@@ -10,9 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.Map;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -40,13 +40,13 @@ class ClassBinariesControllerTest {
 
   @Autowired WebTestClient web;
 
-  @MockitoBean ClassConstantsStore storage;
+  @MockitoBean UnitConstantsStore storage;
 
   @Test
   void storeClass() throws IOException {
     byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
-    when(storage.store(any(ClassConstants.class), anyString()))
-        .thenAnswer(inv -> Mono.just(inv.getArgument(0, ClassConstants.class)));
+    when(storage.store(any(UnitConstants.class), anyString()))
+        .thenAnswer(inv -> Mono.just(inv.getArgument(0, UnitConstants.class)));
     web.post()
         .uri(POST_URL)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -72,8 +72,8 @@ class ClassBinariesControllerTest {
   @Test
   void storeClassWithVersion() throws IOException {
     byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
-    when(storage.store(any(ClassConstants.class), anyString(), anyInt()))
-        .thenAnswer(inv -> Mono.just(inv.getArgument(0, ClassConstants.class)));
+    when(storage.store(any(UnitConstants.class), anyString(), anyInt()))
+        .thenAnswer(inv -> Mono.just(inv.getArgument(0, UnitConstants.class)));
     web.put()
         .uri(PUT_URL)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -90,7 +90,7 @@ class ClassBinariesControllerTest {
             Mono.just(
                 Map.of(
                     "1",
-                    EnumSet.of(ClassConstant.UsageType.ARITHMETIC_OPERAND))));
+                    EnumSet.of(UnitConstant.UsageType.ARITHMETIC_OPERAND))));
     web.get()
         .uri(GET_URL)
         .exchange()

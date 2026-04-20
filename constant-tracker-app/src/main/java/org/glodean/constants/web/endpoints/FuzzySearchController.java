@@ -1,7 +1,7 @@
 package org.glodean.constants.web.endpoints;
 
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,8 +13,8 @@ import reactor.core.publisher.Mono;
 /**
  * REST endpoint for fuzzy / full-text search over indexed constant values.
  *
- * <p>Delegates to the Solr-backed side of {@link ClassConstantsStore} via
- * {@link org.glodean.constants.store.CompositeClassConstantsStore#fuzzySearch}.
+ * <p>Delegates to the Solr-backed side of {@link org.glodean.constants.store.UnitConstantsStore} via
+ * {@link org.glodean.constants.store.CompositeUnitConstantsStore#fuzzySearch}.
  * No Lucene syntax knowledge is required from the caller — the search term is a plain string
  * and fuzzy tolerance is expressed as an integer edit distance.
  *
@@ -40,7 +40,7 @@ import reactor.core.publisher.Mono;
  */
 @RestController
 @RequestMapping("/search")
-public record FuzzySearchController(@Autowired ClassConstantsStore store) {
+public record FuzzySearchController(@Autowired UnitConstantsStore store) {
 
   /**
    * Performs a fuzzy / full-text search over indexed constant values.

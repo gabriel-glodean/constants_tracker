@@ -21,25 +21,25 @@ import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.dto.FuzzySearchHit;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.model.ClassConstant;
-import org.glodean.constants.model.ClassConstants;
-import org.glodean.constants.store.ClassConstantsStore;
+import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.store.UnitConstantsStore;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Solr-backed implementation of {@link ClassConstantsStore} that stores a simplified flat document
- * per class snapshot: {@code id}, {@code project}, {@code class_name}, {@code class_version}, and
+ * Solr-backed implementation of {@link org.glodean.constants.store.UnitConstantsStore} that stores a simplified flat document
+ * per unit snapshot: {@code id}, {@code project}, {@code unit_name}, {@code unit_version}, and
  * a multi-valued {@code constant_pairs_ss} field with entries of the form
  * {@code "<value>|<USAGE_TYPE>"}.
  *
- * <p>This service is used by {@link org.glodean.constants.store.CompositeClassConstantsStore} as
+ * <p>This service is used by {@link org.glodean.constants.store.CompositeUnitConstantsStore} as
  * the search-index side-car. Version assignment and reads live in PostgreSQL.
  */
 @Service
-public class SolrService implements ClassConstantsStore {
+public class SolrService implements UnitConstantsStore {
   private static final Logger logger = LogManager.getLogger(SolrService.class);
 
   private final HttpSolrClientBase solrClient;
@@ -55,28 +55,29 @@ public class SolrService implements ClassConstantsStore {
 
   /** Throws {@link UnsupportedOperationException} — version assignment is owned by the composite. */
   @Override
-  public Mono<ClassConstants> store(ClassConstants constants, String project) {
+  public Mono<UnitConstants> store(UnitConstants constants, String project) {
     throw new UnsupportedOperationException(
-        "SolrService does not manage version assignment; use CompositeClassConstantsStore");
+        "SolrService does not manage version assignment; use CompositeUnitConstantsStore");
   }
 
   /**
    * Stores a simplified flat Solr document for the given class snapshot.
    *
-   * <p>The document contains the fields {@code id}, {@code project}, {@code class_name},
-   * {@code class_version}, a multi-valued {@code constant_pairs_ss} field
+   * <p>The document contains the fields {@code id}, {@code project}, {@code unit_name},
+   * {@code unit_version}, {@code source_kind}, a multi-valued {@code constant_pairs_ss} field
    * ({@code "<value>|<USAGE_TYPE>"}), and a tokenised {@code constant_values_t} field used
    * for full-text search.
    *
-   * @param constants the class constants to index
+     * @param constants the unit constants to index
    * @param project   the project identifier
    * @param version   the version number
    * @return a {@link reactor.core.publisher.Mono} emitting the original {@code constants} on success
    */
   @Override
-  public Mono<ClassConstants> store(ClassConstants constants, String project, int version) {
-    logger.atInfo().log("Storing to Solr (simplified): {} project={} version={}", constants.name(), project, version);
-    var id = project + ":" + constants.name() + ":" + version;
+  public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
+    String sourcePath = constants.source().path();
+    logger.atInfo().log("Storing to Solr (simplified): {} project={} version={}", sourcePath, project, version);
+    var id = project + ":" + sourcePath + ":" + version;
 
     List<String> pairs = new ArrayList<>();
     List<String> values = new ArrayList<>();
@@ -84,7 +85,7 @@ public class SolrService implements ClassConstantsStore {
       String value = constant.value().toString();
       values.add(value);
       constant.usages().stream()
-          .map(ClassConstant.ConstantUsage::structuralType)
+          .map(UnitConstant.ConstantUsage::structuralType)
           .distinct()
           .forEach(usage -> pairs.add(value + "|" + usage.name()));
     }
@@ -92,8 +93,9 @@ public class SolrService implements ClassConstantsStore {
     SolrInputDocument doc = new SolrInputDocument();
     doc.setField("id", id);
     doc.setField("project", project);
-    doc.setField("class_name", constants.name());
-    doc.setField("class_version", version);
+    doc.setField("unit_name", sourcePath);
+    doc.setField("unit_version", version);
+    doc.setField("source_kind", constants.source().sourceKind().name());
     doc.setField("constant_pairs_ss", pairs);
     doc.setField("constant_values_t", values);
 
@@ -148,7 +150,7 @@ public class SolrService implements ClassConstantsStore {
     if (!"*".equals(project)) {
       params.set("fq", "project:\"" + project + "\"");
     }
-    params.set("fl", "project,class_name,class_version,constant_values_t");
+    params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t");
     params.set("rows", maxRows);
 
     return new QueryRequest(params);
@@ -165,7 +167,7 @@ public class SolrService implements ClassConstantsStore {
    *         errors with {@link IllegalArgumentException} if the document is not found
    */
   @Override
-  public Mono<Map<Object, Collection<ClassConstant.UsageType>>> find(String key) {
+  public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.set("q", "id:\"" + key + "\"");
     params.set("fl", "constant_pairs_ss");
@@ -185,15 +187,15 @@ public class SolrService implements ClassConstantsStore {
    * {@code "<value>|<USAGE_TYPE>"}.
    *
    * @param list the raw Solr {@link NamedList} response
-   * @return map of constant value ({@link String}) to a set of {@link ClassConstant.UsageType}
+    * @return map of constant value ({@link String}) to a set of {@link org.glodean.constants.model.UnitConstant.UsageType}
    * @throws IllegalArgumentException if the response contains no matching documents
    */
-  private static Map<Object, Collection<ClassConstant.UsageType>> parsePairs(
+  private static Map<Object, Collection<UnitConstant.UsageType>> parsePairs(
       NamedList<Object> list) {
-    Map<Object, Collection<ClassConstant.UsageType>> result = HashMap.newHashMap(10);
+    Map<Object, Collection<UnitConstant.UsageType>> result = HashMap.newHashMap(10);
     if (list.get("response") instanceof Collection<?> response) {
       if (response.isEmpty()) {
-        throw new IllegalArgumentException("Unknown class!");
+        throw new IllegalArgumentException("Unknown unit!");
       }
       for (var doc : response) {
         if (doc instanceof Map<?, ?> solrDoc) {
@@ -204,11 +206,11 @@ public class SolrService implements ClassConstantsStore {
                 int sep = pairStr.lastIndexOf('|');
                 if (sep > 0) {
                   String value = pairStr.substring(0, sep);
-                  ClassConstant.UsageType type =
-                      ClassConstant.UsageType.valueOf(pairStr.substring(sep + 1));
-                  result
-                      .computeIfAbsent(value, _ -> EnumSet.noneOf(ClassConstant.UsageType.class))
-                      .add(type);
+                   UnitConstant.UsageType type =
+                       UnitConstant.UsageType.valueOf(pairStr.substring(sep + 1));
+                   result
+                       .computeIfAbsent(value, _ -> EnumSet.noneOf(UnitConstant.UsageType.class))
+                       .add(type);
                 }
               }
             }
@@ -238,14 +240,15 @@ public class SolrService implements ClassConstantsStore {
     List<FuzzySearchHit> hits = new ArrayList<>(docs.size());
     for (SolrDocument doc : docs) {
       String project = (String) doc.getFieldValue("project");
-      String className = (String) doc.getFieldValue("class_name");
-      Object rawVersion = doc.getFieldValue("class_version");
+      String unitName = (String) doc.getFieldValue("unit_name");
+      Object rawVersion = doc.getFieldValue("unit_version");
       int version = rawVersion instanceof Number n ? n.intValue() : 0;
+      String sourceKind = (String) doc.getFieldValue("source_kind");
       Collection<Object> rawValues = doc.getFieldValues("constant_values_t");
       List<String> values = rawValues == null
           ? List.of()
           : rawValues.stream().map(Object::toString).toList();
-      hits.add(new FuzzySearchHit(project, className, version, values));
+      hits.add(new FuzzySearchHit(project, unitName, version, sourceKind, values));
     }
     return new FuzzySearchResponse(hits, numFound);
   }
