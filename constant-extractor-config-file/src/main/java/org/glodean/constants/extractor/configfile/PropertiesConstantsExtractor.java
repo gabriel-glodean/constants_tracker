@@ -56,7 +56,7 @@ public record PropertiesConstantsExtractor() implements ConstantsExtractor {
             var descriptor = new UnitDescriptor(ConfigFileSourceKind.PROPERTIES, path.toString(), size);
             return Set.of(new UnitConstants(descriptor, constants));
         } catch (IOException e) {
-            throw new ExtractionException(e);
+            throw new ExtractionException("Failed to extract constants from properties file: " + path, e);
         }
     }
 

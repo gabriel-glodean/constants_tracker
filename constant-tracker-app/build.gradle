@@ -17,6 +17,8 @@ repositories {
 dependencies {
     // Library dependency (bytecode extractor project)
     implementation project(':constant-extractor-bytecode')
+    // Config file extractor (YAML, properties)
+    implementation project(':constant-extractor-config-file')
     // API module containing models and SPI
     implementation project(':constant-extractor-api')
 

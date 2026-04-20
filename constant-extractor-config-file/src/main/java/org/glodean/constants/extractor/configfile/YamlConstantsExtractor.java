@@ -59,7 +59,7 @@ public record YamlConstantsExtractor() implements ConstantsExtractor {
             var descriptor = new UnitDescriptor(ConfigFileSourceKind.YAML, path.toString(), size);
             return Set.of(new UnitConstants(descriptor, constants));
         } catch (IOException e) {
-            throw new ExtractionException(e);
+            throw new ExtractionException("Failed to extract constants from YAML file: " + path, e);
         }
     }
 
@@ -112,4 +112,5 @@ public record YamlConstantsExtractor() implements ConstantsExtractor {
         return CoreSemanticType.CONFIGURATION_VALUE;
     }
 }
+
 
