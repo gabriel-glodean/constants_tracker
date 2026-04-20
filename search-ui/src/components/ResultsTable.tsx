@@ -1,6 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronRight, Copy, Check, FileCode2, Hash, FolderOpen } from 'lucide-react'
 import type { FuzzySearchHit, FuzzySearchResponse } from '@/api/searchApi'
+
+interface SemanticBadge {
+  type: string
+  confidence: string
+}
+
+function parseSemanticPairs(pairs: string[]): Map<string, SemanticBadge[]> {
+  const map = new Map<string, SemanticBadge[]>()
+  for (const pair of pairs) {
+    const lastPipe = pair.lastIndexOf('|')
+    if (lastPipe < 0) continue
+    const secondLastPipe = pair.lastIndexOf('|', lastPipe - 1)
+    if (secondLastPipe < 0) continue
+    const value = pair.substring(0, secondLastPipe)
+    const type = pair.substring(secondLastPipe + 1, lastPipe)
+    const confidence = pair.substring(lastPipe + 1)
+    const existing = map.get(value) ?? []
+    // deduplicate by type
+    if (!existing.some(b => b.type === type)) {
+      existing.push({ type, confidence })
+    }
+    map.set(value, existing)
+  }
+  return map
+}
 
 interface ResultsTableProps {
   data: FuzzySearchResponse
@@ -51,6 +76,7 @@ function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }
   const packagePath = hit.unitName.includes('/')
     ? hit.unitName.substring(0, hit.unitName.lastIndexOf('/'))
     : ''
+  const semanticMap = useMemo(() => parseSemanticPairs(hit.semanticPairs ?? []), [hit.semanticPairs])
 
   return (
     <div className="bg-card/30 hover:bg-card/60 transition-colors">
@@ -97,7 +123,7 @@ function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }
         <div className="px-4 pb-4 pl-11">
           <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border overflow-hidden">
             {hit.constantValues.map((val, i) => (
-              <ConstantValueRow key={i} value={val} searchTerm={searchTerm} />
+              <ConstantValueRow key={i} value={val} searchTerm={searchTerm} badges={semanticMap.get(val) ?? []} />
             ))}
           </div>
         </div>
@@ -108,7 +134,17 @@ function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }
 
 // ── Constant value with highlight & copy ────────────────────────────────
 
-function ConstantValueRow({ value, searchTerm }: { value: string; searchTerm: string }) {
+const BADGE_COLORS: Record<string, string> = {
+  'SQL Fragment': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  'URL/Resource': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  'File Path': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  'Log Message': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  'Error Message': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  'Annotation': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+}
+const DEFAULT_BADGE_COLOR = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+
+function ConstantValueRow({ value, searchTerm, badges }: { value: string; searchTerm: string; badges: SemanticBadge[] }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -119,9 +155,24 @@ function ConstantValueRow({ value, searchTerm }: { value: string; searchTerm: st
 
   return (
     <div className="flex items-start gap-3 px-3 py-2.5 group hover:bg-muted/50 transition-colors">
-      <code className="flex-1 text-xs font-mono text-foreground/90 break-all whitespace-pre-wrap leading-relaxed">
-        <HighlightedText text={value} highlight={searchTerm} />
-      </code>
+      <div className="flex-1 min-w-0">
+        <code className="text-xs font-mono text-foreground/90 break-all whitespace-pre-wrap leading-relaxed">
+          <HighlightedText text={value} highlight={searchTerm} />
+        </code>
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {badges.map((badge, i) => (
+              <span
+                key={i}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${BADGE_COLORS[badge.type] ?? DEFAULT_BADGE_COLOR}`}
+              >
+                {badge.type}
+                <span className="opacity-70">{badge.confidence}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
       <button
         onClick={handleCopy}
         title="Copy to clipboard"

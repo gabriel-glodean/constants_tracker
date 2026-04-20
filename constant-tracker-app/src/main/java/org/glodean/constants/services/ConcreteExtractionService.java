@@ -15,6 +15,7 @@ import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.ClassModelExtractor;
 import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
+import io.micrometer.core.annotation.Timed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,14 +38,22 @@ import org.springframework.stereotype.Service;
  * @param merger the analysis merger shared by all created extractors
  */
 @Service
-public record ConcreteExtractionService(@Autowired AnalysisMerger merger)
-    implements ExtractionService {
+public class ConcreteExtractionService implements ExtractionService {
 
+  private final AnalysisMerger merger;
+
+  @Autowired
+  public ConcreteExtractionService(AnalysisMerger merger) {
+    this.merger = merger;
+  }
+
+  @Timed(value = "extraction.class", description = "Time to create a class file extractor")
   @Override
   public ModelExtractor extractorForClassFile(byte[] classFileBytes) {
     return new ClassModelExtractor(ClassFile.of().parse(classFileBytes), merger);
   }
 
+  @Timed(value = "extraction.jar", description = "Time to create a JAR file extractor")
   @Override
   public ModelExtractor extractorForJarFile(byte[] jarFileBytes) {
     return new FileSystemModelExtractor(

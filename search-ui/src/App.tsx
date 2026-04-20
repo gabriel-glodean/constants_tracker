@@ -1,15 +1,17 @@
 import { useState, useRef } from 'react'
-import { Database, Github, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen } from 'lucide-react'
+import { Database, Github, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch } from 'lucide-react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { useSearch } from '@/hooks/useSearch'
 import { UploadForm } from '@/components/UploadForm'
 import { ClassLookupForm } from '@/components/ClassLookupForm'
+import { VersionManager } from '@/components/VersionManager'
 
 const TABS = [
   { key: 'search', label: 'Search', icon: SearchIcon },
   { key: 'upload', label: 'Upload', icon: UploadIcon },
   { key: 'lookup', label: 'Class Lookup', icon: BookOpen },
+  { key: 'versions', label: 'Versions', icon: GitBranch },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -32,7 +34,7 @@ function App() {
             <span className="font-semibold text-sm tracking-tight">Constant Tracker</span>
           </div>
           <a
-            href="https://github.com"
+            href="https://github.com/gabrielglodean/constant-tracker"
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -133,6 +135,12 @@ function App() {
           <section className="max-w-2xl mx-auto px-6 pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Class Constants Lookup</h1>
             <ClassLookupForm />
+          </section>
+        )}
+        {tab === 'versions' && (
+          <section className="max-w-2xl mx-auto px-6 pt-16 pb-16">
+            <h1 className="text-2xl font-bold mb-6">Version Manager</h1>
+            <VersionManager />
           </section>
         )}
       </main>

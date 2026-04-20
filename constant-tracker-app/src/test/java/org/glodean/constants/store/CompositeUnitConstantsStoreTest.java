@@ -176,7 +176,7 @@ class CompositeUnitConstantsStoreTest {
   void fuzzySearchDelegatesToSolrNotPostgres() {
     FuzzySearchResponse resp =
         new FuzzySearchResponse(
-            List.of(new FuzzySearchHit("proj", "com/example/Greeter", 1, "CLASS_FILE", List.of("Hello"))), 1L);
+            List.of(new FuzzySearchHit("proj", "com/example/Greeter", 1, "CLASS_FILE", List.of("Hello"), List.of())), 1L);
     when(solrService.fuzzySearch("proj", "Hello", 1, 10)).thenReturn(Mono.just(resp));
 
     FuzzySearchResponse result = store.fuzzySearch("proj", "Hello", 1, 10).block();

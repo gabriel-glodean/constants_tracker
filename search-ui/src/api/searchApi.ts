@@ -6,6 +6,7 @@ export interface FuzzySearchHit {
   version: number
   sourceKind: string
   constantValues: string[]
+  semanticPairs: string[]
 }
 
 export interface FuzzySearchResponse {

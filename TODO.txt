@@ -1,23 +1,10 @@
 ## V1 — Portfolio-ready product (Senior Java Engineer showcase)
 ##   Goal: hiring manager clones repo, runs it, is impressed in 2 minutes
-##   Estimate: ~30-42 hrs | 3-4 weekends
 
 ### Tier 1 — "It just works" (must-have for credibility)
 
-- add a seed/demo script that preloads data on first start                              P0
-  → ~3-4 hrs (docker-compose init container uploads demo-crud-server JAR +
-    sample .class files; the UI must never start empty)
-
-- fix docker-compose to auto-copy Solr schema on first boot                             P0
-  → ~2-3 hrs (mount schema into the container; eliminate the manual copy
-    step — senior engineers don't ship "copy these 3 files first" instructions)
-
-- add a "try it" quickstart to the README with GIF/screenshots                          P0
-  → ~2-3 hrs (3 commands: clone, docker compose up, open browser;
-    add a GIF showing upload → search → results; this is your first impression)
-
-- update the GitHub link in UI header + wire the VersionManager tab                     P0
-  → ~30 min (App.tsx: fix href, add Versions tab to TABS array)
+- record a demo GIF and add it to docs/demo.gif                                        P0
+  → ~1 hr (the README already references it; just needs the actual recording)
 
 ### Tier 2 — Diff analysis (the differentiator)
 
@@ -25,17 +12,6 @@
   → ~15-20 hrs (diff model + endpoint + Postgres queries + diff view in UI;
     THIS is what makes the project memorable — "upload two JARs, see what
     changed" is a one-sentence elevator pitch that sticks)
-
-### Tier 3 — Production-mindedness signals
-
-- add Micrometer/Prometheus metrics + /actuator/health                                  P1
-  → ~3-4 hrs (add spring-boot-starter-actuator, @Timed on extraction
-    and store methods, /actuator/prometheus endpoint; shows you think
-    about operations, not just features)
-
-- add semantic type badges to search results in the UI                                  P1
-  → ~2-3 hrs (show "SQL_FRAGMENT 0.95" / "URL_RESOURCE 0.90" next to
-    each constant — this is the visual proof the analysis is smart)
 
 ## ✅ Already done (V1 foundations)
 
@@ -45,6 +21,12 @@
 - ✅ Full Docker Compose stack (app, Solr, Postgres, Redis, UI)
 - ✅ Module split (api / bytecode / config-file)
 - ✅ Version management (create, upload, finalize, inheritance)
+- ✅ Seed/demo script (docker compose --profile seed; uploads demo-crud-server JAR + sample .class files)
+- ✅ Solr schema auto-mounted on first boot (no manual copy step)
+- ✅ README quickstart (3 commands: clone, docker compose --profile seed up, open browser)
+- ✅ GitHub link in UI header + VersionManager tab wired
+- ✅ Micrometer/Prometheus metrics + /actuator/health (@Timed on extraction + Solr methods, /actuator/prometheus endpoint)
+- ✅ Semantic type badges in search results UI (semanticPairs displayed as badges per constant)
 
 ## V2 — Depth features (post-launch)
 ##   At 10 hrs/week: ~3-5 weeks

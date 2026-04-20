@@ -24,6 +24,7 @@ import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.store.UnitConstantsStore;
+import io.micrometer.core.annotation.Timed;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,7 @@ public class SolrService implements UnitConstantsStore {
    * @param version   the version number
    * @return a {@link reactor.core.publisher.Mono} emitting the original {@code constants} on success
    */
+  @Timed(value = "solr.store", description = "Time to store a unit in Solr")
   @Override
   public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
     String sourcePath = constants.source().path();
@@ -81,6 +83,7 @@ public class SolrService implements UnitConstantsStore {
 
     List<String> pairs = new ArrayList<>();
     List<String> values = new ArrayList<>();
+    List<String> semanticPairs = new ArrayList<>();
     for (var constant : constants.constants()) {
       String value = constant.value().toString();
       values.add(value);
@@ -88,6 +91,11 @@ public class SolrService implements UnitConstantsStore {
           .map(UnitConstant.ConstantUsage::structuralType)
           .distinct()
           .forEach(usage -> pairs.add(value + "|" + usage.name()));
+      constant.usages().stream()
+          .filter(u -> u.semanticType() != null)
+          .forEach(u -> semanticPairs.add(
+              value + "|" + u.semanticType().displayName() + "|"
+                  + String.format("%.2f", u.confidence())));
     }
 
     SolrInputDocument doc = new SolrInputDocument();
@@ -98,6 +106,9 @@ public class SolrService implements UnitConstantsStore {
     doc.setField("source_kind", constants.source().sourceKind().name());
     doc.setField("constant_pairs_ss", pairs);
     doc.setField("constant_values_t", values);
+    if (!semanticPairs.isEmpty()) {
+      doc.setField("semantic_pairs_ss", semanticPairs);
+    }
 
     var request = new UpdateRequest();
     request.add(doc);
@@ -126,6 +137,7 @@ public class SolrService implements UnitConstantsStore {
    * @param maxRows      maximum number of hits to return
    * @return ranked {@link FuzzySearchResponse}
    */
+  @Timed(value = "solr.fuzzy_search", description = "Time to execute fuzzy search")
   @Override
   public Mono<FuzzySearchResponse> fuzzySearch(
       String project, String term, int editDistance, int maxRows) {
@@ -150,7 +162,7 @@ public class SolrService implements UnitConstantsStore {
     if (!"*".equals(project)) {
       params.set("fq", "project:\"" + project + "\"");
     }
-    params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t");
+    params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t,semantic_pairs_ss");
     params.set("rows", maxRows);
 
     return new QueryRequest(params);
@@ -166,6 +178,7 @@ public class SolrService implements UnitConstantsStore {
    * @return a {@link reactor.core.publisher.Mono} emitting the constant-to-usage-type map;
    *         errors with {@link IllegalArgumentException} if the document is not found
    */
+  @Timed(value = "solr.find", description = "Time to find a unit in Solr")
   @Override
   public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
     ModifiableSolrParams params = new ModifiableSolrParams();
@@ -248,7 +261,11 @@ public class SolrService implements UnitConstantsStore {
       List<String> values = rawValues == null
           ? List.of()
           : rawValues.stream().map(Object::toString).toList();
-      hits.add(new FuzzySearchHit(project, unitName, version, sourceKind, values));
+      Collection<Object> rawSemantic = doc.getFieldValues("semantic_pairs_ss");
+      List<String> semanticPairs = rawSemantic == null
+          ? List.of()
+          : rawSemantic.stream().map(Object::toString).toList();
+      hits.add(new FuzzySearchHit(project, unitName, version, sourceKind, values, semanticPairs));
     }
     return new FuzzySearchResponse(hits, numFound);
   }

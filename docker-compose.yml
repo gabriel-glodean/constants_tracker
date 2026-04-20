@@ -16,18 +16,24 @@ services:
   solr:
     image: solr:latest
     container_name: solr
-    # Precreate core if it doesn't exist, then run in foreground
+    # Precreate core with mounted config, then run in foreground
     command:
       - bash
       - -lc
       - >
-        if [ ! -d /var/solr/data/${SOLR_CORE:-Constants} ];
-        then solr-precreate ${SOLR_CORE:-Constants};
+        CORE=$${SOLR_CORE:-Constants};
+        CORE_DIR=/var/solr/data/$$CORE;
+        if [ ! -d "$$CORE_DIR" ]; then
+          solr-precreate $$CORE /opt/solr-config;
+        else
+          cp /opt/solr-config/* $$CORE_DIR/conf/ 2>/dev/null || true;
         fi && exec solr-foreground --user-managed
     ports:
       - "${SOLR_PORT:-8983}:8983"
     volumes:
       - ${SOLR_HOST_PATH:-./.solr_data}:/var/solr/data
+      - ./constant-tracker-app/solr/managed-schema.xml:/opt/solr-config/managed-schema.xml:ro
+      - ./constant-tracker-app/solr/solrconfig.xml:/opt/solr-config/solrconfig.xml:ro
     networks:
       - app_network
 
@@ -46,11 +52,20 @@ services:
       dockerfile: constant-tracker-app/Dockerfile
     container_name: constant-tracker-app
     depends_on:
-      - solr
-      - redis
-      - postgres
+      solr:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
     environment:
       - SERVER_PORT=8080
       # Solr base URL for Spring Data Solr / SolrJ
@@ -80,6 +95,40 @@ services:
       - app
     networks:
       - app_network
+
+  seed:
+    image: curlimages/curl:latest
+    container_name: seed
+    profiles:
+      - seed
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./demo-crud-server/build/libs:/seed/jars:ro
+      - ./constant-tracker-app/src/test/resources/samples:/seed/classes:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "=== Seeding demo data ==="
+        for jar in /seed/jars/*.jar; do
+          [ -f "$$jar" ] || continue
+          echo "Uploading JAR: $$jar"
+          curl -sf -X POST "http://app:8080/jar?project=demo-crud-server" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@$$jar" && echo " OK" || echo " FAILED"
+        done
+        for cls in /seed/classes/*.class; do
+          [ -f "$$cls" ] || continue
+          echo "Uploading class: $$cls"
+          curl -sf -X POST "http://app:8080/class?project=samples" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@$$cls" && echo " OK" || echo " FAILED"
+        done
+        echo "=== Seed complete ==="
+    networks:
+      - app_network
+
 networks:
   app_network:
     driver: bridge

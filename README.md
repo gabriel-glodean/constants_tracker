@@ -8,6 +8,25 @@ The focus of this project is **bytecode analysis correctness**, but config file 
 
 ---
 
+## 🚀 Quick Start (3 commands)
+
+```bash
+git clone https://github.com/gabrielglodean/constant-tracker.git
+cd constant-tracker
+docker compose --profile seed up -d
+```
+
+Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads sample `.class` files and the `demo-crud-server` JAR so you have data to explore immediately.
+
+Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.
+
+![Demo: upload and search constants](./docs/demo.gif)
+
+> **Prerequisites:** Docker and Docker Compose. The first build takes a few minutes (Gradle + npm).
+> Run `./gradlew :demo-crud-server:build` first if the seed data JAR hasn't been built yet.
+
+---
+
 ## 🧠 Design Focus
 
 This project is split into **five modules** for clean separation and reusability:
@@ -149,43 +168,14 @@ The application uses three main data stores:
 - **Solr 9/10**: Full-text search and indexing of constant references.
   - Default URL: [http://localhost:8983/solr/](http://localhost:8983/solr/)
   - Collection: `Constants`
-  - Schema: `constant-tracker-app/solr/managed-schema.xml`
-  - ⚠️ Before starting Solr, copy the schema file to the Solr data folder (see below).
+  - Schema: `constant-tracker-app/solr/managed-schema.xml` (auto-mounted by Docker Compose)
 - **Postgres**: Relational database for persistent storage of metadata and application state.
-  - Default URL: `jdbc:postgresql://localhost:5432/constants`
-  -  ⚠️ Before starting  Postgres, ensure the database credentials are specified in the environment variables.
+  - Default URL: `jdbc:postgresql://localhost:5432/constant_tracker`
+  - ⚠️ Before starting Postgres, ensure the database credentials are specified in the environment variables.
 - **Redis 7**: Caching and versioning.
   - Default URL: `localhost:6379`
 
-All services are started automatically with Docker Compose for local development.
-
-**Solr schema setup:**
-Copy the schema file before starting Solr:
-
-**Solr core setup (REQUIRED):**
-
-Before starting Solr, copy the following files to your Solr core's config directory. This step is required for correct indexing and search functionality:
-
-- `constant-tracker-app/solr/managed-schema.xml` → `<solr_core_dir>/conf/managed-schema.xml`
-- `constant-tracker-app/solr/solrconfig.xml` → `<solr_core_dir>/conf/solrconfig.xml`
-- `constant-tracker-app/solr/core.properties` → `<solr_core_dir>/core.properties`
-
-Replace `<solr_core_dir>` with your Solr core directory (for example, `constant-tracker-app/solr/data/Constants`).
-
-**PowerShell (Windows):**
-```powershell
-Copy-Item constant-tracker-app/solr/managed-schema.xml <solr_core_dir>/conf/managed-schema.xml -Force
-Copy-Item constant-tracker-app/solr/solrconfig.xml <solr_core_dir>/conf/solrconfig.xml -Force
-Copy-Item constant-tracker-app/solr/core.properties <solr_core_dir>/core.properties -Force
-```
-
-**Bash (Linux/macOS):**
-```bash
-cp constant-tracker-app/solr/managed-schema.xml <solr_core_dir>/conf/managed-schema.xml
-cp constant-tracker-app/solr/solrconfig.xml <solr_core_dir>/conf/solrconfig.xml
-cp constant-tracker-app/solr/core.properties <solr_core_dir>/core.properties
-```
-Replace `<solr_core_dir>` with your Solr core directory (e.g., `constant-tracker-app/solr/data/Constants/conf` for config files and `constant-tracker-app/solr/data/Constants` for core.properties).
+All services are started automatically with Docker Compose for local development. The Solr schema is auto-mounted into the container — no manual copy step required.
 
 
 ---

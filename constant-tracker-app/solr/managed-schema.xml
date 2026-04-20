@@ -9,6 +9,8 @@
     <field name="constant_pairs_ss" type="string" indexed="true" stored="true" multiValued="true"/>
     <!-- Full-text searchable constant values (tokenised, lowercase, stored for highlighting) -->
     <field name="constant_values_t" type="text_general" indexed="true" stored="true" multiValued="true"/>
+    <!-- Semantic type pairs: "constantValue|SEMANTIC_TYPE|confidence" -->
+    <field name="semantic_pairs_ss" type="string" indexed="true" stored="true" multiValued="true"/>
     <!-- Edge n-gram shadow copy for prefix / partial-word matching -->
     <field name="constant_values_ngram" type="text_edge_ngram" indexed="true" stored="false" multiValued="true"/>
 

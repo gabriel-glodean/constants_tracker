@@ -38,7 +38,7 @@ class FuzzySearchControllerTest {
         new FuzzySearchResponse(
             List.of(
                 new FuzzySearchHit(
-                    "my-app", "org/example/Repo", 1, "CLASS_FILE", List.of("SELECT * FROM users"))),
+                    "my-app", "org/example/Repo", 1, "CLASS_FILE", List.of("SELECT * FROM users"), List.of("SELECT * FROM users|SQL Fragment|0.95"))),
             1L);
     // default fuzzy=1, rows=10
     when(store.fuzzySearch(eq("my-app"), eq("SELECT"), eq(1), eq(10)))
