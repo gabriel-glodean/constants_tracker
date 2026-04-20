@@ -8,12 +8,14 @@ COPY gradle gradle
 COPY settings.gradle ./
 COPY build.gradle ./
 COPY gradle.properties ./
-COPY constant-extractor-lib/build.gradle constant-extractor-lib/
+COPY constant-extractor-api/build.gradle constant-extractor-api/
+COPY constant-extractor-bytecode/build.gradle constant-extractor-bytecode/
 COPY constant-tracker-app/build.gradle constant-tracker-app/
 RUN chmod +x gradlew && ./gradlew --no-daemon -q help || true
 
 # 2) Copy sources and build
-COPY constant-extractor-lib/src constant-extractor-lib/src
+COPY constant-extractor-api/src constant-extractor-api/src
+COPY constant-extractor-bytecode/src constant-extractor-bytecode/src
 COPY constant-tracker-app/src constant-tracker-app/src
 RUN ./gradlew --no-daemon -q :constant-tracker-app:clean :constant-tracker-app:build -x test -x spotlessCheck \
     && ls -l /workspace/constant-tracker-app/build/libs/
