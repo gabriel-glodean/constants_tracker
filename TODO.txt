@@ -1,51 +1,73 @@
-## V1 — Ship a complete, demoable tool
-##   Status: MOSTLY DONE
+## V1 — Portfolio-ready product (Senior Java Engineer showcase)
+##   Goal: hiring manager clones repo, runs it, is impressed in 2 minutes
+##   Estimate: ~30-42 hrs | 3-4 weekends
 
-- ✅ implement 5 more interpreters (SQL, URL, file path, error message, annotation)     P0  DONE
-  → SqlConstantUsageInterpreter, UrlResourceConstantUsageInterpreter,
-    FilePathConstantUsageInterpreter, ErrorMessageConstantUsageInterpreter,
-    AnnotationConstantUsageInterpreter (config key was replaced by annotation)
+### Tier 1 — "It just works" (must-have for credibility)
+
+- add a seed/demo script that preloads data on first start                              P0
+  → ~3-4 hrs (docker-compose init container uploads demo-crud-server JAR +
+    sample .class files; the UI must never start empty)
+
+- fix docker-compose to auto-copy Solr schema on first boot                             P0
+  → ~2-3 hrs (mount schema into the container; eliminate the manual copy
+    step — senior engineers don't ship "copy these 3 files first" instructions)
+
+- add a "try it" quickstart to the README with GIF/screenshots                          P0
+  → ~2-3 hrs (3 commands: clone, docker compose up, open browser;
+    add a GIF showing upload → search → results; this is your first impression)
+
+- update the GitHub link in UI header + wire the VersionManager tab                     P0
+  → ~30 min (App.tsx: fix href, add Versions tab to TABS array)
+
+### Tier 2 — Diff analysis (the differentiator)
 
 - implement the constant diff analysis (compare two versions of the same class)        P0
-  → ~15-20 hrs (the hard part: designing the diff model + a new endpoint +
-    querying Postgres for two versions via the existing snapshot/constant/usage repos;
-    the storage layer already supports versioned lookups)
+  → ~15-20 hrs (diff model + endpoint + Postgres queries + diff view in UI;
+    THIS is what makes the project memorable — "upload two JARs, see what
+    changed" is a one-sentence elevator pitch that sticks)
 
-## V2 — Depth features
-##   At 10 hrs/week: ~4-6 weeks | At 20 hrs/week: ~2-3 weeks
+### Tier 3 — Production-mindedness signals
+
+- add Micrometer/Prometheus metrics + /actuator/health                                  P1
+  → ~3-4 hrs (add spring-boot-starter-actuator, @Timed on extraction
+    and store methods, /actuator/prometheus endpoint; shows you think
+    about operations, not just features)
+
+- add semantic type badges to search results in the UI                                  P1
+  → ~2-3 hrs (show "SQL_FRAGMENT 0.95" / "URL_RESOURCE 0.90" next to
+    each constant — this is the visual proof the analysis is smart)
+
+## ✅ Already done (V1 foundations)
+
+- ✅ 6 semantic classifiers (Logging, SQL, URL, File Path, Error Message, Annotation)
+- ✅ Config file extraction (YAML + properties)
+- ✅ Search UI (fuzzy search, upload, class lookup)
+- ✅ Full Docker Compose stack (app, Solr, Postgres, Redis, UI)
+- ✅ Module split (api / bytecode / config-file)
+- ✅ Version management (create, upload, finalize, inheritance)
+
+## V2 — Depth features (post-launch)
+##   At 10 hrs/week: ~3-5 weeks
 
 - implement similar constant detection                                                  P1
-  → ~12-15 hrs (string similarity algo + new endpoint + Solr or Postgres query;
-    Solr's MLT could help but may need a custom approach for constant values)
+  → ~12-15 hrs (string similarity + Solr MLT or custom approach)
 
-- implement the constant split analysis                                                 P1
-  → ~10-15 hrs (detect when one constant in version N became multiple in N+1;
-    depends on diff being done first — reuses that infrastructure)
+- implement constant split/merge analysis                                               P2
+  → ~18-25 hrs (detect when constants split or merge across versions;
+    depends on diff infrastructure)
 
-- implement the constant merge analysis                                                 P1
-  → ~8-10 hrs (reverse of split; faster if split is done first, same patterns)
+## V3 — Polish & hardening
 
-- add Micrometer/Prometheus metrics for analysis throughput + latency                    P2
-  → ~4-6 hrs (add dependency, @Timed on key methods, /actuator/prometheus endpoint)
+- add Jest tests for search-ui                                                          P2
+  → ~6-10 hrs (components + API client mocks)
 
-## V3 — Polish
+- add exception-flow bytecode analysis                                                  P3
+  → ~15-20 hrs (wire SuccessorBuilder handler starts into semantic layer)
 
-- ✅ add a WebUI to display full analysis results (beyond search)                        P2  DONE
-  → search-ui module: React 19 + TypeScript + Tailwind CSS v4
-    fuzzy search, class lookup, file upload (class/JAR/config), version management
+- fix Terraform docker image creation                                                   P3
+  → ~2-4 hrs (image reference in main.tf)
 
-- debug why terraform fails to create the app docker image                              P3
-  → ~2-4 hrs (likely just the image reference in main.tf)
-
-- add exception-flow analysis to handle exception handling code                         P4
-  → ~15-20 hrs (complex bytecode work — handler starts are tracked in
-    SuccessorBuilder but the semantic interpretation isn't wired)
-
-- ✅ split lib into model and bytecode analysis, to have a hook for Java source analysis P4  DONE
-  → split into constant-extractor-api (model + SPI), constant-extractor-bytecode
-    (JVM analysis), and constant-extractor-config-file (YAML/properties)
-
-## Remaining estimate: ~65-90 hrs
-##   V1 remaining (diff only): ~15-20 hrs
-##   V2: ~34-46 hrs
-##   V3 remaining: ~17-24 hrs
+## Estimates
+##   V1 (ship it): ~27-40 hrs  ← DO THIS FIRST
+##   V2 (depth):   ~34-46 hrs
+##   V3 (polish):  ~23-34 hrs
