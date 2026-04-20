@@ -24,7 +24,7 @@ import reactor.core.publisher.Mono;
  * <p><b>Typical workflow:</b>
  * <pre>{@code
  * // Store analysis results
- * UnitConstants results = extractor.extract();
+ * UnitConstants results = extractor.extract(descriptor);
  * store.store(results, "my-project", 1).subscribe();
  *
  * // Search for constant usages

@@ -28,11 +28,13 @@ export async function uploadClass({
 export async function uploadJar({
   file,
   project,
+  jarName,
 }: {
   file: File;
   project: string;
+  jarName: string;
 }): Promise<UploadResult> {
-  const url = `/jar?project=${encodeURIComponent(project)}`;
+  const url = `/jar?project=${encodeURIComponent(project)}&jarName=${encodeURIComponent(jarName)}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream' },

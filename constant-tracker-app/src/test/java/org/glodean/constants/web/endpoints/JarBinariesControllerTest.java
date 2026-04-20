@@ -34,7 +34,7 @@ class JarBinariesControllerTest {
     @MockitoBean UnitConstantsStore storage;
     @MockitoBean ExtractionService extractionService;
 
-    static final String POST_URL = "/jar?project=demo";
+    static final String POST_URL = "/jar?project=demo&jarName=test.jar";
 
     static UnitConstants sampleConstants() {
         var usage = new UnitConstant.ConstantUsage(

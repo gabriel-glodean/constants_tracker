@@ -35,7 +35,8 @@
  * ClassModel model = ClassFile.of().parse(classBytes);
  * AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
  * ClassModelExtractor extractor = new ClassModelExtractor(model, merger);
- * Collection<UnitConstants> results = extractor.extract();
+ * Collection<UnitConstants> results = extractor.extract(
+ *     new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, "MyClass"));
  * }</pre>
  *
  * <p><b>Example: Analyzing a JAR file</b>
@@ -44,7 +45,8 @@
  * AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
  * FileSystemModelExtractor extractor = new FileSystemModelExtractor(
  *     jarFS, merger, "META-INF/", notifier);
- * Collection<UnitConstants> results = extractor.extract();
+ * Collection<UnitConstants> results = extractor.extract(
+ *     new UnitDescriptor(BytecodeSourceKind.JAR, jarPath.toString()));
  * }</pre>
  *
  * @see org.glodean.constants.extractor.ModelExtractor

@@ -20,14 +20,6 @@ import org.glodean.constants.model.UnitDescriptor;
  */
 public interface ModelExtractor {
   /**
-   * Backwards-compatible no-arg extract method used by callers that don't supply an explicit
-   * {@link org.glodean.constants.model.UnitDescriptor}. Implementations should provide a
-   * meaningful default when possible (e.g. derive class name from parsed model).
-   */
-  default Collection<UnitConstants> extract() throws ExtractionException {
-    throw new UnsupportedOperationException("No default source descriptor available");
-  }
-  /**
    * Extracts constant usage information from the configured source.
    *
    * @return collection of {@link UnitConstants}, typically one per analyzed class

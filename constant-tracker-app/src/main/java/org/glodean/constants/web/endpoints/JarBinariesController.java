@@ -1,6 +1,11 @@
 package org.glodean.constants.web.endpoints;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.glodean.constants.extractor.ModelExtractor;
+import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
+import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +40,16 @@ public class JarBinariesController {
      *
      * @param jarFile the raw bytes of a .jar file (as reactive stream)
      * @param project the project identifier
+     * @param jarName the name of the JAR file being uploaded
      * @return 200 OK with a list of UnitConstants if successful,
      *         422 Unprocessable Entity if the JAR is invalid,
      *         500 Internal Server Error for other failures
      */
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeJar(
-            @RequestBody Mono<DataBuffer> jarFile, @RequestParam("project") String project) {
+            @RequestBody Mono<DataBuffer> jarFile,
+            @RequestParam("project") String project,
+            @RequestParam("jarName") String jarName) {
         return jarFile
                 .map(dataBuffer -> {
                     byte[] bytes = new byte[dataBuffer.readableByteCount()];
@@ -49,21 +57,14 @@ public class JarBinariesController {
                     DataBufferUtils.release(dataBuffer);
                     return bytes;
                 })
-                .map(extractionService::extractorForJarFile)
-                .flatMapMany(modelExtractor -> {
-                        try {
-                        // Try the no-arg extract() first (real implementations typically
-                        // provide this). If unsupported (e.g., mocks), fall back to
-                        // calling the UnitDescriptor overload with null.
-                        return reactor.core.publisher.Flux.fromIterable(modelExtractor.extract());
+                .flatMapMany(bytes -> {
+                    var descriptor = new UnitDescriptor(
+                            BytecodeSourceKind.JAR, jarName, bytes.length, sha256(bytes));
+                    var modelExtractor = extractionService.extractorForJarFile(bytes);
+                    try {
+                        return reactor.core.publisher.Flux.fromIterable(modelExtractor.extract(descriptor));
                     } catch (ModelExtractor.ExtractionException e) {
                         return reactor.core.publisher.Flux.error(e);
-                    } catch (UnsupportedOperationException e) {
-                        try {
-                            return reactor.core.publisher.Flux.fromIterable(modelExtractor.extract((org.glodean.constants.model.UnitDescriptor) null));
-                        } catch (ModelExtractor.ExtractionException ex) {
-                            return reactor.core.publisher.Flux.error(ex);
-                        }
                     }
                 })
                 .collectList()
@@ -79,5 +80,13 @@ public class JarBinariesController {
                         Exception.class,
                         _ -> Mono.just(ResponseEntity.internalServerError().build()));
     }
-}
 
+    private static String sha256(byte[] bytes) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+}

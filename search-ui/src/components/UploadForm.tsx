@@ -20,7 +20,7 @@ export function UploadForm() {
       const res = type === 'class'
         ? await uploadClass({ file, project: project.trim(), version: version ? Number(version) : undefined })
         : type === 'jar'
-        ? await uploadJar({ file, project: project.trim() })
+        ? await uploadJar({ file, project: project.trim(), jarName: file.name })
         : await uploadConfig({ file, project: project.trim(), version: version ? Number(version) : undefined })
       setStatus(res.status)
       setMessage(res.message)

@@ -36,7 +36,8 @@ import org.glodean.constants.model.UnitDescriptor;
  * AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
  * FileSystemModelExtractor extractor = new FileSystemModelExtractor(
  *     jarFS, merger, "META-INF/", myNotifier);
- * Collection<UnitConstants> results = extractor.extract();
+ * Collection<UnitConstants> results = extractor.extract(
+ *     new UnitDescriptor(BytecodeSourceKind.JAR, jarPath.toString()));
  * }</pre>
  */
 public final class FileSystemModelExtractor implements ModelExtractor {
@@ -161,18 +162,4 @@ public final class FileSystemModelExtractor implements ModelExtractor {
     }
   }
 
-  /**
-   * No-arg extract: creates a single {@link UnitDescriptor} for the entire file system
-   * (e.g., a JAR) and delegates to {@link #extract(UnitDescriptor)}. All resulting
-   * {@link UnitConstants} share the same descriptor so that the JAR is tracked as one unit.
-   */
-  @Override
-  public Collection<UnitConstants> extract() throws ExtractionException {
-    // Derive a descriptor that represents the whole filesystem (JAR / directory).
-    // The path comes from the filesystem's root; for Jimfs / ZIP file systems
-    // the toString() of the filesystem itself is typically the JAR path.
-    String fsPath = fileSystem.toString();
-    var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, fsPath);
-    return extract(descriptor);
-  }
 }

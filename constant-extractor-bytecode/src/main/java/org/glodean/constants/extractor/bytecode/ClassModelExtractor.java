@@ -40,17 +40,15 @@ import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
     implements ModelExtractor {
 
-  @Override
-  public Collection<UnitConstants> extract() throws ExtractionException {
-    // derive a sensible UnitDescriptor from the parsed class model
-    var javaClassName = toJavaName(model.thisClass().asSymbol());
-    return extract(new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, javaClassName));
-  }
 
   @Override
   public Collection<UnitConstants> extract(UnitDescriptor source) throws ExtractionException {
     Multimap<Object, ConstantUsage> joinedMap = HashMultimap.create();
     String javaClassName = toJavaName(model.thisClass().asSymbol());
+
+    // Enrich the descriptor with the actual class name derived from the bytecode
+    var enriched = new UnitDescriptor(
+        source.sourceKind(), javaClassName, source.sizeBytes(), source.contentHash());
 
     // Extract constants from annotations (class, field, method, parameter level)
     var annotationExtractor = new AnnotationConstantExtractor(merger.usageInterpreterRegistry());
@@ -74,6 +72,6 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
         .map(entry -> new UnitConstant(entry.getKey(), new HashSet<>(entry.getValue())))
         .collect(Collectors.toSet());
 
-    return Set.of(new UnitConstants(source, constants));
+    return Set.of(new UnitConstants(enriched, constants));
   }
 }

@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import org.glodean.constants.extractor.bytecode.interpreters.BytecodeInterpreterRegistryFactory;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -143,7 +144,8 @@ class AnnotationConstantExtractorTest {
         new InternalStringConcatPatternSplitter(),
         BytecodeInterpreterRegistryFactory.registry());
 
-    var results = new ClassModelExtractor(model, merger).extract();
+    var descriptor = new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, "TestAnnotatedClass");
+    var results = new ClassModelExtractor(model, merger).extract(descriptor);
     UnitConstants classConstants = results.iterator().next();
 
     // Collect all constant values

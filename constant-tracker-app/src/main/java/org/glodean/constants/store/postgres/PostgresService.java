@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -96,12 +97,69 @@ public class PostgresService implements UnitConstantsStore {
         null, project, version, sourceKind, sourcePath, sizeBytes, contentHash);
 
     String json = unitConstantsJson;
+    var constantsSet = constants.constants();
+
     return descriptorRepo
-        .save(descriptorEntity)
+        .findByProjectAndPathAndVersion(project, sourcePath, version)
+        .switchIfEmpty(descriptorRepo.save(descriptorEntity))
         .flatMap(savedDescriptor -> {
-          var snapshotEntity = new UnitSnapshotEntity(
-              null, savedDescriptor.id(), sourcePath, json);
-          return snapshotRepo.save(snapshotEntity);
+          var updated = new UnitDescriptorEntity(
+              savedDescriptor.id(), project, version, sourceKind, sourcePath, sizeBytes, contentHash);
+          return descriptorRepo.save(updated);
+        })
+        .flatMap(savedDescriptor ->
+            snapshotRepo.findByDescriptorIdAndUnitName(savedDescriptor.id(), sourcePath)
+                .flatMap(existing -> {
+                  var updatedSnapshot = new UnitSnapshotEntity(
+                      existing.id(), savedDescriptor.id(), sourcePath, json);
+                  return snapshotRepo.save(updatedSnapshot);
+                })
+                .switchIfEmpty(snapshotRepo.save(
+                    new UnitSnapshotEntity(null, savedDescriptor.id(), sourcePath, json)))
+        )
+        .flatMap(savedSnapshot -> {
+          // Delete existing normalized rows for this snapshot, then re-insert
+          return constantRepo.findAllBySnapshotId(savedSnapshot.id())
+              .flatMap(existing -> usageRepo.findAllByConstantId(existing.id())
+                  .flatMap(usageRepo::delete)
+                  .then(constantRepo.delete(existing)))
+              .then(Mono.just(savedSnapshot));
+        })
+        .flatMap(savedSnapshot -> {
+          // Persist normalized unit_constants and constant_usages rows
+          return Flux.fromIterable(constantsSet)
+              .flatMap(uc -> {
+                String valueStr = String.valueOf(uc.value());
+                String valueType = uc.value().getClass().getSimpleName();
+                var entity = new UnitConstantEntity(null, savedSnapshot.id(), valueStr, valueType);
+                return constantRepo.save(entity)
+                    .flatMapMany(savedConstant ->
+                        Flux.fromIterable(uc.usages())
+                            .flatMap(usage -> {
+                              var loc = usage.location();
+                              var sem = usage.semanticType();
+                              String semKind = sem instanceof CoreSemanticType ? "CORE" : "CUSTOM";
+                              String semName = sem instanceof CoreSemanticType cst ? cst.name()
+                                  : ((CustomSemanticType) sem).category();
+                              String semDisplay = sem instanceof CustomSemanticType cust ? cust.displayName() : null;
+                              String semDesc = sem instanceof CustomSemanticType cust ? cust.description() : null;
+                              String metadataJson;
+                              try {
+                                metadataJson = JSON.writeValueAsString(usage.metadata());
+                              } catch (JsonProcessingException e) {
+                                metadataJson = "{}";
+                              }
+                              var usageEntity = new ConstantUsageEntity(
+                                  null, savedConstant.id(),
+                                  usage.structuralType().name(),
+                                  semKind, semName, semDisplay, semDesc,
+                                  loc.className(), loc.methodName(), loc.methodDescriptor(),
+                                  loc.bytecodeOffset(), loc.lineNumber(),
+                                  usage.confidence(), metadataJson);
+                              return usageRepo.save(usageEntity);
+                            }));
+              })
+              .then(Mono.just(savedSnapshot));
         })
         .doOnNext(saved -> logger.atInfo().log(
             "Saved snapshot id={} for descriptor project={} path={} v{}",
@@ -148,31 +206,20 @@ public class PostgresService implements UnitConstantsStore {
         .switchIfEmpty(Mono.error(new IllegalArgumentException("Unknown unit!")))
         .flatMap(descriptor -> snapshotRepo.findByDescriptorIdAndUnitName(descriptor.id(), unitPath))
         .switchIfEmpty(Mono.error(new IllegalArgumentException("No snapshot found!")))
-        .flatMap(snapshot -> {
-          String json = snapshot.unitConstantsJson();
-          java.util.Set<UnitConstant> constantsSet;
-          try {
-            var node = JSON.readTree(json);
-            var constantsNode = node.has("constants") ? node.get("constants") : null;
-            if (constantsNode == null || constantsNode.isNull()) {
-              constantsSet = java.util.Set.of();
-            } else {
-              constantsSet = JSON.convertValue(
-                  constantsNode, JSON.getTypeFactory().constructCollectionType(java.util.Set.class, UnitConstant.class));
-            }
-          } catch (JsonProcessingException | IllegalArgumentException e) {
-            return Mono.error(new IllegalStateException("Failed to parse stored UnitConstants JSON", e));
-          }
-          Map<Object, Collection<UnitConstant.UsageType>> result = HashMap.newHashMap(constantsSet.size());
-          for (var uc : constantsSet) {
-            for (var usage : uc.usages()) {
-              result.computeIfAbsent(uc.value(), _ -> EnumSet.noneOf(UnitConstant.UsageType.class))
-                  .add(usage.structuralType());
-            }
-          }
-          return Mono.just(result);
-        });
+        .flatMap(snapshot -> constantRepo.findAllBySnapshotId(snapshot.id())
+            .flatMap(constantEntity -> usageRepo.findAllByConstantId(constantEntity.id())
+                .map(usageEntity -> Map.entry(
+                    (Object) constantEntity.constantValue(),
+                    UnitConstant.UsageType.valueOf(usageEntity.structuralType()))))
+            .collectList()
+            .map(entries -> {
+              Map<Object, Collection<UnitConstant.UsageType>> result = new HashMap<>();
+              for (var entry : entries) {
+                result.computeIfAbsent(entry.getKey(), _ -> EnumSet.noneOf(UnitConstant.UsageType.class))
+                    .add(entry.getValue());
+              }
+              return result;
+            }));
   }
 }
-
 

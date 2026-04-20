@@ -1,9 +1,14 @@
 package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
+import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
@@ -141,27 +146,28 @@ public record ClassBinariesController(
                             DataBufferUtils.release(dataBuffer);
                             return bytes;
                         })
-                .map(extractionService::extractorForClassFile)
                 .flatMap(
-                        modelExtractor -> {
+                        bytes -> {
+                            var modelExtractor = extractionService.extractorForClassFile(bytes);
                             try {
-                                // Prefer the no-arg extract() which most concrete extractors
-                                // (e.g., ClassModelExtractor) override to derive a sensible
-                                // UnitDescriptor. If it's not implemented (e.g., mocks that
-                                // only implement the UnitDescriptor overload) fall back to
-                                // calling extract(null).
-                                return Mono.just(modelExtractor.extract());
+                                var descriptor = new UnitDescriptor(
+                                        BytecodeSourceKind.CLASS_FILE, "uploaded-class",
+                                        bytes.length, sha256(bytes));
+                                return Mono.just(modelExtractor.extract(descriptor));
                             } catch (ModelExtractor.ExtractionException e) {
                                 return Mono.error(e);
-                            } catch (UnsupportedOperationException e) {
-                                try {
-                                    return Mono.just(modelExtractor.extract((org.glodean.constants.model.UnitDescriptor) null));
-                                } catch (ModelExtractor.ExtractionException ex) {
-                                    return Mono.error(ex);
-                                }
                             }
                         })
                 .map(Iterables::getOnlyElement);
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     /**

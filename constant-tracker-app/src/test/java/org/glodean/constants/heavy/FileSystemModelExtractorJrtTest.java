@@ -8,9 +8,11 @@ import java.nio.file.FileSystems;
 import java.util.Collection;
 import org.glodean.constants.extractor.ModelExtractor.ExtractionException;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
+import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.LoggingExtractionNotifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -33,7 +35,8 @@ class FileSystemModelExtractorJrtTest {
         new FileSystemModelExtractor(
             jrtFs, merger, "/modules/jdk.localedata/", new LoggingExtractionNotifier());
 
-    Collection<UnitConstants> results = extractor.extract();
+    Collection<UnitConstants> results = extractor.extract(
+        new UnitDescriptor(BytecodeSourceKind.JAR, "jrt:/"));
 
     // The JDK ships thousands of classes – we must get a non-trivial number of results
     assertNotNull(results);

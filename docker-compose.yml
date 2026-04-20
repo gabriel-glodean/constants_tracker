@@ -114,7 +114,8 @@ services:
         for jar in /seed/jars/*.jar; do
           [ -f "$$jar" ] || continue
           echo "Uploading JAR: $$jar"
-          curl -sf -X POST "http://app:8080/jar?project=demo-crud-server" \
+          jarname=$$(basename "$$jar")
+          curl -sf -X POST "http://app:8080/jar?project=demo-crud-server&jarName=$$jarname" \
             -H "Content-Type: application/octet-stream" \
             --data-binary "@$$jar" && echo " OK" || echo " FAILED"
         done

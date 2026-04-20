@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -112,8 +113,17 @@ class PostgresServiceTest {
         42L, "proj", 1, "CLASS_FILE", "com/example/Greeter", -1L, null);
     var savedSnapshot = new UnitSnapshotEntity(100L, 42L, "com/example/Greeter", "{}");
 
+    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "com/example/Greeter", 1))
+        .thenReturn(Mono.empty());
     when(descriptorRepo.save(any())).thenReturn(Mono.just(savedDescriptor));
+    when(snapshotRepo.findByDescriptorIdAndUnitName(42L, "com/example/Greeter"))
+        .thenReturn(Mono.empty());
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
+    when(constantRepo.findAllBySnapshotId(100L)).thenReturn(Flux.empty());
+    when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(1L, 100L, "Hello", "String")));
+    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+        1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
 
     UnitConstants result = service.store(sampleCoreType(), "proj", 1).block();
     assertThat(result).isNotNull();
@@ -126,8 +136,17 @@ class PostgresServiceTest {
         43L, "proj", 2, "CLASS_FILE", "com/example/AwsClient", -1L, null);
     var savedSnapshot = new UnitSnapshotEntity(101L, 43L, "com/example/AwsClient", "{}");
 
+    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "com/example/AwsClient", 2))
+        .thenReturn(Mono.empty());
     when(descriptorRepo.save(any())).thenReturn(Mono.just(savedDescriptor));
+    when(snapshotRepo.findByDescriptorIdAndUnitName(43L, "com/example/AwsClient"))
+        .thenReturn(Mono.empty());
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
+    when(constantRepo.findAllBySnapshotId(101L)).thenReturn(Flux.empty());
+    when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(2L, 101L, "arn:aws:s3:::bucket", "String")));
+    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+        2L, 2L, "FIELD_STORE", "CUSTOM", "aws", "AWS ARN", "Amazon Resource Name",
+        "com/example/Greeter", "greet", "()V", 0, null, 0.85, "{}")));
 
     UnitConstants result = service.store(sampleCustomType(), "proj", 2).block();
     assertThat(result).isNotNull();
@@ -152,8 +171,17 @@ class PostgresServiceTest {
         44L, "proj", 1, "CLASS_FILE", "com/example/Client", -1L, null);
     var savedSnapshot = new UnitSnapshotEntity(102L, 44L, "com/example/Client", "{}");
 
+    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "com/example/Client", 1))
+        .thenReturn(Mono.empty());
     when(descriptorRepo.save(any())).thenReturn(Mono.just(savedDescriptor));
+    when(snapshotRepo.findByDescriptorIdAndUnitName(44L, "com/example/Client"))
+        .thenReturn(Mono.empty());
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
+    when(constantRepo.findAllBySnapshotId(102L)).thenReturn(Flux.empty());
+    when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(3L, 102L, "https://api.example.com", "String")));
+    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+        3L, 3L, "STRING_CONCATENATION_MEMBER", "CORE", "URL_RESOURCE", null, null,
+        "com/example/Client", "send", "()V", 0, null, 0.75, "{\"key\":\"value\",\"retries\":3}")));
 
     UnitConstants result = service.store(constants, "proj", 1).block();
     assertThat(result).isNotNull();
