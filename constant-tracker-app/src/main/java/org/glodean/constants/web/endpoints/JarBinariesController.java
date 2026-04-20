@@ -1,7 +1,6 @@
 package org.glodean.constants.web.endpoints;
 
 import org.glodean.constants.extractor.ModelExtractor;
-import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,11 +66,8 @@ public class JarBinariesController {
                         }
                     }
                 })
-                .flatMap(unitConstants -> storage.store(unitConstants, project))
                 .collectList()
-                // Avoid serializing model objects (tests only assert status). Return
-                // an empty 200 OK to prevent Jackson errors for anonymous types used
-                // in test fixtures.
+                .flatMap(allUnits -> storage.storeAll(allUnits, project))
                 .thenReturn(ResponseEntity.ok().build())
                 .onErrorResume(
                         ModelExtractor.ExtractionException.class,

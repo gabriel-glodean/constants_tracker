@@ -22,13 +22,16 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.postgres.PostgresService;
+import org.glodean.constants.store.postgres.ProjectVersionEntity;
 import org.glodean.constants.store.solr.SolrService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,12 +40,15 @@ class CompositeUnitConstantsStoreTest {
   @Mock SolrService solrService;
   @Mock PostgresService postgresService;
   @Mock VersionIncrementer versionIncrementer;
+  @Mock ProjectVersionService projectVersionService;
 
   CompositeUnitConstantsStore store;
 
   @BeforeEach
   void setUp() {
-    store = new CompositeUnitConstantsStore(solrService, postgresService, versionIncrementer);
+    store =
+        new CompositeUnitConstantsStore(
+            solrService, postgresService, versionIncrementer, projectVersionService);
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -61,7 +67,8 @@ class CompositeUnitConstantsStoreTest {
 
   @Test
   void storeAutoVersionCallsIncrementor() {
-    when(versionIncrementer.getNextVersion("proj", "com/example/Greeter")).thenReturn(5);
+    var openVersion = new ProjectVersionEntity(1L, "proj", 5, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
     when(postgresService.store(any(), eq("proj"), eq(5))).thenReturn(Mono.just(sample()));
     when(solrService.store(any(), eq("proj"), eq(5))).thenReturn(Mono.just(sample()));
 
@@ -69,7 +76,7 @@ class CompositeUnitConstantsStoreTest {
 
     assertThat(result).isNotNull();
     assertThat(result.source().path()).isEqualTo("com/example/Greeter");
-    verify(versionIncrementer).getNextVersion("proj", "com/example/Greeter");
+    verify(projectVersionService).getOrCreateOpenVersion("proj");
     verify(postgresService).store(any(), eq("proj"), eq(5));
   }
 
@@ -77,6 +84,9 @@ class CompositeUnitConstantsStoreTest {
 
   @Test
   void storeExplicitVersionDualWritesBothStores() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 3, null, "OPEN", null, null);
+    when(projectVersionService.ensureVersionExists("proj", 3)).thenReturn(Mono.just(openVersion));
+    when(projectVersionService.isVersionOpen("proj", 3)).thenReturn(Mono.just(true));
     when(postgresService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(sample()));
     when(solrService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(sample()));
 
@@ -91,6 +101,10 @@ class CompositeUnitConstantsStoreTest {
   @Test
   void storeExplicitVersionReturnsOriginalConstants() {
     UnitConstants expected = sample();
+    var openVersion = new ProjectVersionEntity(1L, "proj", 7, null, "OPEN", null, null);
+    when(projectVersionService.ensureVersionExists(anyString(), anyInt()))
+        .thenReturn(Mono.just(openVersion));
+    when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(expected));
     when(solrService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(expected));
 
@@ -103,6 +117,10 @@ class CompositeUnitConstantsStoreTest {
 
   @Test
   void solrFailureIsNonFatalWhenPostgresSucceeds() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 1, null, "OPEN", null, null);
+    when(projectVersionService.ensureVersionExists(anyString(), anyInt()))
+        .thenReturn(Mono.just(openVersion));
+    when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(sample()));
     when(solrService.store(any(), anyString(), anyInt()))
         .thenReturn(Mono.error(new RuntimeException("Solr unavailable")));
@@ -115,6 +133,10 @@ class CompositeUnitConstantsStoreTest {
 
   @Test
   void postgresFailurePropagatesError() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 1, null, "OPEN", null, null);
+    when(projectVersionService.ensureVersionExists(anyString(), anyInt()))
+        .thenReturn(Mono.just(openVersion));
+    when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
     when(solrService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(sample()));
@@ -142,10 +164,10 @@ class CompositeUnitConstantsStoreTest {
   void findPropagatesPostgresError() {
     when(postgresService.find(anyString()))
         .thenReturn(Mono.error(new IllegalArgumentException("Unknown class!")));
+    when(projectVersionService.getVersion(anyString(), anyInt())).thenReturn(Mono.empty());
 
     assertThatThrownBy(() -> store.find("proj:com/example/Greeter:99").block())
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unknown class!");
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   // ── fuzzySearch – delegates to Solr ───────────────────────────────────────

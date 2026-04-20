@@ -5,6 +5,7 @@ import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
+import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -56,7 +57,9 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/class")
 public record ClassBinariesController(
-        @Autowired UnitConstantsStore storage, @Autowired ExtractionService extractionService) {
+        @Autowired UnitConstantsStore storage,
+        @Autowired ExtractionService extractionService,
+        @Autowired ProjectVersionService projectVersionService) {
 
     /**
      * Store a class file for a specific project and version.
@@ -182,6 +185,30 @@ public record ClassBinariesController(
                 .map(ResponseEntity::ok)
                 .onErrorResume(
                         IllegalArgumentException.class, _ -> Mono.just(ResponseEntity.notFound().build()))
+                .onErrorResume(
+                        Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
+    }
+
+    /**
+     * Explicitly remove a unit from a project version, preventing it from being inherited
+     * from a parent version.
+     *
+     * @param project   the project identifier
+     * @param className the unit path (slash-separated, e.g., "java/lang/String")
+     * @param version   the version number
+     * @return 204 No Content on success, 409 Conflict if the version is finalized,
+     *         500 Internal Server Error for other failures
+     */
+    @DeleteMapping
+    public Mono<ResponseEntity<Object>> deleteUnit(
+            @RequestParam("project") String project,
+            @RequestParam("className") String className,
+            @RequestParam("version") int version) {
+        return projectVersionService.deleteUnit(project, version, className)
+                .thenReturn(ResponseEntity.noContent().<Object>build())
+                .onErrorResume(
+                        IllegalStateException.class,
+                        _ -> Mono.just(ResponseEntity.status(409).build()))
                 .onErrorResume(
                         Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
     }

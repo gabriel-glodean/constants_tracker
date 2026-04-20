@@ -1,63 +1,82 @@
 # Constant Tracker
 
-A Spring Boot (WebFlux) service that indexes **Java bytecode constants** for fast search and analysis using Solr.
+A Spring Boot (WebFlux) service that indexes **Java bytecode constants** and **configuration file constants** for fast search and analysis using Solr.
 
 This started as an experiment in exploring the JVM class file structure — parsing the constant pool, resolving
 references, and indexing them into Solr for querying and visualization.  
-The focus of this project is **bytecode analysis correctness**, but in the future analysis of java files might be on the
-table.
+The focus of this project is **bytecode analysis correctness**, but config file analysis (YAML, properties) is also supported.
 
 ---
 
 ## 🧠 Design Focus
 
-This project is split into **three modules** for clean separation and reusability:
+This project is split into **five modules** for clean separation and reusability:
 
-- The **`constant-extractor-lib`** module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor. It's tested at over **90% coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
-- The **`constant-tracker-app`** module provides a reactive web service built with WebFlux. The Redis and Solr layers are intentionally minimal; they serve as integration and caching shells for the core analysis engine.
-- The **`search-ui`** module is a lightweight web UI for searching and browsing indexed constants. It is served as a static site and communicates with the backend API.
+- The **`constant-extractor-api`** module defines the shared model, SPI interfaces (`ConstantUsageInterpreter`, `ModelExtractor`), and context types. It has zero framework dependencies and is the contract between all extractor implementations.
+- The **`constant-extractor-bytecode`** module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor. It includes six semantic classifiers (Logging, SQL, URL/Resource, File Path, Error Message, Annotation). It's tested at over **90% coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
+- The **`constant-extractor-config-file`** module extracts constants from YAML (`.yml`/`.yaml`) and Java properties (`.properties`) files, reusing the shared model from `constant-extractor-api`.
+- The **`constant-tracker-app`** module provides a reactive web service built with WebFlux. The Redis, Solr, and Postgres layers serve as integration, caching, and persistence shells for the core analysis engine.
+- The **`search-ui`** module is a lightweight web UI for searching, browsing, uploading, and managing indexed constants and project versions. It is served as a static site and communicates with the backend API.
 
-The library can be used **standalone** in any Java project that needs bytecode analysis capabilities.
+The extractor libraries can be used **standalone** in any Java project that needs bytecode or config-file analysis capabilities.
+
+Additionally, the **`demo-crud-server`** module is a framework-free Java application used for testing — it exercises as many semantic types as possible (SQL, URLs, file paths, etc.) to validate the extraction pipeline.
 
 ---
 
 ## 🧩 Architecture
 
-This is a **multi-module Gradle project** with clear separation of concerns. In addition to the backend modules, the project includes a small search UI for browsing and querying indexed constants:
+This is a **multi-module Gradle project** with clear separation of concerns:
 
 ### Modules
 
-1. **`constant-extractor-lib`** – Core bytecode analysis library
+1. **`constant-extractor-api`** – Shared model & SPI
+   - Model records (`UnitConstants`, `UnitConstant`, `UnitDescriptor`, `UsageType`, `SemanticType`)
+   - `ConstantUsageInterpreter` strategy interface + context types
+   - `ModelExtractor` interface
+   - Zero external dependencies
+
+2. **`constant-extractor-bytecode`** – Core bytecode analysis library
    - JVM ClassFile parser (format version 69 / JDK 25)
    - Constant pool extraction and resolution
-   - Model classes for bytecode structures
-   - Zero external dependencies (except Guava and testing tools)
-   - Can be used standalone in any Java project
+   - Six semantic classifiers: Logging, SQL, URL/Resource, File Path, Error Message, Annotation
+   - `ConstantUsageInterpreterRegistry` for wiring classifiers
+   - Depends on `constant-extractor-api` and Guava
 
-2. **`constant-tracker-app`** – Spring Boot application
+3. **`constant-extractor-config-file`** – Config file analysis library
+   - YAML extractor (SnakeYAML)
+   - Java properties extractor
+   - Depends on `constant-extractor-api`
+
+4. **`constant-tracker-app`** – Spring Boot application
    - Reactive REST API (WebFlux)
    - Redis caching layer + versioning
    - Solr indexing integration
-   - Database persistence with Postgres
+   - Database persistence with Postgres (R2DBC + Flyway migrations)
+   - Project version lifecycle management (open → finalized)
    - Docker and Terraform deployment
-   - Depends on `constant-extractor-lib`
+   - Depends on all three extractor modules
 
-3. **`search-ui`** – Web-based search interface
-   - Lightweight static web UI for searching and browsing indexed constants
-   - Communicates with the backend API
-   - Located in the `search-ui/` directory (served as a static site)
+5. **`search-ui`** – Web-based search interface
+   - React 19 + TypeScript + Tailwind CSS v4
+   - Fuzzy search, class lookup, file upload (class/JAR/config), version management
+   - Located in the `search-ui/` directory (served as a static site via Nginx)
+
+6. **`demo-crud-server`** – Test fixture application
+   - Framework-free Java HTTP server with CRUD endpoints
+   - Exercises SQL, URL, file path, and other constant types for extraction testing
 
 ### Data Flow
 
-**Class/JAR Upload and Indexing:**
+**Class/JAR/Config Upload and Indexing:**
 ```
-[ .class/.jar upload ]
+[ .class/.jar/.yml/.properties upload ]
        │
        ▼
 [ WebFlux Controller ] (constant-tracker-app)
        │
        ▼
-[ Analysis Engine ] (constant-extractor-lib)
+[ Analysis Engine ] (constant-extractor-bytecode / constant-extractor-config-file)
        │
        ▼
 [ Redis Cache ] → [ Solr Index + Postgres DB ] (constant-tracker-app)
@@ -90,7 +109,7 @@ This is a **multi-module Gradle project** with clear separation of concerns. In 
 **Backend:**
 - Spring Boot 3 / WebFlux – reactive REST interface
 - Solr 10 – full-text indexing of constant references
-- Postgres 18 – relational storage for detailed class constants usage
+- Postgres 17 – relational storage for detailed class constants usage (R2DBC + Flyway)
 - Redis 7 – caching
 - Java 25 – uses latest features including ClassFile API
 
@@ -108,9 +127,14 @@ This is a **multi-module Gradle project** with clear separation of concerns. In 
 
 ## 🖥️ UI
 
-This project includes a simple search UI for browsing and querying indexed constants.
+This project includes a search UI for browsing, querying, uploading, and managing indexed constants.
 
 - **Location:** `search-ui/` directory (served as a static site)
+- **Features:**
+  - Fuzzy constant search across projects
+  - Class constant lookup by project/class/version
+  - File upload (`.class`, `.jar`, `.yml`/`.yaml`, `.properties`)
+  - Version management (lookup, close/finalize, sync removals, delete units)
 - **Access:**
   - When running with Docker Compose, the UI is available at: [http://localhost:5173](http://localhost:5173)
   - The UI communicates with the backend API at [http://localhost:8080](http://localhost:8080)
@@ -182,7 +206,7 @@ docker build -f search-ui/Dockerfile -t search_ui:latest ./search-ui
 
 **3. Start all services with Docker Compose:**
 ```bash
-docker compose -f constant-tracker-app/docker-compose.yml up -d
+docker compose up -d
 ```
 
 This will start:
@@ -193,7 +217,7 @@ This will start:
 - **Search UI**: [http://localhost:5173](http://localhost:5173)
 - **Redis**: `localhost:6379` (no web UI)
 
-You can now upload `.class` or `.jar` files and use the UI to search indexed constants.
+You can now upload `.class`, `.jar`, or config files and use the UI to search indexed constants.
 
 
 
@@ -212,7 +236,8 @@ You can now upload `.class` or `.jar` files and use the UI to search indexed con
 ```
 
 ### Module-Specific Tests
-- **`constant-extractor-lib`:** > 85% coverage (JaCoCo report under `constant-extractor-lib/build/jacocoHtml`)
+- **`constant-extractor-bytecode`:** > 85% coverage (JaCoCo report under `constant-extractor-bytecode/build/jacocoHtml`)
+- **`constant-extractor-config-file`:** > 85% coverage (JaCoCo report under `constant-extractor-config-file/build/jacocoHtml`)
 - **`constant-tracker-app`:** Integration tests verifying upload, caching, and Solr indexing
 
 ### Test Reports
@@ -224,8 +249,8 @@ You can now upload `.class` or `.jar` files and use the UI to search indexed con
 ## 📦 Mock Files and Samples
 
 Example `.class` and `.java` files are included in the test resources:
-- `.class` files: `constant-extractor-lib/src/test/resources/samples/` and `constant-tracker-app/src/test/resources/samples/`
-- `.java` files: `constant-extractor-lib/src/test/java/org/glodean/constants/samples/`
+- `.class` files: `constant-extractor-bytecode/src/test/resources/samples/` and `constant-tracker-app/src/test/resources/samples/`
+- `.java` files: `constant-extractor-bytecode/src/test/java/org/glodean/constants/samples/`
 
 They can be used to test or demonstrate the analysis process without compiling your own Java sources.
 
@@ -233,7 +258,7 @@ They can be used to test or demonstrate the analysis process without compiling y
 # Example: analyze a provided mock class
 curl -X POST "http://localhost:8080/class?project=samples" \
   -H "Content-Type: application/octet-stream" \
-  --data-binary @constant-extractor-lib/src/test/resources/samples/Greeter.class
+  --data-binary @constant-extractor-bytecode/src/test/resources/samples/Greeter.class
 ```
 
 ---
@@ -255,8 +280,11 @@ The UI layer looks like this:
 
 - Custom parser for JVM constant pool (fields, methods, strings, class refs, dynamic invocations)
 - Handles `invokedynamic` and bootstrap method resolution
+- Six semantic classifiers: Logging, SQL, URL/Resource, File Path, Error Message, Annotation
+- Config file extraction: YAML and Java properties
 - Exports constants and metadata to Solr documents
-- Reactive and container-ready (WebFlux + Redis + Solr)
+- Project version lifecycle with inheritance and removal sync
+- Reactive and container-ready (WebFlux + Redis + Solr + Postgres)
 - Built and tested on JDK 25 (it can analyze all the java 25 runtime in about 2 and a half minutes on an i7-13620 with 16 GB RAM allocated to the JVM)
 
 ---
@@ -282,12 +310,14 @@ The UI layer looks like this:
 java -jar constant-tracker-app/build/libs/constant-tracker-app-0.1.0-SNAPSHOT.jar
 ```
 
-### Build Only the Library
+### Build Only the Libraries
 ```bash
-./gradlew :constant-extractor-lib:build
+./gradlew :constant-extractor-api:build
+./gradlew :constant-extractor-bytecode:build
+./gradlew :constant-extractor-config-file:build
 ```
 
-The library JAR will be available at `constant-extractor-lib/build/libs/`
+The library JARs will be available under each module's `build/libs/` directory.
 
 ---
 

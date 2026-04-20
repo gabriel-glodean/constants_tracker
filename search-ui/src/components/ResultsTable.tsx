@@ -36,7 +36,7 @@ export function ResultsTable({ data, searchTerm }: ResultsTableProps) {
       {/* Results list */}
       <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
         {data.hits.map((hit, idx) => (
-          <HitRow key={`${hit.className}-${hit.version}-${idx}`} hit={hit} searchTerm={searchTerm} />
+          <HitRow key={`${hit.unitName}-${hit.version}-${idx}`} hit={hit} searchTerm={searchTerm} />
         ))}
       </div>
     </div>
@@ -47,9 +47,9 @@ export function ResultsTable({ data, searchTerm }: ResultsTableProps) {
 
 function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }) {
   const [expanded, setExpanded] = useState(false)
-  const shortName = hit.className.split('/').pop() ?? hit.className
-  const packagePath = hit.className.includes('/')
-    ? hit.className.substring(0, hit.className.lastIndexOf('/'))
+  const shortName = hit.unitName.split('/').pop() ?? hit.unitName
+  const packagePath = hit.unitName.includes('/')
+    ? hit.unitName.substring(0, hit.unitName.lastIndexOf('/'))
     : ''
 
   return (
@@ -81,6 +81,11 @@ function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }
             <Hash className="h-3 w-3" />
             v{hit.version}
           </span>
+          {hit.sourceKind && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-xs font-medium">
+              {hit.sourceKind}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground tabular-nums">
             {hit.constantValues.length} constant{hit.constantValues.length !== 1 ? 's' : ''}
           </span>

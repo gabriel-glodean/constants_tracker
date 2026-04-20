@@ -1,10 +1,10 @@
 ## V1 — Ship a complete, demoable tool
-##   At 10 hrs/week: ~5-7 weeks | At 20 hrs/week: ~3-4 weeks
+##   Status: MOSTLY DONE
 
-- implement 4-5 more interpreters (SQL, URL, file path, config key, error message)    P0
-  → ~12-18 hrs total (first one ~4-5 hrs to nail the pattern + tests,
-    then ~2-3 hrs each — the LoggingConstantUsageInterpreter + test is 335 lines,
-    each new one follows the same shape: class sets, method sets, confidence calc)
+- ✅ implement 5 more interpreters (SQL, URL, file path, error message, annotation)     P0  DONE
+  → SqlConstantUsageInterpreter, UrlResourceConstantUsageInterpreter,
+    FilePathConstantUsageInterpreter, ErrorMessageConstantUsageInterpreter,
+    AnnotationConstantUsageInterpreter (config key was replaced by annotation)
 
 - implement the constant diff analysis (compare two versions of the same class)        P0
   → ~15-20 hrs (the hard part: designing the diff model + a new endpoint +
@@ -29,10 +29,10 @@
   → ~4-6 hrs (add dependency, @Timed on key methods, /actuator/prometheus endpoint)
 
 ## V3 — Polish
-##   At 10 hrs/week: ~5-8 weeks | At 20 hrs/week: ~3-4 weeks
 
-- add a WebUI to display full analysis results (beyond search)                          P2
-  → ~15-25 hrs (depends on ambition — basic Thymeleaf or a small React app)
+- ✅ add a WebUI to display full analysis results (beyond search)                        P2  DONE
+  → search-ui module: React 19 + TypeScript + Tailwind CSS v4
+    fuzzy search, class lookup, file upload (class/JAR/config), version management
 
 - debug why terraform fails to create the app docker image                              P3
   → ~2-4 hrs (likely just the image reference in main.tf)
@@ -41,10 +41,11 @@
   → ~15-20 hrs (complex bytecode work — handler starts are tracked in
     SuccessorBuilder but the semantic interpretation isn't wired)
 
-- split lib into model and bytecode analysis, to have a hook for Java source analysis   P4
-  → ~8-12 hrs (Gradle module refactoring + moving classes + fixing imports + tests)
+- ✅ split lib into model and bytecode analysis, to have a hook for Java source analysis P4  DONE
+  → split into constant-extractor-api (model + SPI), constant-extractor-bytecode
+    (JVM analysis), and constant-extractor-config-file (YAML/properties)
 
-## Total estimate: ~105-155 hrs
-##   At 10 hrs/week: ~11-16 weeks (all of it)
-##   At 20 hrs/week: ~6-8 weeks (all of it)
-##   V1 alone is ~33-47 hrs — that's your 2-3 weekends target if weekends are long
+## Remaining estimate: ~65-90 hrs
+##   V1 remaining (diff only): ~15-20 hrs
+##   V2: ~34-46 hrs
+##   V3 remaining: ~17-24 hrs

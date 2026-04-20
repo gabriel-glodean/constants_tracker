@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,8 @@ class ClassBinariesControllerTest {
   @Autowired WebTestClient web;
 
   @MockitoBean UnitConstantsStore storage;
+
+  @MockitoBean ProjectVersionService projectVersionService;
 
   @Test
   void storeClass() throws IOException {

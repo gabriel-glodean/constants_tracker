@@ -14,6 +14,7 @@ import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
+import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,8 @@ class ClassBinariesControllerErrorPathsTest {
   @Autowired WebTestClient web;
 
   @MockitoBean UnitConstantsStore storage;
+
+  @MockitoBean ProjectVersionService projectVersionService;
 
   @MockitoBean(enforceOverride = true)
   ExtractionService extractionService;

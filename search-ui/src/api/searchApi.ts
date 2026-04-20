@@ -2,8 +2,9 @@
 
 export interface FuzzySearchHit {
   project: string
-  className: string
+  unitName: string
   version: number
+  sourceKind: string
   constantValues: string[]
 }
 

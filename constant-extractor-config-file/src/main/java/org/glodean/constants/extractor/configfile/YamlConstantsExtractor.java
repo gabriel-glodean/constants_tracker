@@ -113,4 +113,3 @@ public record YamlConstantsExtractor() implements ConstantsExtractor {
     }
 }
 
-

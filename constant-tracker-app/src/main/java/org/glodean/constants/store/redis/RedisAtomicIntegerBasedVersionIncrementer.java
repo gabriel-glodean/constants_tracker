@@ -10,9 +10,9 @@ import org.springframework.stereotype.Service;
  * Redis-backed {@link VersionIncrementer} that uses a {@link RedisAtomicInteger} counter per
  * project/class pair to produce monotonically increasing version numbers.
  *
- * <p>Each counter is stored under the key {@code "IdCounter:<project>:<className>"}. Redis
+ * <p>Each counter is stored under the key {@code "IdCounter:<project>"}. Redis
  * atomic semantics guarantee that concurrent calls from multiple application instances never
- * produce the same version number for the same class.
+ * produce the same version number for the same project.
  *
  * @param connectionFactory the Redis connection factory used to create atomic counters
  */
@@ -23,14 +23,13 @@ public record RedisAtomicIntegerBasedVersionIncrementer(
   /**
    * {@inheritDoc}
    *
-   * <p>Increments the Redis counter stored at {@code "IdCounter:<project>:<className>"}
+   * <p>Increments the Redis counter stored at {@code "IdCounter:<project>"}
    * and returns the new value. The counter is created automatically if it does not exist.
    */
   @Override
-  public int getNextVersion(String project, String className) {
+  public int getNextVersion(String project) {
     try {
-      return new RedisAtomicInteger("IdCounter:" + project + ":" + className, connectionFactory)
-          .incrementAndGet();
+      return new RedisAtomicInteger("IdCounter:" + project, connectionFactory).incrementAndGet();
     } catch (RuntimeException e) {
       // Be defensive in integration tests: if Redis is temporarily unavailable return a
       // sensible default (version 1) and log the problem. This prevents Redis flakiness from

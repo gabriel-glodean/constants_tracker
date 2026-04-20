@@ -52,7 +52,7 @@ class JarBinariesControllerTest {
         UnitConstants constants = sampleConstants();
         ModelExtractor mockExtractor = (src) -> List.of(constants);
         when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
-        when(storage.store(any(UnitConstants.class), anyString())).thenReturn(Mono.just(constants));
+        when(storage.storeAll(any(), anyString())).thenReturn(Mono.just(List.of(constants)));
 
         web.post()
             .uri(POST_URL)
@@ -92,7 +92,7 @@ class JarBinariesControllerTest {
         UnitConstants constants = sampleConstants();
         ModelExtractor mockExtractor = (src) -> List.of(constants);
         when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
-        when(storage.store(any(UnitConstants.class), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
+        when(storage.storeAll(any(), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
 
         web.post()
             .uri(POST_URL)
