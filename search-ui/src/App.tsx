@@ -125,7 +125,7 @@ function App() {
         )}
         {tab === 'upload' && (
           <section className="max-w-2xl mx-auto px-6 pt-16 pb-16">
-            <h1 className="text-2xl font-bold mb-6">Upload Class or JAR</h1>
+            <h1 className="text-2xl font-bold mb-6">Upload Class, JAR, or Config</h1>
             <UploadForm />
           </section>
         )}

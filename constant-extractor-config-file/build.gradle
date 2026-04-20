@@ -1,0 +1,68 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'com.diffplug.spotless' version "$spotlessVersion"
+}
+
+group = 'org.glodean'
+version = "$appVersion"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':constant-extractor-api')
+    implementation "com.google.guava:guava:$guavaVersion"
+
+    // YAML parsing
+    implementation "org.yaml:snakeyaml:2.3"
+
+    testImplementation platform("org.junit:junit-bom:$junitVersion")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+    withJavadocJar()
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.13"
+    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+
+jacocoTestCoverageVerification {
+    dependsOn tasks.named('test')
+    dependsOn tasks.named('jacocoTestReport')
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.85
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+

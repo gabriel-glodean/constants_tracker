@@ -1,0 +1,27 @@
+server:
+  port: 8080
+  host: localhost
+
+spring:
+  datasource:
+    url: https://db.example.com/mydb
+    username: admin
+    password: secret123
+  cache:
+    type: redis
+
+logging:
+  level:
+    root: INFO
+    org.glodean: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd} - %msg%n"
+
+app:
+  features:
+    - feature-one
+    - feature-two
+  paths:
+    config-dir: /etc/myapp/config
+    log-dir: /var/log/myapp
+

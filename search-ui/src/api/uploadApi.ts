@@ -43,3 +43,25 @@ export async function uploadJar({
   return { status: 'error', message: `Upload failed (HTTP ${res.status})` };
 }
 
+export async function uploadConfig({
+  file,
+  project,
+  version,
+}: {
+  file: File;
+  project: string;
+  version?: number;
+}): Promise<UploadResult> {
+  const form = new FormData();
+  form.append('file', file);
+  const url = version != null
+    ? `/config?project=${encodeURIComponent(project)}&version=${version}`
+    : `/config?project=${encodeURIComponent(project)}`;
+  const res = await fetch(url, {
+    method: version != null ? 'PUT' : 'POST',
+    body: form,
+  });
+  if (res.ok) return { status: 'success', message: 'Config file uploaded successfully.' };
+  if (res.status === 422) return { status: 'error', message: 'Unsupported config file type.' };
+  return { status: 'error', message: `Upload failed (HTTP ${res.status})` };
+}
