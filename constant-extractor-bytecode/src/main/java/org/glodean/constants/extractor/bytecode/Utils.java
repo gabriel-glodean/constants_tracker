@@ -48,4 +48,22 @@ class Utils {
         return d.substring(1, d.length() - 1).replace('/', '.');
     }
 
+    /**
+     * Returns the JVM internal (slash-separated) class name from a {@link ClassDesc}.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code Ljava/sql/Statement;} → {@code java/sql/Statement}</li>
+     *   <li>{@code Lorg/slf4j/Logger;}   → {@code org/slf4j/Logger}</li>
+     * </ul>
+     *
+     * @param desc the class descriptor
+     * @return the internal slash-separated class name
+     */
+    static String toInternalName(ClassDesc desc) {
+        if (desc.isPrimitive() || desc.isArray()) return desc.descriptorString();
+        String d = desc.descriptorString(); // Lcom/example/Foo;
+        return d.substring(1, d.length() - 1); // com/example/Foo
+    }
+
 }

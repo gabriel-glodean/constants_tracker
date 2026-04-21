@@ -13,17 +13,16 @@ The focus of this project is **bytecode analysis correctness**, but config file 
 ```bash
 git clone https://github.com/gabrielglodean/constant-tracker.git
 cd constant-tracker
-docker compose --profile seed up -d
+docker compose --profile=seed up -d
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads sample `.class` files and the `demo-crud-server` JAR so you have data to explore immediately.
+Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads the `demo-crud-server` JAR so you have data to explore immediately.
 
 Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.
 
 ![Demo: upload and search constants](./docs/demo.gif)
 
 > **Prerequisites:** Docker and Docker Compose. The first build takes a few minutes (Gradle + npm).
-> Run `./gradlew :demo-crud-server:build` first if the seed data JAR hasn't been built yet.
 
 ---
 
@@ -182,32 +181,51 @@ All services are started automatically with Docker Compose for local development
 
 ## 🐳 Getting Started with Docker Compose
 
-To launch the full stack (backend, Solr, Postgres, Redis, and UI) locally, you must first build both the backend and frontend (UI) Docker images:
+All services are managed via Docker Compose. The stack includes the backend, Solr, Postgres, Redis, and the search UI.
 
-**1. Build the backend container:**
+### Compose Profiles
+
+| Profile | Command | Description |
+|---------|---------|-------------|
+| *(none)* | `docker compose up -d` | Start all core services (backend, Solr, Postgres, Redis, UI) |
+| `seed` | `docker compose --profile=seed up -d` | Start all services **and** upload the demo JAR for instant data |
+| `clear` | `docker compose --profile=clear up clear` | **Wipe all data** from Postgres, Solr, and Redis (keeps services running) |
+
+### Typical workflow
+
 ```bash
-docker build -f constant-tracker-app/Dockerfile -t constant_tracker:latest .
+# First time: start everything and seed demo data
+docker compose --profile=seed up -d
+
+# Reset data (e.g. after a re-index or code change):
+docker compose --profile=clear up clear
+
+# Re-seed after clearing:
+docker rm -f seed
+docker compose --profile=seed up -d seed
 ```
 
-**2. Build the frontend (UI) container:**
+### Rebuilding after code changes
+
 ```bash
-docker build -f search-ui/Dockerfile -t search_ui:latest ./search-ui
+# Rebuild a specific service image
+docker compose build app
+docker compose build search-ui
+
+# Restart with the new image
+docker compose up -d app
+docker compose up -d search-ui
 ```
 
-**3. Start all services with Docker Compose:**
-```bash
-docker compose up -d
-```
+### Services & ports
 
-This will start:
+Once running:
+- **Search UI**: [http://localhost:5173](http://localhost:5173)
 - **API**: [http://localhost:8080](http://localhost:8080)
+- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 - **Solr UI**: [http://localhost:8983/solr/#/](http://localhost:8983/solr/#/)
 - **Postgres**: `localhost:5432`
-- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **Search UI**: [http://localhost:5173](http://localhost:5173)
-- **Redis**: `localhost:6379` (no web UI)
-
-You can now upload `.class`, `.jar`, or config files and use the UI to search indexed constants.
+- **Redis**: `localhost:6379`
 
 
 

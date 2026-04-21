@@ -96,6 +96,34 @@ services:
     networks:
       - app_network
 
+  clear:
+    image: alpine:latest
+    container_name: clear
+    profiles:
+      - clear
+    depends_on:
+      - postgres
+      - redis
+      - solr
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
+        echo "=== Clearing PostgreSQL ==="
+        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "TRUNCATE unit_descriptors CASCADE;"
+        echo "=== Clearing Solr ==="
+        until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
+        curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
+          -H "Content-Type: application/json" \
+          -d '{"delete":{"query":"*:*"}}' && echo " Solr cleared"
+        echo "=== Clearing Redis ==="
+        redis-cli -h redis FLUSHALL && echo " Redis cleared"
+        echo "=== Clear complete ==="
+    networks:
+      - app_network
+
   seed:
     image: curlimages/curl:latest
     container_name: seed
@@ -106,7 +134,6 @@ services:
         condition: service_healthy
     volumes:
       - ./demo-crud-server/build/libs:/seed/jars:ro
-      - ./constant-tracker-app/src/test/resources/samples:/seed/classes:ro
     entrypoint: ["sh", "-c"]
     command:
       - |

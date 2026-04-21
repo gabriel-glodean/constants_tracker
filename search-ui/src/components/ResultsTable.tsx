@@ -24,6 +24,13 @@ function parseSemanticPairs(pairs: string[]): Map<string, SemanticBadge[]> {
     }
     map.set(value, existing)
   }
+  // Remove Unknown entries for constants that have at least one real classification
+  for (const [value, badges] of map) {
+    const hasReal = badges.some(b => b.type !== 'Unknown')
+    if (hasReal) {
+      map.set(value, badges.filter(b => b.type !== 'Unknown'))
+    }
+  }
   return map
 }
 
@@ -136,7 +143,7 @@ function HitRow({ hit, searchTerm }: { hit: FuzzySearchHit; searchTerm: string }
 
 const BADGE_COLORS: Record<string, string> = {
   'SQL Fragment': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  'URL/Resource': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  'URL Resource': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   'File Path': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   'Log Message': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   'Error Message': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',

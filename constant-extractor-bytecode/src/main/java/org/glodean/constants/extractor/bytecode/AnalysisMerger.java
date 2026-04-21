@@ -1,6 +1,7 @@
 package org.glodean.constants.extractor.bytecode;
 
 import static java.lang.classfile.Opcode.*;
+import static org.glodean.constants.extractor.bytecode.Utils.toInternalName;
 import static org.glodean.constants.extractor.bytecode.Utils.toJavaDescriptor;
 import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 import static org.glodean.constants.model.UnitConstant.UsageType.*;
@@ -13,7 +14,6 @@ import java.lang.classfile.CodeElement;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
-// ...existing code...
 import java.util.*;
 import java.util.function.Function;
 
@@ -167,7 +167,7 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
                         ? ReceiverKind.STATIC
                         : receiverKindOf(stackAt(state, paramCount + 1));
                 MethodCallContext ctx = new MethodCallContext(
-                        toJavaName(ii.owner().asSymbol()),
+                        ii.owner().name().stringValue(),
                         ii.name().stringValue(),
                         toJavaDescriptor(ii.typeSymbol()),
                         rk);
@@ -206,7 +206,7 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
             // -- invokedynamic: other (lambdas, etc.) ------------------------------
             case InvokeDynamicInstruction idi -> {
                 MethodCallContext ctx = new MethodCallContext(
-                        toJavaName(idi.bootstrapMethod().owner()),
+                        toInternalName(idi.bootstrapMethod().owner()),
                         idi.name().stringValue(),
                         toJavaDescriptor(idi.typeSymbol()),
                         ReceiverKind.STATIC);
