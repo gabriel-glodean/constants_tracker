@@ -16,9 +16,10 @@ cd constant-tracker
 docker compose --profile=seed up -d
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads the `demo-crud-server` JAR so you have data to explore immediately.
+Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads **two versions** of `demo-crud-server` (v1 with hardcoded constants, v2 with an `AppConfig` class + `app.properties`) so you have data to explore and diff immediately.
 
-Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.
+Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.  
+Open the **Diff** tab → enter project `demo-crud-server`, from `1`, to `2` → see exactly what changed between versions.
 
 ![Demo: upload and search constants](./docs/demo.gif)
 
@@ -77,12 +78,16 @@ This is a **multi-module Gradle project** with clear separation of concerns:
 
 5. **`search-ui`** – Web-based search interface
    - React 19 + TypeScript + Tailwind CSS v4
-   - Fuzzy search, class lookup, file upload (class/JAR/config), version management
+   - Fuzzy search, class lookup, file upload (class/JAR/config), version management, **version diff viewer**
    - Located in the `search-ui/` directory (served as a static site via Nginx)
 
-6. **`demo-crud-server`** – Test fixture application
+6. **`demo-crud-server`** – Test fixture application (v1)
    - Framework-free Java HTTP server with CRUD endpoints
    - Exercises SQL, URL, file path, and other constant types for extraction testing
+
+7. **`demo-crud-server-v2`** – Refactored test fixture (v2)
+   - Introduces `AppConfig` class + `app.properties` to replace hardcoded constants
+   - Seeded alongside v1 under the same project (`demo-crud-server`) as version 2, enabling diff demos out of the box
 
 ### Data Flow
 
@@ -150,6 +155,7 @@ This project includes a search UI for browsing, querying, uploading, and managin
 - **Location:** `search-ui/` directory (served as a static site)
 - **Features:**
   - Fuzzy constant search across projects
+  - **Version diff** — compare two versions of the same project, see added/removed/changed constants per class
   - Class constant lookup by project/class/version
   - File upload (`.class`, `.jar`, `.yml`/`.yaml`, `.properties`)
   - Version management (lookup, close/finalize, sync removals, delete units)
@@ -292,6 +298,7 @@ The UI layer looks like this:
 - Config file extraction: YAML and Java properties
 - Exports constants and metadata to Solr documents
 - Project version lifecycle with inheritance and removal sync
+- **Constant diff analysis** — compares two finalized versions of a project, returning added/removed/changed constants per unit (class, config file, etc.) with full usage context
 - Reactive and container-ready (WebFlux + Redis + Solr + Postgres)
 - Built and tested on JDK 25 (it can analyze all the java 25 runtime in about 2 and a half minutes on an i7-13620 with 16 GB RAM allocated to the JVM)
 

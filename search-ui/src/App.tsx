@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react'
-import { Database, Github, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch } from 'lucide-react'
+import { Database, Github, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch, GitCompareArrows } from 'lucide-react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { useSearch } from '@/hooks/useSearch'
 import { UploadForm } from '@/components/UploadForm'
 import { ClassLookupForm } from '@/components/ClassLookupForm'
 import { VersionManager } from '@/components/VersionManager'
+import { DiffViewer } from '@/components/DiffViewer'
 
 const TABS = [
   { key: 'search', label: 'Search', icon: SearchIcon },
+  { key: 'diff', label: 'Diff', icon: GitCompareArrows },
   { key: 'upload', label: 'Upload', icon: UploadIcon },
   { key: 'lookup', label: 'Class Lookup', icon: BookOpen },
   { key: 'versions', label: 'Versions', icon: GitBranch },
@@ -124,6 +126,12 @@ function App() {
               )}
             </section>
           </>
+        )}
+        {tab === 'diff' && (
+          <section className="max-w-4xl mx-auto px-6 pt-16 pb-16">
+            <h1 className="text-2xl font-bold mb-6">Version Diff</h1>
+            <DiffViewer />
+          </section>
         )}
         {tab === 'upload' && (
           <section className="max-w-2xl mx-auto px-6 pt-16 pb-16">

@@ -133,26 +133,42 @@ services:
       app:
         condition: service_healthy
     volumes:
-      - ./demo-crud-server/build/libs:/seed/jars:ro
+      - ./demo-crud-server/build/libs:/seed/jars/v1:ro
+      - ./demo-crud-server-v2/build/libs:/seed/jars/v2:ro
     entrypoint: ["sh", "-c"]
     command:
       - |
-        echo "=== Seeding demo data ==="
-        for jar in /seed/jars/*.jar; do
-          [ -f "$$jar" ] || continue
-          echo "Uploading JAR: $$jar"
-          jarname=$$(basename "$$jar")
-          curl -sf -X POST "http://app:8080/jar?project=demo-crud-server&jarName=$$jarname" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary "@$$jar" && echo " OK" || echo " FAILED"
-        done
-        for cls in /seed/classes/*.class; do
-          [ -f "$$cls" ] || continue
-          echo "Uploading class: $$cls"
-          curl -sf -X POST "http://app:8080/class?project=samples" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary "@$$cls" && echo " OK" || echo " FAILED"
-        done
+        PROJECT="demo-crud-server"
+        APP="http://app:8080"
+
+        upload_jar_dir() {
+          local jar_dir="$$1"
+          for jar in "$$jar_dir"/*.jar; do
+            [ -f "$$jar" ] || continue
+            jarname=$$(basename "$$jar")
+            echo "Uploading: $$jarname"
+            curl -sf -X POST "$$APP/jar?project=$$PROJECT&jarName=$$jarname" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$$jar" && echo " OK" || echo " FAILED"
+          done
+        }
+
+        sync_and_finalize() {
+          local version="$$1"
+          echo "--- Syncing removals: $$PROJECT v$$version ---"
+          curl -sf -X POST "$$APP/project/$$PROJECT/version/$$version/sync" && echo " sync OK" || echo " sync FAILED"
+          echo "--- Finalizing: $$PROJECT v$$version ---"
+          curl -sf -X POST "$$APP/project/$$PROJECT/version/$$version/finalize" && echo " finalize OK" || echo " finalize FAILED"
+        }
+
+        echo "=== Seeding v1 ==="
+        upload_jar_dir "/seed/jars/v1"
+        sync_and_finalize 1
+
+        echo "=== Seeding v2 ==="
+        upload_jar_dir "/seed/jars/v2"
+        sync_and_finalize 2
+
         echo "=== Seed complete ==="
     networks:
       - app_network

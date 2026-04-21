@@ -29,6 +29,7 @@ dependencies {
             exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
             exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
+    testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation "org.testcontainers:testcontainers:$testcontainersVersion"
     testImplementation "org.springframework.boot:spring-boot-testcontainers:$springBootVersion"

@@ -1,27 +1,36 @@
 ## V1 — Portfolio-ready product (Senior Java Engineer showcase)
 ##   Goal: hiring manager clones repo, runs it, is impressed in 2 minutes
 
-### Tier 1 — "It just works" (must-have for credibility)
+### Remaining to ship V1
 
 - record a demo GIF and add it to docs/demo.gif                                        P0
   → ~1 hr (the README already references it; just needs the actual recording)
 
-### Tier 2 — Diff analysis (the differentiator)
-
-- implement the constant diff analysis (compare two versions of the same class)        P0
-  → ~15-20 hrs (diff model + endpoint + Postgres queries + diff view in UI;
-    THIS is what makes the project memorable — "upload two JARs, see what
-    changed" is a one-sentence elevator pitch that sticks)
+- diff UI polish & debugging                                                            P0
+  → ~8-12 hrs
+  → known gaps:
+    - ConstantRow "Before/After" column headers show literal "Before"/"After" instead
+      of resolved version numbers (needs version numbers passed down as props)
+    - filter pill counts not shown (e.g. "added (3)")
+    - no empty-state illustration when no diff data yet loaded
+    - keyboard accessibility (Enter on UnitRow should toggle collapse)
+    - test the diff end-to-end with the live seed data and fix any response
+      shape mismatches (changeKind casing, null fields, etc.)
+    - some diff values seem identical but are shown as "changed"
+    - need to handle constantvalue on static final fields
+    - synchronize the redis index with the db at startup (before serving rest endpoints) if misaligned
 
 ## ✅ Already done (V1 foundations)
 
 - ✅ 6 semantic classifiers (Logging, SQL, URL, File Path, Error Message, Annotation)
 - ✅ Config file extraction (YAML + properties)
-- ✅ Search UI (fuzzy search, upload, class lookup)
+- ✅ Search UI (fuzzy search, upload, class lookup, version diff viewer)
 - ✅ Full Docker Compose stack (app, Solr, Postgres, Redis, UI)
 - ✅ Module split (api / bytecode / config-file)
 - ✅ Version management (create, upload, finalize, inheritance)
-- ✅ Seed/demo script (docker compose --profile seed; uploads demo-crud-server JAR + sample .class files)
+- ✅ Seed/demo script (docker compose --profile seed; uploads demo-crud-server v1 + v2,
+    finalizes both versions for instant diff demo)
+- ✅ constant diff analysis (backend + frontend + demo data — see polish task above)
 - ✅ Solr schema auto-mounted on first boot (no manual copy step)
 - ✅ README quickstart (3 commands: clone, docker compose --profile seed up, open browser)
 - ✅ GitHub link in UI header + VersionManager tab wired
@@ -41,7 +50,7 @@
 ## V3 — Polish & hardening
 
 - add Jest tests for search-ui                                                          P2
-  → ~6-10 hrs (components + API client mocks)
+  → ~6-10 hrs (components + API client mocks; DiffViewer is a priority target)
 
 - add exception-flow bytecode analysis                                                  P3
   → ~15-20 hrs (wire SuccessorBuilder handler starts into semantic layer)
@@ -50,6 +59,6 @@
   → ~2-4 hrs (image reference in main.tf)
 
 ## Estimates
-##   V1 (ship it): ~27-40 hrs  ← DO THIS FIRST
+##   V1 (ship it): ~9-13 hrs remaining (demo GIF + diff polish)
 ##   V2 (depth):   ~34-46 hrs
 ##   V3 (polish):  ~23-34 hrs
