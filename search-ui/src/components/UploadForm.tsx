@@ -42,17 +42,32 @@ export function UploadForm() {
 
   return (
     <form onSubmit={handleUpload} className="space-y-6 max-w-md mx-auto">
-      <div className="flex gap-2 mb-2">
-        <button type="button" className={`flex-1 px-3 py-2 rounded-lg border ${type==='class'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'} transition`} onClick={()=>setType('class')}>
-          <FileCode2 className="inline mr-1 w-4 h-4"/> Class
-        </button>
-        <button type="button" className={`flex-1 px-3 py-2 rounded-lg border ${type==='jar'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'} transition`} onClick={()=>setType('jar')}>
-          <FileArchive className="inline mr-1 w-4 h-4"/> JAR
-        </button>
-        <button type="button" className={`flex-1 px-3 py-2 rounded-lg border ${type==='config'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'} transition`} onClick={()=>setType('config')}>
-          <FileText className="inline mr-1 w-4 h-4"/> Config
-        </button>
+      {/* File type selector */}
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-2">File type</label>
+        <div className="flex gap-2">
+          <button type="button"
+            title="Upload a single compiled .class file"
+            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${type==='class'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'}`}
+            onClick={()=>setType('class')}>
+            <FileCode2 className="inline mr-1 w-4 h-4"/> .class file
+          </button>
+          <button type="button"
+            title="Upload a JAR archive — every class inside will be indexed"
+            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${type==='jar'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'}`}
+            onClick={()=>setType('jar')}>
+            <FileArchive className="inline mr-1 w-4 h-4"/> JAR archive
+          </button>
+          <button type="button"
+            title="Upload a .yml, .yaml, or .properties config file"
+            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${type==='config'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'}`}
+            onClick={()=>setType('config')}>
+            <FileText className="inline mr-1 w-4 h-4"/> Config file
+          </button>
+        </div>
       </div>
+
+      {/* Drop zone */}
       <div
         className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer bg-muted/30 hover:bg-muted/50 transition"
         onClick={()=>inputRef.current?.click()}
@@ -62,14 +77,33 @@ export function UploadForm() {
         <Upload className="mx-auto mb-2 w-7 h-7 text-primary"/>
         <div className="text-sm mb-1">Drag & drop or click to select a {type === 'class' ? '.class' : type === 'jar' ? '.jar' : '.yml / .yaml / .properties'} file</div>
         <input ref={inputRef} type="file" accept={type==='class'?'.class':type==='jar'?'.jar':'.yml,.yaml,.properties'} className="hidden" onChange={handleFileChange}/>
-        {file && <div className="mt-2 text-xs text-foreground">{file.name}</div>}
+        {file && <div className="mt-2 text-xs text-foreground font-medium">{file.name}</div>}
       </div>
-      <div className="flex gap-2">
-        <input type="text" placeholder="Project (required)" value={project} onChange={e=>setProject(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
-        {type!=='jar' && (
-          <input type="number" placeholder="Version (optional)" value={version} onChange={e=>setVersion(e.target.value)} className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+
+      {/* Project + Version fields */}
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Project name <span className="text-destructive">*</span>
+          </label>
+          <input type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e=>setProject(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+        </div>
+        {type !== 'jar' && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              Version
+              <span
+                title="Leave blank to let the server assign the next version number automatically"
+                className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
+              >ⓘ</span>
+            </label>
+            <input type="number" placeholder="Leave blank to auto-assign" value={version} onChange={e=>setVersion(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+          </div>
         )}
       </div>
+
       <button type="submit" disabled={!file||!project.trim()||status==='loading'} className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
         {status==='loading'?<span className="animate-spin h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"/>:<Upload className="h-5 w-5"/>}
         Upload

@@ -76,8 +76,12 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-border bg-card/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
           {/* Project */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               Project
+              <span
+                title='Use "*" to search across all projects, or type a project name to narrow results'
+                className="cursor-help normal-case text-muted-foreground/60 hover:text-muted-foreground"
+              >ⓘ</span>
             </label>
             <input
               type="text"

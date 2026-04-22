@@ -35,10 +35,32 @@ export function ClassLookupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto">
-      <div className="flex gap-2">
-        <input type="text" placeholder="Project" value={project} onChange={e=>setProject(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
-        <input type="text" placeholder="Class name (e.g. java/lang/String)" value={className} onChange={e=>setClassName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
-        <input type="number" placeholder="Version" value={version} onChange={e=>setVersion(e.target.value)} className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Project <span className="text-destructive">*</span>
+          </label>
+          <input type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e=>setProject(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            Class name <span className="text-destructive">*</span>
+            <span
+              title="Use JVM internal format with slashes, e.g. com/example/MyClass"
+              className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
+            >ⓘ</span>
+          </label>
+          <input type="text" placeholder="com/example/MyClass" value={className} onChange={e=>setClassName(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Version <span className="text-destructive">*</span>
+          </label>
+          <input type="number" placeholder="e.g. 1" value={version} onChange={e=>setVersion(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+        </div>
       </div>
       <button type="submit" disabled={loading} className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
         {loading ? <span className="animate-spin h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"/> : <Search className="h-5 w-5"/>}

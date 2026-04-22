@@ -122,21 +122,27 @@ export function VersionManager() {
     <div className="space-y-8 max-w-lg mx-auto">
       {/* ── Version Lookup ── */}
       <form onSubmit={handleLookup} className="space-y-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Project"
-            value={project}
-            onChange={e => setProject(e.target.value)}
-            className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
-          />
-          <input
-            type="number"
-            placeholder="Version"
-            value={versionNum}
-            onChange={e => setVersionNum(e.target.value)}
-            className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
-          />
+        <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Project</label>
+            <input
+              type="text"
+              placeholder="e.g. demo-crud-server"
+              value={project}
+              onChange={e => setProject(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Version</label>
+            <input
+              type="number"
+              placeholder="e.g. 1"
+              value={versionNum}
+              onChange={e => setVersionNum(e.target.value)}
+              className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
+            />
+          </div>
           <button
             type="submit"
             disabled={loading || !project.trim() || !versionNum}
@@ -209,6 +215,7 @@ export function VersionManager() {
                 <button
                   onClick={handleFinalize}
                   disabled={loading}
+                  title="Closes this version permanently — no further uploads or deletions will be accepted"
                   className="flex-1 h-10 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
                 >
                   <Lock className="h-4 w-4" /> Close Version
@@ -216,6 +223,7 @@ export function VersionManager() {
                 <button
                   onClick={handleSync}
                   disabled={loading}
+                  title="Detects units present in the parent version but not re-uploaded here, and marks them as removed"
                   className="flex-1 h-10 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
                 >
                   <RefreshCw className="h-4 w-4" /> Sync Removals
@@ -223,22 +231,31 @@ export function VersionManager() {
               </div>
 
               {/* ── Delete Unit ── */}
-              <form onSubmit={handleDelete} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Unit path to delete (e.g. com/example/Foo)"
-                  value={deleteClass}
-                  onChange={e => setDeleteClass(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={loading || !deleteClass.trim()}
-                  className="px-4 py-2 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </button>
-              </form>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  Delete unit
+                  <span
+                    title="Marks a class/unit as deleted in this version. Use the JVM internal path format (slashes, no .class suffix)."
+                    className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
+                  >ⓘ</span>
+                </label>
+                <form onSubmit={handleDelete} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="com/example/Foo"
+                    value={deleteClass}
+                    onChange={e => setDeleteClass(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !deleteClass.trim()}
+                    className="px-4 py-2 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </button>
+                </form>
+              </div>
             </div>
           )}
         </div>

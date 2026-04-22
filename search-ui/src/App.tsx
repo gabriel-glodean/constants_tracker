@@ -9,11 +9,11 @@ import { VersionManager } from '@/components/VersionManager'
 import { DiffViewer } from '@/components/DiffViewer'
 
 const TABS = [
-  { key: 'search', label: 'Search', icon: SearchIcon },
-  { key: 'diff', label: 'Diff', icon: GitCompareArrows },
-  { key: 'upload', label: 'Upload', icon: UploadIcon },
-  { key: 'lookup', label: 'Class Lookup', icon: BookOpen },
-  { key: 'versions', label: 'Versions', icon: GitBranch },
+  { key: 'search',   label: 'Search',       icon: SearchIcon,       title: 'Full-text fuzzy search across all indexed constants' },
+  { key: 'lookup',   label: 'Class Lookup',  icon: BookOpen,         title: 'Fetch all constants declared in a specific class' },
+  { key: 'diff',     label: 'Diff',          icon: GitCompareArrows, title: 'Compare constants between two project versions' },
+  { key: 'upload',   label: 'Upload',        icon: UploadIcon,       title: 'Index a .class file, JAR, or config file' },
+  { key: 'versions', label: 'Versions',      icon: GitBranch,        title: 'Manage project versions: sync, finalize, delete units' },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -49,14 +49,20 @@ function App() {
       {/* Tabs */}
       <nav className="border-b border-border bg-card/40">
         <div className="max-w-5xl mx-auto px-6 flex gap-2 h-12">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`flex items-center gap-1.5 px-4 h-10 mt-1 rounded-t-lg font-medium text-sm transition-colors ${tab===key ? 'bg-background text-primary border-x border-t border-border' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={() => setTab(key)}
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </button>
+          {TABS.map(({ key, label, icon: Icon, title }, i) => (
+            <>
+              {i === 3 && (
+                <div key="divider" className="w-px bg-border my-3 mx-1" />
+              )}
+              <button
+                key={key}
+                title={title}
+                className={`flex items-center gap-1.5 px-4 h-10 mt-1 rounded-t-lg font-medium text-sm transition-colors ${tab===key ? 'bg-background text-primary border-x border-t border-border' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setTab(key)}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            </>
           ))}
         </div>
       </nav>

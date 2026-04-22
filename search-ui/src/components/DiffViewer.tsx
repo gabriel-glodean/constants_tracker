@@ -13,6 +13,7 @@ import {
   FileMinus,
   FileDiff,
   GitCompareArrows,
+  GitCompare,
 } from 'lucide-react'
 function kindBadge(kind: ConstantDiffEntry['changeKind']) {
   switch (kind) {
@@ -34,7 +35,11 @@ function unitLabel(unit: UnitDiff) {
   if (unit.removedUnit) return 'removed'
   return `${unit.changedConstants.length} constant change${unit.changedConstants.length !== 1 ? 's' : ''}`
 }
-function ConstantRow({ entry }: { entry: ConstantDiffEntry }) {
+function ConstantRow({ entry, fromVersion, toVersion }: {
+  entry: ConstantDiffEntry
+  fromVersion: number
+  toVersion: number
+}) {
   const [open, setOpen] = useState(false)
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -51,9 +56,10 @@ function ConstantRow({ entry }: { entry: ConstantDiffEntry }) {
         <div className="px-3 pb-3 grid grid-cols-2 gap-3 border-t border-border bg-secondary/20">
           {(['from', 'to'] as const).map(side => {
             const usages = side === 'from' ? entry.fromUsages : entry.toUsages
+            const versionLabel = side === 'from' ? `since v${fromVersion}` : `since v${toVersion}`
             return (
               <div key={side}>
-                <p className="text-xs font-medium text-muted-foreground mt-2 mb-1">{side === 'from' ? 'Before' : 'After'}</p>
+                <p className="text-xs font-medium text-muted-foreground mt-2 mb-1">{versionLabel}</p>
                 {usages.length === 0 ? (
                   <p className="text-xs italic text-muted-foreground">—</p>
                 ) : (
@@ -79,15 +85,26 @@ function ConstantRow({ entry }: { entry: ConstantDiffEntry }) {
     </div>
   )
 }
-function UnitRow({ unit }: { unit: UnitDiff }) {
+function UnitRow({ unit, fromVersion, toVersion }: {
+  unit: UnitDiff
+  fromVersion: number
+  toVersion: number
+}) {
   const [open, setOpen] = useState(false)
   const hasConstants = unit.changedConstants.length > 0
+
+  function toggle() {
+    if (hasConstants) setOpen(o => !o)
+  }
+
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <button
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-secondary/40 transition-colors"
-        onClick={() => hasConstants && setOpen(o => !o)}
+        onClick={toggle}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
         disabled={!hasConstants}
+        aria-expanded={hasConstants ? open : undefined}
       >
         {hasConstants ? (open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />) : <span className="h-4 w-4 shrink-0" />}
         {unitIcon(unit)}
@@ -96,7 +113,7 @@ function UnitRow({ unit }: { unit: UnitDiff }) {
       </button>
       {open && hasConstants && (
         <div className="px-4 pb-4 space-y-2 border-t border-border">
-          {unit.changedConstants.map((entry, i) => <ConstantRow key={i} entry={entry} />)}
+          {unit.changedConstants.map((entry, i) => <ConstantRow key={i} entry={entry} fromVersion={fromVersion} toVersion={toVersion} />)}
         </div>
       )}
     </div>
@@ -138,12 +155,23 @@ export function DiffViewer() {
       setLoading(false)
     }
   }
+
+  const counts = diff
+    ? {
+        all: diff.units.length,
+        added: diff.units.filter(u => u.addedUnit).length,
+        removed: diff.units.filter(u => u.removedUnit).length,
+        changed: diff.units.filter(u => !u.addedUnit && !u.removedUnit).length,
+      }
+    : { all: 0, added: 0, removed: 0, changed: 0 }
+
   const filteredUnits = diff?.units.filter(u => {
     if (filter === 'added') return u.addedUnit
     if (filter === 'removed') return u.removedUnit
     if (filter === 'changed') return !u.addedUnit && !u.removedUnit
     return true
   }) ?? []
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <form onSubmit={handleDiff} className="flex flex-wrap gap-2 items-end">
@@ -164,17 +192,33 @@ export function DiffViewer() {
           {loading ? 'Loading…' : 'Compare'}
         </button>
       </form>
+
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl border border-destructive/50 bg-destructive/5 text-sm">
           <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
           <p className="text-destructive">{error}</p>
         </div>
       )}
+
       {loading && (
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       )}
+
+      {/* ── Empty state — nothing loaded yet ── */}
+      {!diff && !loading && !error && (
+        <div className="flex flex-col items-center justify-center py-20 text-center select-none">
+          <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
+            <GitCompare className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-base font-medium text-foreground mb-1">No diff loaded yet</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Enter a project name and two version numbers above, then click <span className="font-medium text-foreground">Compare</span>.
+          </p>
+        </div>
+      )}
+
       {diff && !loading && (
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -187,13 +231,20 @@ export function DiffViewer() {
               <DiffSummary diff={diff} />
               <div className="flex gap-2 mb-4">
                 {(['all', 'added', 'removed', 'changed'] as const).map(f => (
-                  <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filter === f ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}>
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filter === f ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+                  >
                     {f}
+                    <span className={`ml-1.5 tabular-nums ${filter === f ? 'opacity-75' : 'opacity-60'}`}>
+                      {counts[f]}
+                    </span>
                   </button>
                 ))}
               </div>
               <div className="space-y-2">
-                {filteredUnits.map((unit, i) => <UnitRow key={i} unit={unit} />)}
+                {filteredUnits.map((unit, i) => <UnitRow key={i} unit={unit} fromVersion={diff.fromVersion} toVersion={diff.toVersion} />)}
                 {filteredUnits.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No units match the selected filter.</p>}
               </div>
             </>
