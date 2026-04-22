@@ -75,9 +75,10 @@ final class StaticFinalFieldConstantExtractor {
         String fieldName = fm.fieldName().stringValue();
         String fieldDescriptor = fm.fieldType().stringValue();
 
-        // bytecodeOffset=0 — no instruction offset for a field attribute
+        // bytecodeOffset=null, lineNumber=0 — field constant attributes have no instruction
+        // offset; use line 0 as a sentinel to satisfy UsageLocation's non-null constraint.
         UsageLocation location =
-            new UsageLocation(className, "<field:" + fieldName + ">", fieldDescriptor, 0, null);
+            new UsageLocation(className, "<field:" + fieldName + ">", fieldDescriptor, null, 0);
 
         FieldStoreContext ctx =
             new FieldStoreContext(className, fieldName, fieldDescriptor, ReceiverKind.STATIC);

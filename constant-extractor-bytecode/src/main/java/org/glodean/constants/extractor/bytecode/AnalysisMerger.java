@@ -13,9 +13,11 @@ import com.google.common.collect.Multimap;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.*;
+import java.lang.classfile.instruction.LineNumber;
 import java.lang.constant.ClassDesc;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.glodean.constants.interpreter.ArithmeticOperandContext;
 import org.glodean.constants.interpreter.ConstantUsageInterpreter;
@@ -104,12 +106,37 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
             List<CodeElement> code,
             List<State> in) {
         Multimap<Object, ConstantUsage> map = HashMultimap.create();
+        int[] lineNumbers = buildLineNumbers(code);
         for (int i = 0; i < code.size(); i++) {
             State state = i < in.size() ? in.get(i) : null;
             if (state == null) continue;
-            handle(code.get(i), state, map, className, methodName, methodDescriptor, i);
+            handle(code.get(i), state, map, className, methodName, methodDescriptor, i, lineNumbers[i]);
         }
         return map;
+    }
+
+    /**
+     * Scans the code element list for {@link LineNumber} pseudo-instructions and builds an
+     * array mapping each element index to its effective source line number.
+     *
+     * <p>The effective line for index {@code i} is the line declared by the most recent
+     * {@code LineNumber} element at or before index {@code i}, or {@code -1} if none has
+     * appeared yet.
+     *
+     * @param code the list of code elements in instruction order
+     * @return array of the same length as {@code code}; each entry holds the active line number
+     *         ({@code >= 0}) or {@code -1} if no line information is available
+     */
+    static int[] buildLineNumbers(List<CodeElement> code) {
+        int[] lines = new int[code.size()];
+        int current = -1;
+        for (int i = 0; i < code.size(); i++) {
+            if (code.get(i) instanceof LineNumber ln) {
+                current = ln.line();
+            }
+            lines[i] = current;
+        }
+        return lines;
     }
 
     // -------------------------------------------------------------------------
@@ -134,9 +161,11 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
             String className,
             String methodName,
             String methodDescriptor,
-            int instrIndex) {
+            int instrIndex,
+            int lineNumber) {
         if (instr == null) return;
-        UsageLocation location = new UsageLocation(className, methodName, methodDescriptor, instrIndex, null);
+        Integer lineNum = lineNumber >= 0 ? lineNumber : null;
+        UsageLocation location = new UsageLocation(className, methodName, methodDescriptor, instrIndex, lineNum);
         switch (instr) {
 
             // -- instance field store (putfield) -----------------------------------
@@ -252,14 +281,28 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
         if (interpreters.isEmpty()) return;
         for (var entity : slot) {
             if (entity instanceof Constant<?> c) {
-                for (var interp : interpreters) {
-                    map.put(c.value(), interp.interpret(location, context));
+                List<ConstantUsage> results = interpreters.stream()
+                        .map(interp -> interp.interpret(location, context))
+                        .collect(Collectors.toList());
+                boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
+                for (var usage : results) {
+                    // Drop zero-confidence fallbacks when at least one interpreter matched,
+                    // so that a SQL constant passed to a JDBC call isn't also recorded as UNKNOWN.
+                    if (!anyMatched || usage.confidence() > 0) {
+                        map.put(c.value(), usage);
+                    }
                 }
             }
             if (entity instanceof ConstantPropagation(Set<Number> values, _)) {
                 values.forEach(v -> {
-                    for (var interp : interpreters) {
-                        map.put(v, interp.interpret(location, context));
+                    List<ConstantUsage> results = interpreters.stream()
+                            .map(interp -> interp.interpret(location, context))
+                            .collect(Collectors.toList());
+                    boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
+                    for (var usage : results) {
+                        if (!anyMatched || usage.confidence() > 0) {
+                            map.put(v, usage);
+                        }
                     }
                 });
             }

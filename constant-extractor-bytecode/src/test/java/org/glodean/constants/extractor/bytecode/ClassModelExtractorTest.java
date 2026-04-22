@@ -161,7 +161,9 @@ class ClassModelExtractorTest {
           "org.glodean.constants.samples.Greeter",
           Set.of(
               constant("Default", METHOD_INVOCATION_PARAMETER),
-              constant(Greeter.FORMAT, METHOD_INVOCATION_TARGET),
+              // FORMAT is static final → extracted from ConstantValue attribute (STATIC_FIELD_STORE)
+              // and also used as a method invocation target (FORMAT.formatted(...))
+              constant(Greeter.FORMAT, METHOD_INVOCATION_TARGET, STATIC_FIELD_STORE),
               constant(Greeter.wackyFormat, STATIC_FIELD_STORE)));
     }
 

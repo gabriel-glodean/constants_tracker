@@ -63,6 +63,13 @@ class DiffServiceTest {
         null, null, "com.Foo", "bar", "()V", 0, 10, 1.0);
   }
 
+  private ConstantDiffRow rowAt(long snapId, String value, String structural, String semantic,
+      String className, String methodName, int lineNumber) {
+    return new ConstantDiffRow(
+        snapId, value, "String", structural, "CORE", semantic,
+        null, null, className, methodName, "()V", 0, lineNumber, 1.0);
+  }
+
   private void noDeletions() {
     when(deletionRepo.findAllByProjectAndVersion(anyString(), anyInt()))
         .thenReturn(Flux.empty());
@@ -187,8 +194,38 @@ class DiffServiceTest {
   }
 
   @Test
-  void changedUsage_appearsAsChanged() {
+  void sameUsagesDifferentDbOrder_notReportedAsChange() {
+    // Two snapshots differ only in the order that the DB returns their usage rows.
+    // After canonical sorting they must compare equal → no diff entry.
     when(versionRepo.findByProjectAndVersion("proj", 1)).thenReturn(Mono.just(ver(1, null)));
+    when(versionRepo.findByProjectAndVersion("proj", 2)).thenReturn(Mono.just(ver(2, 1)));
+    when(descriptorRepo.findAllByProjectAndVersion("proj", 1))
+        .thenReturn(Flux.just(desc(1L, "ClassA", 1)));
+    when(descriptorRepo.findAllByProjectAndVersion("proj", 2))
+        .thenReturn(Flux.just(desc(2L, "ClassA", 2)));
+    when(snapshotRepo.findByDescriptorIdAndUnitName(1L, "ClassA"))
+        .thenReturn(Mono.just(snap(10L, 1L, "ClassA")));
+    when(snapshotRepo.findByDescriptorIdAndUnitName(2L, "ClassA"))
+        .thenReturn(Mono.just(snap(20L, 2L, "ClassA")));
+    noDeletions();
+    // from: row A first, then row B
+    when(diffRepo.loadForSnapshots(java.util.Set.of(10L)))
+        .thenReturn(Flux.just(
+            rowAt(10L, "hello", "STRING_CONCATENATION_MEMBER", "UNKNOWN", "UserRepo", "updateUser", 5),
+            rowAt(10L, "hello", "METHOD_INVOCATION_PARAMETER", "LOG_MESSAGE", "UserRepo", "listUsers", 10)));
+    // to: same rows but reversed order
+    when(diffRepo.loadForSnapshots(java.util.Set.of(20L)))
+        .thenReturn(Flux.just(
+            rowAt(20L, "hello", "METHOD_INVOCATION_PARAMETER", "LOG_MESSAGE", "UserRepo", "listUsers", 10),
+            rowAt(20L, "hello", "STRING_CONCATENATION_MEMBER", "UNKNOWN", "UserRepo", "updateUser", 5)));
+
+    StepVerifier.create(diffService.diff("proj", 1, 2))
+        .assertNext(r -> assertThat(r.units()).isEmpty())
+        .verifyComplete();
+  }
+
+  @Test
+  void changedUsage_appearsAsChanged() {    when(versionRepo.findByProjectAndVersion("proj", 1)).thenReturn(Mono.just(ver(1, null)));
     when(versionRepo.findByProjectAndVersion("proj", 2)).thenReturn(Mono.just(ver(2, 1)));
     when(descriptorRepo.findAllByProjectAndVersion("proj", 1))
         .thenReturn(Flux.just(desc(1L, "ClassA", 1)));

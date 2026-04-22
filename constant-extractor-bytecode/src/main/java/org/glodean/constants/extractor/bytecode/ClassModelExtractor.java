@@ -54,6 +54,10 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
     var annotationExtractor = new AnnotationConstantExtractor(merger.usageInterpreterRegistry());
     joinedMap.putAll(annotationExtractor.extract(model, javaClassName));
 
+    // Extract compile-time constants from ConstantValue attributes on static final fields
+    var staticFieldExtractor = new StaticFinalFieldConstantExtractor(merger.usageInterpreterRegistry());
+    joinedMap.putAll(staticFieldExtractor.extract(model, javaClassName));
+
     for (MethodModel mm : model.methods()) {
       if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
         continue;

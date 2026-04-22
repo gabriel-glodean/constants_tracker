@@ -1,6 +1,7 @@
 package org.glodean.constants.services;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -273,13 +274,30 @@ public class DiffService {
 
     List<ConstantDiffEntry> entries = new ArrayList<>();
     for (String value : allValues) {
-      List<UsageDetail> from = fromC.getOrDefault(value, List.of());
-      List<UsageDetail> to   = toC.getOrDefault(value, List.of());
+      List<UsageDetail> from = canonicallySorted(fromC.getOrDefault(value, List.of()));
+      List<UsageDetail> to   = canonicallySorted(toC.getOrDefault(value, List.of()));
       if (!from.equals(to)) {
         entries.add(new ConstantDiffEntry(value, null, from, to));
       }
     }
     return entries;
+  }
+
+  /**
+   * Returns a canonically sorted copy of the given usage list so that two logically identical
+   * sets of usages compare as equal regardless of the order in which the DB returned them.
+   *
+   * <p>Sort key: structuralType → locationClassName → locationMethodName →
+   * locationLineNumber (nulls last) → confidence (descending).
+   */
+  static List<UsageDetail> canonicallySorted(List<UsageDetail> usages) {
+    Comparator<UsageDetail> cmp = Comparator
+        .comparing((UsageDetail u) -> u.structuralType() == null ? "" : u.structuralType())
+        .thenComparing(u -> u.locationClassName() == null ? "" : u.locationClassName())
+        .thenComparing(u -> u.locationMethodName() == null ? "" : u.locationMethodName())
+        .thenComparingInt(u -> u.locationLineNumber() == null ? Integer.MAX_VALUE : u.locationLineNumber())
+        .thenComparingDouble(u -> -u.confidence());
+    return usages.stream().sorted(cmp).toList();
   }
 }
 

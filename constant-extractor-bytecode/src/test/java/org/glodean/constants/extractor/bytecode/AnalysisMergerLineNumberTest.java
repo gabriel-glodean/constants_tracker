@@ -1,7 +1,6 @@
 package org.glodean.constants.extractor.bytecode;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.glodean.constants.extractor.bytecode.TestUtils.convertClassToModel;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.lang.classfile.CodeElement;
@@ -32,7 +31,7 @@ class AnalysisMergerLineNumberTest {
 
     int[] result = AnalysisMerger.buildLineNumbers(code);
 
-    assertThat(result).containsExactly(-1, -1, -1);
+    assertArrayEquals(new int[]{-1, -1, -1}, result);
   }
 
   @Test
@@ -40,7 +39,7 @@ class AnalysisMergerLineNumberTest {
   void buildLineNumbers_emptyCode_emptyArray() {
     int[] result = AnalysisMerger.buildLineNumbers(List.of());
 
-    assertThat(result).isEmpty();
+    assertEquals(0, result.length);
   }
 
   @Test
@@ -54,7 +53,7 @@ class AnalysisMergerLineNumberTest {
 
     int[] result = AnalysisMerger.buildLineNumbers(code);
 
-    assertThat(result).containsExactly(-1, 10, 10, 10);
+    assertArrayEquals(new int[]{-1, 10, 10, 10}, result);
   }
 
   @Test
@@ -69,7 +68,7 @@ class AnalysisMergerLineNumberTest {
 
     int[] result = AnalysisMerger.buildLineNumbers(code);
 
-    assertThat(result).containsExactly(5, 5, 9, 9, 9);
+    assertArrayEquals(new int[]{5, 5, 9, 9, 9}, result);
   }
 
   @Test
@@ -79,7 +78,7 @@ class AnalysisMergerLineNumberTest {
 
     int[] result = AnalysisMerger.buildLineNumbers(code);
 
-    assertThat(result).containsExactly(42);
+    assertArrayEquals(new int[]{42}, result);
   }
 
   // ── Integration: real .class file has non-null line numbers ──────────────
@@ -87,7 +86,7 @@ class AnalysisMergerLineNumberTest {
   @Test
   @DisplayName("Usages extracted from a compiled class carry non-null line numbers")
   void extractedUsages_haveNonNullLineNumbers() throws IOException {
-    var model = convertClassToModel(Greeter.class);
+    var model = TestUtils.convertClassToModel(Greeter.class);
     var merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
     var className = Utils.toJavaName(model.thisClass().asSymbol());
     var descriptor = new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, className);
@@ -97,22 +96,20 @@ class AnalysisMergerLineNumberTest {
         .iterator()
         .next();
 
-    // At least one usage must have a non-null line number (compiled sources always embed LineNumberTable)
     boolean anyLineNumber = result.constants().stream()
         .flatMap(c -> c.usages().stream())
         .map(ConstantUsage::location)
         .map(UsageLocation::lineNumber)
         .anyMatch(ln -> ln != null);
 
-    assertThat(anyLineNumber)
-        .as("Expected at least one usage with a non-null line number from compiled class")
-        .isTrue();
+    assertTrue(anyLineNumber,
+        "Expected at least one usage with a non-null line number from compiled class");
   }
 
   @Test
   @DisplayName("All usages extracted from a compiled class have non-null line numbers")
   void extractedUsages_allHaveNonNullLineNumbers() throws IOException {
-    var model = convertClassToModel(Greeter.class);
+    var model = TestUtils.convertClassToModel(Greeter.class);
     var merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
     var className = Utils.toJavaName(model.thisClass().asSymbol());
     var descriptor = new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, className);
@@ -126,17 +123,14 @@ class AnalysisMergerLineNumberTest {
         .flatMap(c -> c.usages().stream())
         .map(ConstantUsage::location)
         .forEach(loc ->
-            assertThat(loc.lineNumber())
-                .as("UsageLocation in %s#%s@%d should have a line number",
-                    loc.className(), loc.methodName(), loc.bytecodeOffset())
-                .isNotNull());
+            assertNotNull(loc.lineNumber(),
+                "UsageLocation in " + loc.className() + "#" + loc.methodName()
+                    + "@" + loc.bytecodeOffset() + " should have a line number"));
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Returns a NOP CodeElement for use in synthetic code lists. */
   private static CodeElement nop() {
     return NopInstruction.of();
   }
 }
-
