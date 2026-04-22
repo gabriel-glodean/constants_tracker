@@ -1,0 +1,16 @@
+# Global owner — all files require review
+* @gabriel-glodean
+
+# Java backend modules
+constant-extractor-api/      @gabriel-glodean
+constant-extractor-bytecode/ @gabriel-glodean
+constant-extractor-config-file/ @gabriel-glodean
+constant-tracker-app/        @gabriel-glodean
+
+# Frontend
+search-ui/                   @gabriel-glodean
+
+# CI / repo config
+.github/                     @gabriel-glodean
+
+

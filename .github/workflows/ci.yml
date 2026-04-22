@@ -3,17 +3,21 @@ name: CI
 
 on:
   push:
-    branches: ["main", "develop", "feature/"]
+    branches: [ "main", "master", "develop", "feature/**", "fix/**", "release/**" ]
   pull_request:
+    branches: [ "main", "master", "develop" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Build & Test (Gradle, Java 25)
-    runs-on: ubuntu-latest
 
+  format-check:
+    name: Format Check (Spotless)
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 25
         uses: actions/setup-java@v4
@@ -25,56 +29,106 @@ jobs:
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Spotless check
+        run: ./gradlew spotlessCheck --no-daemon
+
+  build-and-test:
+    name: Build & Test (Gradle, Java 25)
+    runs-on: ubuntu-latest
+    needs: format-check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: search-ui/package-lock.json
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
 
-      - name: Install UI dependencies
-        working-directory: search-ui
-        run: npm ci
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x ./gradlew
 
-      - name: Run ESLint (UI)
-        working-directory: search-ui
-        run: npm run lint
+      - name: Build & test all subprojects (skip heavy tests)
+        run: ./gradlew clean build --no-daemon --continue -x heavyTest
 
-      - name: Run Jest (UI)
-        working-directory: search-ui
-        run: npm test -- --ci --coverage
-
-      - name: Build & test all subprojects
-        run: ./gradlew clean build test --continue
-
-      - name: Upload logs and test results (always)
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-and-app-logs
           path: |
             logs/app-*.log
-            build/test-results/
-            build/reports/
-            build/logs/
-            build/testcontainers-logs/
-            constant-extractor-lib/build/test-results/
-            constant-extractor-lib/build/reports/
-            constant-extractor-lib/build/logs/
-            constant-extractor-lib/build/testcontainers-logs/
+            constant-extractor-api/build/test-results/
+            constant-extractor-api/build/reports/
+            constant-extractor-bytecode/build/test-results/
+            constant-extractor-bytecode/build/reports/
+            constant-extractor-config-file/build/test-results/
+            constant-extractor-config-file/build/reports/
             constant-tracker-app/build/test-results/
             constant-tracker-app/build/reports/
             constant-tracker-app/build/logs/
             constant-tracker-app/build/testcontainers-logs/
+          retention-days: 14
+
+      - name: Upload JaCoCo coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: |
+            constant-extractor-api/build/jacocoHtml/
+            constant-extractor-bytecode/build/jacocoHtml/
+            constant-extractor-config-file/build/jacocoHtml/
+            constant-tracker-app/build/jacocoHtml/
+          retention-days: 14
+
+  ui-check:
+    name: UI Lint, Test & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: search-ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: search-ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests with coverage
+        run: npm test -- --ci --coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload UI coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-coverage
+          path: search-ui/coverage/
+          retention-days: 14
 
   docker-build:
-    name: Dockerfile sanity build
+    name: Docker Build Sanity
     runs-on: ubuntu-latest
-    needs: test
-
+    needs: build-and-test
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Build app Docker image
         run: docker build -f constant-tracker-app/Dockerfile -t constant_tracker:ci .
+
+      - name: Build UI Docker image
+        run: docker build -f search-ui/Dockerfile -t constant_tracker_ui:ci search-ui/
