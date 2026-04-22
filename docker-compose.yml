@@ -14,7 +14,7 @@ services:
       - app_network
 
   solr:
-    image: solr:latest
+    image: solr:10.0.0
     container_name: solr
     # Precreate core with mounted config, then run in foreground
     command:
@@ -38,7 +38,7 @@ services:
       - app_network
 
   redis:
-    image: redis:latest
+    image: redis:7
     container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
@@ -112,7 +112,7 @@ services:
       - |
         apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
         echo "=== Clearing PostgreSQL ==="
-        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "TRUNCATE unit_descriptors CASCADE;"
+        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "TRUNCATE unit_descriptors, project_versions, version_deletions CASCADE;"
         echo "=== Clearing Solr ==="
         until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
         curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \

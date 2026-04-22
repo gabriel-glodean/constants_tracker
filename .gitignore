@@ -65,5 +65,6 @@ terraform.tfvars.json
 .solr_data
 logs
 
-*.env
+.env
+!.env.example
 *.postgres_data

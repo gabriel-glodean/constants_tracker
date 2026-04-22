@@ -1,5 +1,7 @@
 # Constant Tracker
 
+Ever needed to audit every hardcoded SQL string, URL, or file path across a large multi-module Java project? Or see exactly which constants changed between two releases? Constant Tracker does that — upload a JAR, search every indexed constant by keyword or semantic type, and diff two versions to see what changed.
+
 A Spring Boot (WebFlux) service that indexes **Java bytecode constants** and **configuration file constants** for fast search and analysis using Solr.
 
 This started as an experiment in exploring the JVM class file structure — parsing the constant pool, resolving
@@ -21,9 +23,15 @@ Open [http://localhost:5173](http://localhost:5173) — the `seed` profile autom
 Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.  
 Open the **Diff** tab → enter project `demo-crud-server`, from `1`, to `2` → see exactly what changed between versions.
 
-![Demo: upload and search constants](./docs/demo.gif)
+![Upload a JAR file](./docs/upload.jpg)
+![Search constants by keyword](./docs/search.jpg)
+![Inspect constant details](./docs/lookup.jpg)
+![Diff two project versions](./docs/diff.jpg)
+![Diff details](./docs/details.jpg)
+![Version management](./docs/versions.jpg)
 
-> **Prerequisites:** Docker and Docker Compose. The first build takes a few minutes (Gradle + npm).
+> **Prerequisites:** Docker and Docker Compose. The first build takes a few minutes (Gradle + npm).  
+> Copy `.env.example` to `.env` before running if you haven't already: `cp .env.example .env`
 
 ---
 
@@ -274,19 +282,6 @@ curl -X POST "http://localhost:8080/class?project=samples" \
   -H "Content-Type: application/octet-stream" \
   --data-binary @constant-extractor-bytecode/src/test/resources/samples/Greeter.class
 ```
-
----
-
-## 📸 Screenshot
-In Postman you can store the Greeter.class file as follows:
-![Application screenshot](./docs/postman-post.jpg)
-You can check if it was store using Postman:
-![Application screenshot](./docs/postman-get.jpg)
-or with the Solr UI:
-![Application screenshot](./docs/solr.jpg)
-
-The UI layer looks like this:
-![Application screenshot](./docs/search-ui.png)
 
 ---
 

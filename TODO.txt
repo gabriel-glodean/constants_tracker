@@ -1,25 +1,3 @@
-## V1 — Portfolio-ready product (Senior Java Engineer showcase)
-##   Goal: hiring manager clones repo, runs it, is impressed in 2 minutes
-
-### Remaining to ship V1
-
-- record a demo GIF and add it to docs/demo.gif                                        P0
-  → ~1 hr (the README already references it; just needs the actual recording)
-
-- diff UI polish & debugging                                                            P0
-  → ~8-12 hrs
-  → known gaps:
-    - ConstantRow "Before/After" column headers show literal "Before"/"After" instead
-      of resolved version numbers (needs version numbers passed down as props)
-    - filter pill counts not shown (e.g. "added (3)")
-    - no empty-state illustration when no diff data yet loaded
-    - keyboard accessibility (Enter on UnitRow should toggle collapse)
-    - test the diff end-to-end with the live seed data and fix any response
-      shape mismatches (changeKind casing, null fields, etc.)
-    - some diff values seem identical but are shown as "changed"
-    - need to handle constantvalue on static final fields
-    - synchronize the redis index with the db at startup (before serving rest endpoints) if misaligned
-
 ## ✅ Already done (V1 foundations)
 
 - ✅ 6 semantic classifiers (Logging, SQL, URL, File Path, Error Message, Annotation)
@@ -36,6 +14,8 @@
 - ✅ GitHub link in UI header + VersionManager tab wired
 - ✅ Micrometer/Prometheus metrics + /actuator/health (@Timed on extraction + Solr methods, /actuator/prometheus endpoint)
 - ✅ Semantic type badges in search results UI (semanticPairs displayed as badges per constant)
+- ✅ add Jest tests for search-ui
+- ✅ diff UI polish & debugging
 
 ## V2 — Depth features (post-launch)
 ##   At 10 hrs/week: ~3-5 weeks
@@ -49,9 +29,6 @@
 
 ## V3 — Polish & hardening
 
-- add Jest tests for search-ui                                                          P2
-  → ~6-10 hrs (components + API client mocks; DiffViewer is a priority target)
-
 - add exception-flow bytecode analysis                                                  P3
   → ~15-20 hrs (wire SuccessorBuilder handler starts into semantic layer)
 
@@ -59,6 +36,5 @@
   → ~2-4 hrs (image reference in main.tf)
 
 ## Estimates
-##   V1 (ship it): ~9-13 hrs remaining (demo GIF + diff polish)
 ##   V2 (depth):   ~34-46 hrs
 ##   V3 (polish):  ~23-34 hrs
