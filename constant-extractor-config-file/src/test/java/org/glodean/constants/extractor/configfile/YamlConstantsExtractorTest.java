@@ -72,4 +72,3 @@ class YamlConstantsExtractorTest {
         assertThrows(NullPointerException.class, () -> extractor.extract(null));
     }
 }
-

@@ -50,4 +50,3 @@ public class DiffController {
             _ -> Mono.just(ResponseEntity.internalServerError().build()));
   }
 }
-

@@ -19,4 +19,3 @@ public record FieldStoreContext(
         Objects.requireNonNull(receiverKind, "receiverKind cannot be null");
     }
 }
-

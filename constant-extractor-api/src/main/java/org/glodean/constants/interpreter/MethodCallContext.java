@@ -26,4 +26,3 @@ public record MethodCallContext(
         return new MethodCallContext(targetClass, targetMethod, methodDescriptor, ReceiverKind.EXTERNAL_OBJECT);
     }
 }
-

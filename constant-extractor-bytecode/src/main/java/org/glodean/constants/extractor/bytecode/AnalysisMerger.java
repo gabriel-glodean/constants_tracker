@@ -50,6 +50,9 @@ import org.glodean.constants.model.UnitConstant.UsageLocation;
  *       {@link org.glodean.constants.model.UnitConstant.UsageType} from the {@link ConstantUsageInterpreterRegistry}.</li>
  *   <li>Calls each interpreter and records the resulting {@link ConstantUsage}.</li>
  * </ol>
+ *
+ * @param patternSplitter function to extract literal parts from invokedynamic string-concat patterns
+ * @param usageInterpreterRegistry registry of interpreters for constant usage classification
  */
 public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
                              ConstantUsageInterpreterRegistry usageInterpreterRegistry) {

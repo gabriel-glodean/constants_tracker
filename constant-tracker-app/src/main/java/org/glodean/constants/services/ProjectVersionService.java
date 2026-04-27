@@ -5,12 +5,12 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glodean.constants.store.VersionIncrementer;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.UnitDescriptorEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
-import org.glodean.constants.store.postgres.VersionDeletionEntity;
-import org.glodean.constants.store.postgres.VersionDeletionRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
+import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,22 +78,29 @@ public class ProjectVersionService {
           return createVersion(project, nextVersion);
         }));
   }
-  private Mono<ProjectVersionEntity> createVersion(String project, int version) {
-    Mono<Integer> parentVersionMono = versionRepo
-        .findTopByProjectAndStatusOrderByVersionDesc(
-            project, ProjectVersionEntity.STATUS_FINALIZED)
-        .map(ProjectVersionEntity::version);
-    return parentVersionMono
-        .map(pv -> new ProjectVersionEntity(
-            null, project, version, pv,
-            ProjectVersionEntity.STATUS_OPEN, LocalDateTime.now(), null))
-        .switchIfEmpty(Mono.fromSupplier(() -> new ProjectVersionEntity(
-            null, project, version, null,
-            ProjectVersionEntity.STATUS_OPEN, LocalDateTime.now(), null)))
-        .doOnNext(e -> logger.atInfo().log(
-            "Creating version {} for project {} (parent={})", version, project, e.parentVersion()))
-        .flatMap(versionRepo::save);
-  }
+   private Mono<ProjectVersionEntity> createVersion(String project, int version) {
+     Mono<Integer> parentVersionMono = versionRepo
+         .findTopByProjectAndStatusOrderByVersionDesc(
+             project, ProjectVersionEntity.STATUS_FINALIZED)
+         .map(ProjectVersionEntity::version);
+     return parentVersionMono
+         .map(pv -> {
+           if (pv >= version) {
+             throw new IllegalArgumentException(
+                 "Invalid version hierarchy for project " + project
+                     + ": parent version " + pv + " must be less than child version " + version);
+           }
+           return new ProjectVersionEntity(
+               null, project, version, pv,
+               ProjectVersionEntity.STATUS_OPEN, LocalDateTime.now(), null);
+         })
+         .switchIfEmpty(Mono.fromSupplier(() -> new ProjectVersionEntity(
+             null, project, version, null,
+             ProjectVersionEntity.STATUS_OPEN, LocalDateTime.now(), null)))
+         .doOnNext(e -> logger.atInfo().log(
+             "Creating version {} for project {} (parent={})", version, project, e.parentVersion()))
+         .flatMap(versionRepo::save);
+   }
   /**
    * Marks a version as finalized. No further uploads or deletions are allowed.
    *

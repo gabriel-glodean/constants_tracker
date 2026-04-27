@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 /**
  * Flat projection of a joined unit_constants + constant_usages row, used by {@link DiffRepository}.
@@ -23,4 +23,3 @@ public record ConstantDiffRow(
     Integer locationBytecodeOffset,
     Integer locationLineNumber,
     double confidence) {}
-

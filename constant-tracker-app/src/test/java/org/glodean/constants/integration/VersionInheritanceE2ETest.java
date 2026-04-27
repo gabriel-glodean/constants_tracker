@@ -243,4 +243,3 @@ class VersionInheritanceE2ETest {
     }
   }
 }
-

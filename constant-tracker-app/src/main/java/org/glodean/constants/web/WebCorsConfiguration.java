@@ -36,4 +36,3 @@ public class WebCorsConfiguration {
     return new CorsWebFilter(source);
   }
 }
-

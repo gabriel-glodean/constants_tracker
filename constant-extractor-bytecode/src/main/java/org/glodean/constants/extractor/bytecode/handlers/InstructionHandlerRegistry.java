@@ -62,6 +62,7 @@ public final class InstructionHandlerRegistry {
     return exceptionHandlerLabelHandler;
   }
 
+  /** Builder for constructing immutable {@code InstructionHandlerRegistry} instances. */
   public static final class Builder {
     private final ImmutableMap.Builder<Class<? extends Instruction>, InstructionHandler<?>>
         mapBuilder = ImmutableMap.builder();

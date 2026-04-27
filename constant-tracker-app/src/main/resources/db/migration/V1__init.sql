@@ -87,6 +87,14 @@ CREATE INDEX idx_project_versions_project ON project_versions (project);
 CREATE INDEX idx_project_versions_project_status ON project_versions (project, status);
 
 -- ============================================================
+-- Add constraint to enforce that parent_version < version
+-- ============================================================
+ALTER TABLE project_versions
+    ADD CONSTRAINT check_parent_version_less_than_version
+        CHECK (parent_version IS NULL OR parent_version < version);
+
+
+-- ============================================================
 -- version_deletions: units explicitly removed from a version
 -- (prevents inheritance from parent for these paths)
 -- ============================================================
@@ -102,3 +110,31 @@ CREATE TABLE version_deletions
 
 CREATE INDEX idx_version_deletions_project_version ON version_deletions (project, version);
 
+-- ============================================================
+-- solr_outbox: pending Solr updates to be processed asynchronously
+-- by a worker
+-- ============================================================
+CREATE TABLE solr_outbox (
+                             id              BIGSERIAL PRIMARY KEY,
+                             created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+                             project         TEXT        NOT NULL,
+                             unit_path       TEXT        NOT NULL,
+                             version         INT         NOT NULL,
+                             payload_json    TEXT        NOT NULL,   -- serialised SolrInputDocument fields
+                             attempts        INT         NOT NULL DEFAULT 0,
+                             last_error      TEXT,
+                             next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX solr_outbox_ready_idx ON solr_outbox (next_attempt_at)
+    WHERE attempts < 10;
+
+CREATE TABLE solr_outbox_dead (
+                                  id           BIGINT PRIMARY KEY,
+                                  failed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+                                  project      TEXT,
+                                  unit_path    TEXT,
+                                  version      INT,
+                                  payload_json TEXT,
+                                  last_error   TEXT
+);

@@ -90,4 +90,3 @@ class SearchQueryBuilderTest {
         .hasMessageContaining("-1");
   }
 }
-

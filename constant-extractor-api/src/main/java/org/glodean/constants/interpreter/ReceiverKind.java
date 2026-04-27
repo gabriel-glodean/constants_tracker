@@ -9,4 +9,3 @@ public enum ReceiverKind {
     THIS,
     EXTERNAL_OBJECT
 }
-

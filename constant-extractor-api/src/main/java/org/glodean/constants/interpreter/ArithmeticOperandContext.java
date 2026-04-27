@@ -12,4 +12,3 @@ public record ArithmeticOperandContext(
         Objects.requireNonNull(operator, "operator cannot be null");
     }
 }
-

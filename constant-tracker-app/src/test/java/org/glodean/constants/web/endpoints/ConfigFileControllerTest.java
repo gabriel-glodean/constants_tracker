@@ -5,8 +5,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Set;
 import org.glodean.constants.extractor.configfile.ConfigFileSourceKind;
 import org.glodean.constants.extractor.configfile.PropertiesConstantsExtractor;
@@ -182,4 +180,3 @@ class ConfigFileControllerTest {
                 .expectStatus().is5xxServerError();
     }
 }
-

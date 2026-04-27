@@ -13,12 +13,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import org.glodean.constants.store.VersionIncrementer;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.UnitDescriptorEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
-import org.glodean.constants.store.postgres.VersionDeletionEntity;
-import org.glodean.constants.store.postgres.VersionDeletionRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
+import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,6 +104,18 @@ class ProjectVersionServiceTest {
     assertThat(v.status()).isEqualTo("OPEN");
   }
 
+  @Test
+  void ensureVersionExistsRejectsNewerParentVersion() {
+    when(versionRepo.findByProjectAndVersion("proj", 1)).thenReturn(Mono.empty());
+    var newerParent = finalizedVersion("proj", 5, null);
+    when(versionRepo.findTopByProjectAndStatusOrderByVersionDesc("proj", "FINALIZED"))
+        .thenReturn(Mono.just(newerParent));
+
+    assertThatThrownBy(() -> service.ensureVersionExists("proj", 1).block())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("parent version 5 must be less than child version 1");
+  }
+
   // -- getOrCreateOpenVersion --
 
   @Test
@@ -132,6 +144,20 @@ class ProjectVersionServiceTest {
     var v = service.getOrCreateOpenVersion("proj").block();
     assertThat(v.version()).isEqualTo(4);
     assertThat(v.parentVersion()).isEqualTo(3);
+  }
+
+  @Test
+  void getOrCreateOpenVersionRejectsNewerParentVersion() {
+    when(versionRepo.findTopByProjectAndStatusOrderByVersionDesc("proj", "OPEN"))
+        .thenReturn(Mono.empty());
+    when(versionIncrementer.getNextVersion("proj")).thenReturn(2);
+    var newerParent = finalizedVersion("proj", 5, null);
+    when(versionRepo.findTopByProjectAndStatusOrderByVersionDesc("proj", "FINALIZED"))
+        .thenReturn(Mono.just(newerParent));
+
+    assertThatThrownBy(() -> service.getOrCreateOpenVersion("proj").block())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("parent version 5 must be less than child version 2");
   }
 
   // -- finalizeVersion --

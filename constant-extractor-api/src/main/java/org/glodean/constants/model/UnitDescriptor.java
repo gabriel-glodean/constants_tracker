@@ -49,4 +49,3 @@ public record UnitDescriptor(SourceKind sourceKind, String path, long sizeBytes,
         return sourceKind.name() + ":" + path;
     }
 }
-

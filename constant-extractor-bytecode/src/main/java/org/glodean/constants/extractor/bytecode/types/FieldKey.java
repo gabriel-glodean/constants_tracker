@@ -2,7 +2,13 @@ package org.glodean.constants.extractor.bytecode.types;
 
 import java.util.Objects;
 
-/** Key representing an instance field access: receiver + owner + name + descriptor. */
+/** Key representing an instance field access: receiver + owner + name + descriptor.
+ *
+ * @param receiver the receiver entity for the field
+ * @param owner the owner class name
+ * @param name the field name
+ * @param desc the field descriptor
+ */
 public record FieldKey(StackAndParameterEntity receiver, String owner, String name, String desc) {
 
   @Override

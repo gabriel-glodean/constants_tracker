@@ -33,4 +33,3 @@
  * @see org.glodean.constants.web.endpoints.ClassBinariesController
  */
 package org.glodean.constants.web.endpoints;
-

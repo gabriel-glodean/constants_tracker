@@ -157,4 +157,3 @@ class ClassBinariesControllerErrorPathsTest {
         .is2xxSuccessful();
   }
 }
-

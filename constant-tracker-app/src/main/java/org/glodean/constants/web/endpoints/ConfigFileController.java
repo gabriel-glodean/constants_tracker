@@ -122,4 +122,3 @@ public record ConfigFileController(
         return result.iterator().next();
     }
 }
-

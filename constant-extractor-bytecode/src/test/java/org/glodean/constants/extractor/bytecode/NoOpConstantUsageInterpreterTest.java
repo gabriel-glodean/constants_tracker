@@ -79,4 +79,3 @@ class NoOpConstantUsageInterpreterTest {
         assertEquals(usage1.confidence(), usage2.confidence());
     }
 }
-

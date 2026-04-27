@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import java.time.LocalDateTime;
 import org.springframework.data.annotation.Id;
@@ -22,4 +22,3 @@ public record ProjectVersionEntity(
   public static final String STATUS_OPEN = "OPEN";
   public static final String STATUS_FINALIZED = "FINALIZED";
 }
-

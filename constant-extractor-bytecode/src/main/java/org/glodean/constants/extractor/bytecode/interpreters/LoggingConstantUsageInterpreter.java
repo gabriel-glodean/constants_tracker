@@ -159,4 +159,3 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
         return 0.60;
     }
 }
-

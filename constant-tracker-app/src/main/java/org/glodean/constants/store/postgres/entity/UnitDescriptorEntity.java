@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
@@ -18,4 +18,3 @@ public record UnitDescriptorEntity(
     String path,
     long sizeBytes,
     String contentHash) {}
-

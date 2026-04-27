@@ -41,5 +41,10 @@ management:
 constants:
   solr:
     url: ${CONSTANTS_SOLR_URL:http://localhost:8983/solr/}
+    outbox:
+      # Interval between drain cycles in milliseconds (default: 5 s)
+      drain-interval-ms: ${CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS:5000}
+      # Cron expression for the dead-letter compaction job (default: every night at 03:00)
+      compaction-cron: ${CONSTANTS_SOLR_OUTBOX_COMPACTION_CRON:0 0 3 * * *}
   cors:
     allowed-origin: http://localhost:5173

@@ -12,4 +12,3 @@ public interface ExtractorRegistry {
     Optional<ConstantsExtractor> findFor(Path path);
     List<ConstantsExtractor> all();
 }
-

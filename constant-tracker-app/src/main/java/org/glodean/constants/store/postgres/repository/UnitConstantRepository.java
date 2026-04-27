@@ -1,5 +1,7 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.repository;
 
+import org.glodean.constants.store.postgres.entity.UnitConstantEntity;
+import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 
@@ -17,4 +19,3 @@ public interface UnitConstantRepository
    */
   Flux<UnitConstantEntity> findAllBySnapshotId(Long snapshotId);
 }
-

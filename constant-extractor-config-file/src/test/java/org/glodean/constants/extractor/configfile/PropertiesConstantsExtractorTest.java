@@ -72,4 +72,3 @@ class PropertiesConstantsExtractorTest {
         assertThrows(NullPointerException.class, () -> extractor.extract(null));
     }
 }
-

@@ -112,4 +112,3 @@ public record YamlConstantsExtractor() implements ConstantsExtractor {
         return CoreSemanticType.CONFIGURATION_VALUE;
     }
 }
-

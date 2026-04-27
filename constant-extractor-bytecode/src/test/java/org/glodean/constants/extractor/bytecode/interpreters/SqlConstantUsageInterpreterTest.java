@@ -91,4 +91,3 @@ class SqlConstantUsageInterpreterTest {
         return new MethodCallContext(targetClass, targetMethod, "(Ljava/lang/String;)V", ReceiverKind.EXTERNAL_OBJECT);
     }
 }
-

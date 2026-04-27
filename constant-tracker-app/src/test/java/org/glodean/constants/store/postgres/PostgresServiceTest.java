@@ -14,6 +14,15 @@ import org.glodean.constants.model.UnitConstant.CustomSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.store.postgres.entity.ConstantUsageEntity;
+import org.glodean.constants.store.postgres.entity.UnitConstantEntity;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
+import org.glodean.constants.store.postgres.repository.ConstantUsageRepository;
+import org.glodean.constants.store.postgres.repository.SolrOutboxRepository;
+import org.glodean.constants.store.postgres.repository.UnitConstantRepository;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,16 +34,22 @@ import reactor.core.publisher.Mono;
 @ExtendWith(MockitoExtension.class)
 class PostgresServiceTest {
 
-  @Mock UnitDescriptorRepository descriptorRepo;
-  @Mock UnitSnapshotRepository snapshotRepo;
-  @Mock UnitConstantRepository constantRepo;
-  @Mock ConstantUsageRepository usageRepo;
+  @Mock
+  UnitDescriptorRepository descriptorRepo;
+  @Mock
+  UnitSnapshotRepository snapshotRepo;
+  @Mock
+  UnitConstantRepository constantRepo;
+  @Mock
+  ConstantUsageRepository usageRepo;
+  @Mock
+  SolrOutboxRepository solrOutboxRepo;
 
   PostgresService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostgresService(descriptorRepo, snapshotRepo, constantRepo, usageRepo);
+    service = new PostgresService(descriptorRepo, snapshotRepo, constantRepo, usageRepo, solrOutboxRepo);
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -188,4 +203,3 @@ class PostgresServiceTest {
     assertThat(result.source().path()).isEqualTo("com/example/Client");
   }
 }
-

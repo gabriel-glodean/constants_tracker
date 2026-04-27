@@ -24,14 +24,13 @@ import org.glodean.constants.model.UnitConstant.UsageType;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.postgres.PostgresService;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.solr.SolrService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +38,6 @@ class CompositeUnitConstantsStoreTest {
 
   @Mock SolrService solrService;
   @Mock PostgresService postgresService;
-  @Mock VersionIncrementer versionIncrementer;
   @Mock ProjectVersionService projectVersionService;
 
   CompositeUnitConstantsStore store;
@@ -48,7 +46,7 @@ class CompositeUnitConstantsStoreTest {
   void setUp() {
     store =
         new CompositeUnitConstantsStore(
-            solrService, postgresService, versionIncrementer, projectVersionService);
+            solrService, postgresService, projectVersionService);
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -196,5 +194,3 @@ class CompositeUnitConstantsStoreTest {
         .isInstanceOf(RuntimeException.class);
   }
 }
-
-

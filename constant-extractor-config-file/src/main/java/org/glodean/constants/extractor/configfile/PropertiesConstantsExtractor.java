@@ -80,4 +80,3 @@ public record PropertiesConstantsExtractor() implements ConstantsExtractor {
         return CoreSemanticType.CONFIGURATION_VALUE;
     }
 }
-

@@ -17,4 +17,3 @@ public record UnitDiff(
     boolean addedUnit,
     boolean removedUnit,
     List<ConstantDiffEntry> changedConstants) {}
-

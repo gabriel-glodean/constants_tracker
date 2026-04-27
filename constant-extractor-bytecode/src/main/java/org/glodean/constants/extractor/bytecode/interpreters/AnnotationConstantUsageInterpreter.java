@@ -7,6 +7,12 @@ import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 import java.util.Map;
 import java.util.Set;
+
+/** Interpreter for constants appearing in Java annotations.
+ *
+ * <p>Classifies annotation values as API endpoints, property keys, SQL fragments, and regex
+ * patterns based on the annotation type and element name.
+ */
 public class AnnotationConstantUsageInterpreter implements ConstantUsageInterpreter {
     private static final Set<String> ENDPOINT_ANNOTATIONS = Set.of(
             "Lorg/springframework/web/bind/annotation/RequestMapping;",

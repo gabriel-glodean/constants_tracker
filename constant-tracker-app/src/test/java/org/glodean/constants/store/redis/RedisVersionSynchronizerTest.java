@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 
 import com.redis.testcontainers.RedisContainer;
 import java.time.LocalDateTime;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.ProjectVersionRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -172,4 +172,3 @@ class RedisVersionSynchronizerTest {
     assertThatCode(this::run).doesNotThrowAnyException();
   }
 }
-

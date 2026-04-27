@@ -119,4 +119,3 @@ class AnnotationConstantUsageInterpreterTest {
         return new AnnotationValueContext(annDesc, element, kind);
     }
 }
-

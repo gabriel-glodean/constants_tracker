@@ -22,6 +22,13 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
+    spotless {
+        java {
+            removeUnusedImports()
+            endWithNewline()
+        }
+    }
+
 }
 
 // Root level spotless task to run on all subprojects

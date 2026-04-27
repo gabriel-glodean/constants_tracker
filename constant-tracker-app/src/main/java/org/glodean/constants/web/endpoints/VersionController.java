@@ -1,11 +1,11 @@
 package org.glodean.constants.web.endpoints;
 
 import java.util.List;
-import java.util.Set;
+
 import org.glodean.constants.services.ProjectVersionService;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -120,4 +120,3 @@ public record VersionController(
             _ -> Mono.just(ResponseEntity.internalServerError().build()));
   }
 }
-

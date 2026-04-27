@@ -20,12 +20,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Primary {@link UnitConstantsStore} that dual-writes to PostgreSQL (authoritative) and Solr
- * (search index with a simplified flat model). Reads always come from PostgreSQL.
+ * Primary {@link UnitConstantsStore} that writes to PostgreSQL (authoritative) and queues a Solr
+ * outbox entry atomically in the same transaction via {@link PostgresService}.
  *
- * <p>Version assignment for the auto-version overload uses {@link VersionIncrementer} (Redis).
- * Solr failures are non-fatal: they are logged as warnings and the operation succeeds as long as
- * the PostgreSQL write succeeds.
+ * <p>Solr indexing is handled asynchronously by
+ * {@link org.glodean.constants.store.solr.SolrOutboxProcessor}, which drains the
+ * {@code solr_outbox} table with retries and exponential back-off. This means Solr is never
+ * a synchronous dependency of write operations — a Solr outage only delays search results,
+ * it never fails uploads.
  *
  * <p>Version inheritance is managed by {@link ProjectVersionService}. When a unit is not found
  * in the requested version, the lookup walks the parent version chain until a match is found
@@ -40,17 +42,14 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
 
   private final SolrService solrService;
   private final PostgresService postgresService;
-  private final VersionIncrementer versionIncrementer;
   private final ProjectVersionService projectVersionService;
 
   public CompositeUnitConstantsStore(
       @Autowired SolrService solrService,
       @Autowired PostgresService postgresService,
-      @Autowired VersionIncrementer versionIncrementer,
       @Autowired ProjectVersionService projectVersionService) {
     this.solrService = solrService;
     this.postgresService = postgresService;
-    this.versionIncrementer = versionIncrementer;
     this.projectVersionService = projectVersionService;
   }
 
@@ -77,24 +76,12 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
   }
 
   private Mono<UnitConstants> doStore(UnitConstants constants, String project, int version) {
-    Mono<UnitConstants> pgWrite = postgresService.store(constants, project, version);
-    Mono<UnitConstants> solrWrite =
-        solrService
-            .store(constants, project, version)
-            .doOnError(
-                e ->
-                    logger
-                        .atWarn()
-                        .withThrowable(e)
-                        .log(
-                            "Solr store failed for {}:{} v{} – continuing (Postgres is authoritative)",
-                            project,
-                            constants.source().path(),
-                            version))
-            .onErrorReturn(constants);
-    pgWrite = pgWrite.doOnError(e -> logger.atError().withThrowable(e).log(
-        "Postgres store failed for {}:{} v{}", project, constants.source().path(), version));
-    return Mono.zip(pgWrite, solrWrite).map(_ -> constants);
+    // PostgresService.store() is @Transactional and inserts an outbox row atomically.
+    // Solr indexing happens asynchronously via SolrOutboxProcessor.
+    return postgresService
+        .store(constants, project, version)
+        .doOnError(e -> logger.atError().withThrowable(e).log(
+            "Postgres store failed for {}:{} v{}", project, constants.source().path(), version));
   }
 
   /**
@@ -191,5 +178,3 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
     return solrService.fuzzySearch(project, term, editDistance, maxRows);
   }
 }
-
-

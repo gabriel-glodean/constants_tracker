@@ -15,4 +15,3 @@ public record StringConcatenationContext(
         Objects.requireNonNull(constantSource, "constantSource cannot be null");
     }
 }
-

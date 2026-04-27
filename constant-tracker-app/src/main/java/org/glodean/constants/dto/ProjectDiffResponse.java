@@ -8,4 +8,3 @@ public record ProjectDiffResponse(
     int fromVersion,
     int toVersion,
     List<UnitDiff> units) {}
-

@@ -14,6 +14,9 @@ import org.glodean.constants.model.UnitConstant.CustomSemanticType;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.glodean.constants.store.Constants;
+import org.glodean.constants.store.postgres.entity.*;
+import org.glodean.constants.store.postgres.repository.*;
+import org.glodean.constants.store.solr.SolrOutboxPayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -56,16 +59,19 @@ public class PostgresService implements UnitConstantsStore {
   private final UnitSnapshotRepository snapshotRepo;
   private final UnitConstantRepository constantRepo;
   private final ConstantUsageRepository usageRepo;
+  private final SolrOutboxRepository solrOutboxRepo;
 
   public PostgresService(
       @Autowired UnitDescriptorRepository descriptorRepo,
       @Autowired UnitSnapshotRepository snapshotRepo,
       @Autowired UnitConstantRepository constantRepo,
-      @Autowired ConstantUsageRepository usageRepo) {
+      @Autowired ConstantUsageRepository usageRepo,
+      @Autowired SolrOutboxRepository solrOutboxRepo) {
     this.descriptorRepo = descriptorRepo;
     this.snapshotRepo = snapshotRepo;
     this.constantRepo = constantRepo;
     this.usageRepo = usageRepo;
+    this.solrOutboxRepo = solrOutboxRepo;
   }
 
   @Override
@@ -76,95 +82,151 @@ public class PostgresService implements UnitConstantsStore {
     String sourceKind = source.sourceKind().name();
     long sizeBytes = source.sizeBytes();
     String contentHash = source.contentHash();
+    String unitConstantsJson = serializeUnitConstantsJson(constants, sourceKind);
 
     logger.atInfo().log(
         "Storing to PostgreSQL: {} (kind={}, size={}) project={} version={}",
         sourcePath, sourceKind, sizeBytes, project, version);
 
-    String unitConstantsJson;
-    try {
-      var payload = new java.util.HashMap<String, Object>();
-      payload.put("source", source);
-      payload.put("sourceKind", sourceKind);
-      payload.put("constants", constants.constants());
-      unitConstantsJson = JSON.writeValueAsString(payload);
-    } catch (JsonProcessingException e) {
-      logger.atWarn().withThrowable(e).log("Failed to serialise UnitConstants to JSON; storing empty object");
-      unitConstantsJson = "{}";
-    }
+    return upsertDescriptor(project, version, sourceKind, sourcePath, sizeBytes, contentHash)
+        .flatMap(descriptor -> upsertSnapshot(descriptor, sourcePath, unitConstantsJson))
+        .flatMap(this::replaceNormalizedRows)
+        .flatMap(snapshot -> persistConstantsAndUsages(snapshot, constants))
+        .doOnNext(snapshot -> logger.atInfo().log(
+            "Saved snapshot id={} for descriptor project={} path={} v{}",
+            snapshot.id(), project, sourcePath, version))
+        .thenReturn(constants)
+        .flatMap(uc -> queueSolrOutbox(uc, project, sourcePath, version));
+  }
 
-    var descriptorEntity = new UnitDescriptorEntity(
+  // -------------------------------------------------------------------------
+  // Upsert helpers
+  // -------------------------------------------------------------------------
+
+  private Mono<UnitDescriptorEntity> upsertDescriptor(
+      String project, int version, String sourceKind,
+      String sourcePath, long sizeBytes, String contentHash) {
+    var entity = new UnitDescriptorEntity(
         null, project, version, sourceKind, sourcePath, sizeBytes, contentHash);
-
-    String json = unitConstantsJson;
-    var constantsSet = constants.constants();
-
     return descriptorRepo
         .findByProjectAndPathAndVersion(project, sourcePath, version)
-        .switchIfEmpty(descriptorRepo.save(descriptorEntity))
-        .flatMap(savedDescriptor -> {
-          var updated = new UnitDescriptorEntity(
-              savedDescriptor.id(), project, version, sourceKind, sourcePath, sizeBytes, contentHash);
-          return descriptorRepo.save(updated);
-        })
-        .flatMap(savedDescriptor ->
-            snapshotRepo.findByDescriptorIdAndUnitName(savedDescriptor.id(), sourcePath)
-                .flatMap(existing -> {
-                  var updatedSnapshot = new UnitSnapshotEntity(
-                      existing.id(), savedDescriptor.id(), sourcePath, json);
-                  return snapshotRepo.save(updatedSnapshot);
-                })
-                .switchIfEmpty(snapshotRepo.save(
-                    new UnitSnapshotEntity(null, savedDescriptor.id(), sourcePath, json)))
-        )
-        .flatMap(savedSnapshot -> {
-          // Delete existing normalized rows for this snapshot, then re-insert
-          return constantRepo.findAllBySnapshotId(savedSnapshot.id())
-              .flatMap(existing -> usageRepo.findAllByConstantId(existing.id())
-                  .flatMap(usageRepo::delete)
-                  .then(constantRepo.delete(existing)))
-              .then(Mono.just(savedSnapshot));
-        })
-        .flatMap(savedSnapshot -> {
-          // Persist normalized unit_constants and constant_usages rows
-          return Flux.fromIterable(constantsSet)
-              .flatMap(uc -> {
-                String valueStr = String.valueOf(uc.value());
-                String valueType = uc.value().getClass().getSimpleName();
-                var entity = new UnitConstantEntity(null, savedSnapshot.id(), valueStr, valueType);
-                return constantRepo.save(entity)
-                    .flatMapMany(savedConstant ->
-                        Flux.fromIterable(uc.usages())
-                            .flatMap(usage -> {
-                              var loc = usage.location();
-                              var sem = usage.semanticType();
-                              String semKind = sem instanceof CoreSemanticType ? "CORE" : "CUSTOM";
-                              String semName = sem instanceof CoreSemanticType cst ? cst.name()
-                                  : ((CustomSemanticType) sem).category();
-                              String semDisplay = sem instanceof CustomSemanticType cust ? cust.displayName() : null;
-                              String semDesc = sem instanceof CustomSemanticType cust ? cust.description() : null;
-                              String metadataJson;
-                              try {
-                                metadataJson = JSON.writeValueAsString(usage.metadata());
-                              } catch (JsonProcessingException e) {
-                                metadataJson = "{}";
-                              }
-                              var usageEntity = new ConstantUsageEntity(
-                                  null, savedConstant.id(),
-                                  usage.structuralType().name(),
-                                  semKind, semName, semDisplay, semDesc,
-                                  loc.className(), loc.methodName(), loc.methodDescriptor(),
-                                  loc.bytecodeOffset(), loc.lineNumber(),
-                                  usage.confidence(), metadataJson);
-                              return usageRepo.save(usageEntity);
-                            }));
-              })
-              .then(Mono.just(savedSnapshot));
-        })
-        .doOnNext(saved -> logger.atInfo().log(
-            "Saved snapshot id={} for descriptor project={} path={} v{}",
-            saved.id(), project, sourcePath, version))
+        .switchIfEmpty(descriptorRepo.save(entity))
+        .flatMap(saved -> descriptorRepo.save(new UnitDescriptorEntity(
+            saved.id(), project, version, sourceKind, sourcePath, sizeBytes, contentHash)));
+  }
+
+  private Mono<UnitSnapshotEntity> upsertSnapshot(
+      UnitDescriptorEntity descriptor, String sourcePath, String json) {
+    return snapshotRepo
+        .findByDescriptorIdAndUnitName(descriptor.id(), sourcePath)
+        .flatMap(existing -> snapshotRepo.save(
+            new UnitSnapshotEntity(existing.id(), descriptor.id(), sourcePath, json)))
+        .switchIfEmpty(snapshotRepo.save(
+            new UnitSnapshotEntity(null, descriptor.id(), sourcePath, json)));
+  }
+
+  // -------------------------------------------------------------------------
+  // Normalised rows
+  // -------------------------------------------------------------------------
+
+  /** Deletes all existing {@code unit_constants} + {@code constant_usages} for the snapshot. */
+  private Mono<UnitSnapshotEntity> replaceNormalizedRows(UnitSnapshotEntity snapshot) {
+    return constantRepo
+        .findAllBySnapshotId(snapshot.id())
+        .flatMap(existing -> usageRepo.findAllByConstantId(existing.id())
+            .flatMap(usageRepo::delete)
+            .then(constantRepo.delete(existing)))
+        .then(Mono.just(snapshot));
+  }
+
+  /** Inserts fresh {@code unit_constants} and {@code constant_usages} rows. */
+  private Mono<UnitSnapshotEntity> persistConstantsAndUsages(
+      UnitSnapshotEntity snapshot, UnitConstants constants) {
+    return Flux.fromIterable(constants.constants())
+        .flatMap(uc -> saveConstantWithUsages(snapshot, uc))
+        .then(Mono.just(snapshot));
+  }
+
+  private Flux<ConstantUsageEntity> saveConstantWithUsages(
+      UnitSnapshotEntity snapshot, UnitConstant uc) {
+    String valueStr = String.valueOf(uc.value());
+    String valueType = uc.value().getClass().getSimpleName();
+    var entity = new UnitConstantEntity(null, snapshot.id(), valueStr, valueType);
+    return constantRepo.save(entity)
+        .flatMapMany(saved -> Flux.fromIterable(uc.usages())
+            .flatMap(usage -> usageRepo.save(buildUsageEntity(saved.id(), usage))));
+  }
+
+  private ConstantUsageEntity buildUsageEntity(Long constantId, UnitConstant.ConstantUsage usage) {
+    var loc = usage.location();
+    var sem = usage.semanticType();
+    String semKind = sem instanceof CoreSemanticType ? "CORE" : "CUSTOM";
+    String semName;
+    if (sem instanceof CoreSemanticType cst) {
+      semName = cst.name();
+    } else if (sem instanceof CustomSemanticType cust) {
+      semName = cust.category();
+    } else {
+      semName = "";
+    }
+    String semDisplay = sem instanceof CustomSemanticType cust ? cust.displayName() : null;
+    String semDesc = sem instanceof CustomSemanticType cust ? cust.description() : null;
+    return new ConstantUsageEntity(
+        null, constantId,
+        usage.structuralType().name(),
+        semKind, semName, semDisplay, semDesc,
+        loc.className(), loc.methodName(), loc.methodDescriptor(),
+        loc.bytecodeOffset(), loc.lineNumber(),
+        usage.confidence(), serializeJson(usage.metadata()));
+  }
+
+  // -------------------------------------------------------------------------
+  // Solr outbox
+  // -------------------------------------------------------------------------
+
+  private Mono<UnitConstants> queueSolrOutbox(
+      UnitConstants constants, String project, String sourcePath, int version) {
+    String payloadJson;
+    try {
+      payloadJson = JSON.writeValueAsString(SolrOutboxPayload.from(constants, project, version));
+    } catch (JsonProcessingException e) {
+      logger.atWarn().withThrowable(e).log(
+          "Failed to serialise Solr outbox payload for {}:{} v{} — Solr indexing skipped",
+          project, sourcePath, version);
+      return Mono.just(constants);
+    }
+    return solrOutboxRepo
+        .save(SolrOutboxEntry.newEntry(project, sourcePath, version, payloadJson))
+        .doOnNext(entry -> logger.atDebug().log(
+            "Queued Solr outbox entry id={} for {}:{} v{}",
+            entry.id(), project, sourcePath, version))
         .thenReturn(constants);
+  }
+
+  // -------------------------------------------------------------------------
+  // JSON helpers
+  // -------------------------------------------------------------------------
+
+  private String serializeUnitConstantsJson(UnitConstants constants, String sourceKind) {
+    try {
+      var payload = new java.util.HashMap<String, Object>();
+      payload.put("source", constants.source());
+      payload.put("sourceKind", sourceKind);
+      payload.put("constants", constants.constants());
+      return JSON.writeValueAsString(payload);
+    } catch (JsonProcessingException e) {
+      logger.atWarn().withThrowable(e).log(
+          "Failed to serialise UnitConstants to JSON; storing empty object");
+      return "{}";
+    }
+  }
+
+  private String serializeJson(Object value) {
+    try {
+      return JSON.writeValueAsString(value);
+    } catch (JsonProcessingException e) {
+      return "{}";
+    }
   }
 
   /**
@@ -222,4 +284,3 @@ public class PostgresService implements UnitConstantsStore {
             }));
   }
 }
-

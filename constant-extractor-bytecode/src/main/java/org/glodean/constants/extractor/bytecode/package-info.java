@@ -53,4 +53,3 @@
  * @see org.glodean.constants.model
  */
 package org.glodean.constants.extractor.bytecode;
-

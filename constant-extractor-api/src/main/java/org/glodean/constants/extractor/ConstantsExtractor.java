@@ -19,4 +19,3 @@ public interface ConstantsExtractor {
      */
     Set<UnitConstants> extract(Path path) throws ExtractionException;
 }
-

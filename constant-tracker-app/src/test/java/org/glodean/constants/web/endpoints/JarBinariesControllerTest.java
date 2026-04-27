@@ -102,4 +102,3 @@ class JarBinariesControllerTest {
             .expectStatus().is5xxServerError();
     }
 }
-

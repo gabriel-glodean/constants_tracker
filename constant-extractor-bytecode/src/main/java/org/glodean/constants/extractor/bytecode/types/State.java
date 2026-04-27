@@ -22,10 +22,15 @@ import java.util.*;
  * a {@link Constant}; for objects, it contains {@link ObjectReference}s.
  */
 public final class State {
+  /** Operand stack (points-to sets for each stack position). */
   public final List<PointsToSet> stack;
+  /** Local variable slots (points-to sets for each variable). */
   public final List<PointsToSet> locals;
+  /** Instance field values (field key → points-to set). */
   public final Map<FieldKey, PointsToSet> heap = new HashMap<>();
+  /** Static field values (static field key → points-to set). */
   public final Map<StaticFieldKey, PointsToSet> statics = new HashMap<>();
+  /** Array element values (array ref → points-to set). */
   public final Map<StackAndParameterEntity, PointsToSet> arrayElements = new HashMap<>();
 
   /**

@@ -21,4 +21,3 @@ public record AnnotationValueContext(
     Objects.requireNonNull(targetKind, "targetKind cannot be null");
   }
 }
-

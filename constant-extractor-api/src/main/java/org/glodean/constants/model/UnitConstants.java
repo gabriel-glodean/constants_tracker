@@ -27,4 +27,3 @@ public record UnitConstants(UnitDescriptor source, Set<UnitConstant> constants) 
         return source.toString();
     }
 }
-

@@ -8,16 +8,16 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import org.glodean.constants.dto.ConstantDiffEntry;
-import org.glodean.constants.store.postgres.ConstantDiffRow;
-import org.glodean.constants.store.postgres.DiffRepository;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.UnitDescriptorEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
-import org.glodean.constants.store.postgres.UnitSnapshotEntity;
-import org.glodean.constants.store.postgres.UnitSnapshotRepository;
-import org.glodean.constants.store.postgres.VersionDeletionEntity;
-import org.glodean.constants.store.postgres.VersionDeletionRepository;
+import org.glodean.constants.store.postgres.entity.ConstantDiffRow;
+import org.glodean.constants.store.postgres.entity.DiffRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
+import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
+import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
+import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -250,4 +250,3 @@ class DiffServiceTest {
         .verifyComplete();
   }
 }
-

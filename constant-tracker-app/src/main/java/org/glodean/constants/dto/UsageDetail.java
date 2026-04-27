@@ -10,4 +10,3 @@ public record UsageDetail(
     String locationMethodName,
     Integer locationLineNumber,
     double confidence) {}
-

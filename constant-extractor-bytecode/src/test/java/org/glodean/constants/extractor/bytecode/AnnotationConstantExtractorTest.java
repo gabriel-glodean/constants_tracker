@@ -190,4 +190,3 @@ class AnnotationConstantExtractorTest {
             .formatted(value, expected, constant.usages()));
   }
 }
-

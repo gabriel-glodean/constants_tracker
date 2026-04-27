@@ -103,4 +103,3 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
         return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
     }
 }
-

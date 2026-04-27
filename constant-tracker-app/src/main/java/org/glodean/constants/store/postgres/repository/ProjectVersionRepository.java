@@ -1,4 +1,5 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.repository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Mono;
 public interface ProjectVersionRepository

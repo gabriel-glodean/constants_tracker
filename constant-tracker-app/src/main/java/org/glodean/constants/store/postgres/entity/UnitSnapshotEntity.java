@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
@@ -15,4 +15,3 @@ public record UnitSnapshotEntity(
     Long descriptorId,
     String unitName,
     String unitConstantsJson) {}
-

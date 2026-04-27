@@ -100,4 +100,3 @@ class DiffServiceCanonicalSortTest {
     assertThat(result).containsExactly(nullClass, namedClass);
   }
 }
-

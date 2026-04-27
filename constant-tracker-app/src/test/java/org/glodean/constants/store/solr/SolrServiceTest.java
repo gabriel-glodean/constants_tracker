@@ -337,4 +337,3 @@ class SolrServiceTest {
     return docs;
   }
 }
-

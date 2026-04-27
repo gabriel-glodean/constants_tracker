@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import java.util.Collection;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -73,4 +73,3 @@ public class DiffRepository {
         .all();
   }
 }
-

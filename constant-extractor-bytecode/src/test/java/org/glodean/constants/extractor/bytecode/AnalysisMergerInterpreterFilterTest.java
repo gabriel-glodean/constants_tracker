@@ -153,4 +153,3 @@ class AnalysisMergerInterpreterFilterTest {
         .orElse(java.util.Set.of());
   }
 }
-

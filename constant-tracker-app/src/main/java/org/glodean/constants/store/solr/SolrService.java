@@ -64,57 +64,42 @@ public class SolrService implements UnitConstantsStore {
   /**
    * Stores a simplified flat Solr document for the given class snapshot.
    *
-   * <p>The document contains the fields {@code id}, {@code project}, {@code unit_name},
-   * {@code unit_version}, {@code source_kind}, a multi-valued {@code constant_pairs_ss} field
-   * ({@code "<value>|<USAGE_TYPE>"}), and a tokenised {@code constant_values_t} field used
-   * for full-text search.
+   * <p>Document fields are built via {@link SolrOutboxPayload#from} to keep field construction
+   * logic in a single place (shared with the outbox processor).
    *
-     * @param constants the unit constants to index
+   * @param constants the unit constants to index
    * @param project   the project identifier
    * @param version   the version number
-   * @return a {@link reactor.core.publisher.Mono} emitting the original {@code constants} on success
+   * @return a {@link Mono} emitting the original {@code constants} on success
    */
   @Timed(value = "solr.store", description = "Time to store a unit in Solr")
   @Override
   public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
     String sourcePath = constants.source().path();
-    logger.atInfo().log("Storing to Solr (simplified): {} project={} version={}", sourcePath, project, version);
-    var id = project + ":" + sourcePath + ":" + version;
+    logger.atInfo().log(
+        "Storing to Solr (direct): {} project={} version={}", sourcePath, project, version);
+    SolrInputDocument doc = SolrOutboxPayload.from(constants, project, version).toSolrDocument();
+    return storeDocumentBatch(List.of(doc)).thenReturn(constants);
+  }
 
-    List<String> pairs = new ArrayList<>();
-    List<String> values = new ArrayList<>();
-    List<String> semanticPairs = new ArrayList<>();
-    for (var constant : constants.constants()) {
-      String value = constant.value().toString();
-      values.add(value);
-      constant.usages().stream()
-          .map(UnitConstant.ConstantUsage::structuralType)
-          .distinct()
-          .forEach(usage -> pairs.add(value + "|" + usage.name()));
-      constant.usages().stream()
-          .filter(u -> u.semanticType() != null)
-          .forEach(u -> semanticPairs.add(
-              value + "|" + u.semanticType().displayName() + "|"
-                  + String.format("%.2f", u.confidence())));
+  /**
+   * Submits a batch of pre-built Solr documents in a single {@link UpdateRequest} with a
+   * hard commit. Called by {@link SolrOutboxProcessor}; documents are already assembled from
+   * the outbox {@link SolrOutboxPayload}.
+   *
+   * @param docs the documents to index; must not be empty
+   * @return a {@link Mono} that completes when Solr acknowledges the commit
+   */
+  @Timed(value = "solr.store_batch", description = "Time to store a batch of documents in Solr")
+  public Mono<Void> storeDocumentBatch(List<SolrInputDocument> docs) {
+    if (docs.isEmpty()) {
+      return Mono.empty();
     }
-
-    SolrInputDocument doc = new SolrInputDocument();
-    doc.setField("id", id);
-    doc.setField("project", project);
-    doc.setField("unit_name", sourcePath);
-    doc.setField("unit_version", version);
-    doc.setField("source_kind", constants.source().sourceKind().name());
-    doc.setField("constant_pairs_ss", pairs);
-    doc.setField("constant_values_t", values);
-    if (!semanticPairs.isEmpty()) {
-      doc.setField("semantic_pairs_ss", semanticPairs);
-    }
-
+    logger.atInfo().log("Submitting {} doc(s) to Solr", docs.size());
     var request = new UpdateRequest();
-    request.add(doc);
+    docs.forEach(request::add);
     request.setParam("commit", "true");
-
-    return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION)).map(_ -> constants);
+    return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION)).then();
   }
 
   /**

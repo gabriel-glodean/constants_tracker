@@ -1,5 +1,6 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.repository;
 
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -21,4 +22,3 @@ public interface UnitDescriptorRepository
    */
   Flux<UnitDescriptorEntity> findAllByProjectAndVersion(String project, int version);
 }
-

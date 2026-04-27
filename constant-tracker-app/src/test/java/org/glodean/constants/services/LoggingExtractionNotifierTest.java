@@ -57,4 +57,3 @@ class LoggingExtractionNotifierTest {
         .isThrownBy(() -> notifier.onExtractionCompleted(50L, 0L, Map.of()));
   }
 }
-

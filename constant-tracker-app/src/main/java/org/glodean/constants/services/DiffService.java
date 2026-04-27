@@ -16,12 +16,12 @@ import org.glodean.constants.dto.ConstantDiffEntry;
 import org.glodean.constants.dto.ProjectDiffResponse;
 import org.glodean.constants.dto.UnitDiff;
 import org.glodean.constants.dto.UsageDetail;
-import org.glodean.constants.store.postgres.ConstantDiffRow;
-import org.glodean.constants.store.postgres.DiffRepository;
-import org.glodean.constants.store.postgres.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
-import org.glodean.constants.store.postgres.UnitSnapshotRepository;
-import org.glodean.constants.store.postgres.VersionDeletionRepository;
+import org.glodean.constants.store.postgres.entity.ConstantDiffRow;
+import org.glodean.constants.store.postgres.entity.DiffRepository;
+import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
+import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -300,4 +300,3 @@ public class DiffService {
     return usages.stream().sorted(cmp).toList();
   }
 }
-

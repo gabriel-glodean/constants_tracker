@@ -6,9 +6,9 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import org.glodean.constants.services.ProjectVersionService;
-import org.glodean.constants.store.postgres.ProjectVersionEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorEntity;
-import org.glodean.constants.store.postgres.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -127,4 +127,3 @@ class VersionControllerTest {
     return org.mockito.ArgumentMatchers.anySet();
   }
 }
-

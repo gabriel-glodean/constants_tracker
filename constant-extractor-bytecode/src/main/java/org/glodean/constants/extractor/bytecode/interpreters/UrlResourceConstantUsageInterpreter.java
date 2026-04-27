@@ -95,4 +95,3 @@ public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpr
         return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
     }
 }
-

@@ -4,24 +4,35 @@ Ever needed to audit every hardcoded SQL string, URL, or file path across a larg
 
 A Spring Boot (WebFlux) service that indexes **Java bytecode constants** and **configuration file constants** for fast search and analysis using Solr.
 
-This started as an experiment in exploring the JVM class file structure — parsing the constant pool, resolving
-references, and indexing them into Solr for querying and visualization.  
-The focus of this project is **bytecode analysis correctness**, but config file analysis (YAML, properties) is also supported.
+**Why it matters:** This project focuses on **bytecode analysis correctness** with advanced JVM class file parsing, constant pool resolution, and indexing. It also supports config file analysis (YAML, properties) for comprehensive constant auditing across your codebase.
 
 ---
 
-## 🚀 Quick Start (3 commands)
+## 🚀 Quick Start
+
+**Prerequisites:** Docker, Docker Compose, and a few minutes for the first build (Gradle + npm).
+
+**Step 1:** Clone and configure
 
 ```bash
 git clone https://github.com/gabrielglodean/constant-tracker.git
 cd constant-tracker
+cp .env.example .env  # if not already present
+```
+
+**Step 2:** Start services and seed demo data
+
+```bash
 docker compose --profile=seed up -d
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — the `seed` profile automatically uploads **two versions** of `demo-crud-server` (v1 with hardcoded constants, v2 with an `AppConfig` class + `app.properties`) so you have data to explore and diff immediately.
+**Step 3:** Open the UI and explore
 
-Upload a JAR → search for `SELECT` or `http://` → see indexed constants with semantic classifications.  
-Open the **Diff** tab → enter project `demo-crud-server`, from `1`, to `2` → see exactly what changed between versions.
+Navigate to [http://localhost:5173](http://localhost:5173). The `seed` profile automatically uploads two versions of `demo-crud-server` so you have instant data to explore.
+
+**Try it out:**
+- Upload a JAR and search for `SELECT` or `http://` to see indexed constants with semantic classifications
+- Open the **Diff** tab and compare `demo-crud-server` from version `1` to `2` to see exactly what changed
 
 ![Upload a JAR file](./docs/upload.jpg)
 ![Search constants by keyword](./docs/search.jpg)
@@ -30,167 +41,123 @@ Open the **Diff** tab → enter project `demo-crud-server`, from `1`, to `2` →
 ![Diff details](./docs/details.jpg)
 ![Version management](./docs/versions.jpg)
 
-> **Prerequisites:** Docker and Docker Compose. The first build takes a few minutes (Gradle + npm).  
-> Copy `.env.example` to `.env` before running if you haven't already: `cp .env.example .env`
 
 ---
 
-## 🧠 Design Focus
+## 🏗️ Architecture
 
-This project is split into **five modules** for clean separation and reusability:
+This is a **multi-module Gradle project** designed with clear separation of concerns:
 
-- The **`constant-extractor-api`** module defines the shared model, SPI interfaces (`ConstantUsageInterpreter`, `ModelExtractor`), and context types. It has zero framework dependencies and is the contract between all extractor implementations.
-- The **`constant-extractor-bytecode`** module implements a **JVM ClassFile parser** (compatible with class file format version 69 / JDK 25) and constant-usage extractor. It includes six semantic classifiers (Logging, SQL, URL/Resource, File Path, Error Message, Annotation). It's tested at over **90% coverage**, validating every supported constant type including `invokedynamic`, method handles, and bootstrap methods.
-- The **`constant-extractor-config-file`** module extracts constants from YAML (`.yml`/`.yaml`) and Java properties (`.properties`) files, reusing the shared model from `constant-extractor-api`.
-- The **`constant-tracker-app`** module provides a reactive web service built with WebFlux. The Redis, Solr, and Postgres layers serve as integration, caching, and persistence shells for the core analysis engine.
-- The **`search-ui`** module is a lightweight web UI for searching, browsing, uploading, and managing indexed constants and project versions. It is served as a static site and communicates with the backend API.
+### Core Modules (5)
 
-The extractor libraries can be used **standalone** in any Java project that needs bytecode or config-file analysis capabilities.
+| Module | Purpose | Key Features |
+|--------|---------|--------------|
+| **`constant-extractor-api`** | Shared model & SPI | Model records, `ConstantUsageInterpreter` strategy interface, `ModelExtractor` interface, zero framework dependencies |
+| **`constant-extractor-bytecode`** | Bytecode analysis engine | JVM ClassFile parser (Java 25 format), constant pool extraction, 6 semantic classifiers, >90% test coverage |
+| **`constant-extractor-config-file`** | Config file analysis | YAML and Java properties extraction, reuses shared model |
+| **`constant-tracker-app`** | Spring Boot web service | Reactive REST API, Redis caching, Solr indexing, Postgres persistence, version lifecycle management |
+| **`search-ui`** | Web-based UI | React 19 + TypeScript, fuzzy search, class lookup, file upload, version diff viewer |
 
-Additionally, the **`demo-crud-server`** module is a framework-free Java application used for testing — it exercises as many semantic types as possible (SQL, URLs, file paths, etc.) to validate the extraction pipeline.
+### Demo/Test Modules (2)
 
----
-
-## 🧩 Architecture
-
-This is a **multi-module Gradle project** with clear separation of concerns:
-
-### Modules
-
-1. **`constant-extractor-api`** – Shared model & SPI
-   - Model records (`UnitConstants`, `UnitConstant`, `UnitDescriptor`, `UsageType`, `SemanticType`)
-   - `ConstantUsageInterpreter` strategy interface + context types
-   - `ModelExtractor` interface
-   - Zero external dependencies
-
-2. **`constant-extractor-bytecode`** – Core bytecode analysis library
-   - JVM ClassFile parser (format version 69 / JDK 25)
-   - Constant pool extraction and resolution
-   - Six semantic classifiers: Logging, SQL, URL/Resource, File Path, Error Message, Annotation
-   - `ConstantUsageInterpreterRegistry` for wiring classifiers
-   - Depends on `constant-extractor-api` and Guava
-
-3. **`constant-extractor-config-file`** – Config file analysis library
-   - YAML extractor (SnakeYAML)
-   - Java properties extractor
-   - Depends on `constant-extractor-api`
-
-4. **`constant-tracker-app`** – Spring Boot application
-   - Reactive REST API (WebFlux)
-   - Redis caching layer + versioning
-   - Solr indexing integration
-   - Database persistence with Postgres (R2DBC + Flyway migrations)
-   - Project version lifecycle management (open → finalized)
-   - Docker and Terraform deployment
-   - Depends on all three extractor modules
-
-5. **`search-ui`** – Web-based search interface
-   - React 19 + TypeScript + Tailwind CSS v4
-   - Fuzzy search, class lookup, file upload (class/JAR/config), version management, **version diff viewer**
-   - Located in the `search-ui/` directory (served as a static site via Nginx)
-
-6. **`demo-crud-server`** – Test fixture application (v1)
-   - Framework-free Java HTTP server with CRUD endpoints
-   - Exercises SQL, URL, file path, and other constant types for extraction testing
-
-7. **`demo-crud-server-v2`** – Refactored test fixture (v2)
-   - Introduces `AppConfig` class + `app.properties` to replace hardcoded constants
-   - Seeded alongside v1 under the same project (`demo-crud-server`) as version 2, enabling diff demos out of the box
+| Module | Purpose |
+|--------|---------|
+| **`demo-crud-server`** (v1) | Test fixture with hardcoded constants (SQL, URLs, file paths) |
+| **`demo-crud-server-v2`** (v2) | Refactored version with `AppConfig` class + `app.properties`, enables diff demos |
 
 ### Data Flow
 
-**Class/JAR/Config Upload and Indexing:**
+**Class/JAR/Config Upload & Indexing:**
 ```
-[ .class/.jar/.yml/.properties upload ]
-       │
-       ▼
-[ WebFlux Controller ] (constant-tracker-app)
-       │
-       ▼
-[ Analysis Engine ] (constant-extractor-bytecode / constant-extractor-config-file)
-       │
-       ▼
-[ Redis Cache ] → [ Solr Index + Postgres DB ] (constant-tracker-app)
+File Upload (.class/.jar/.yml/.properties)
+        ↓
+WebFlux Controller (constant-tracker-app)
+        ↓
+Analysis Engine (bytecode / config-file extractors)
+        ↓
+Redis Cache + Solr Index + Postgres DB
 ```
 
-**Class and Project Query:**
+**Class & Project Query:**
 ```
-[ class and project query ]
-       │
-       ▼
-[ WebFlux Controller ] (constant-tracker-app)
-       │
-       ▼
-[ Redis Cache ] → [ Postgres DB ] (constant-tracker-app)
+Query Request
+        ↓
+WebFlux Controller
+        ↓
+Redis Cache or Postgres DB
 ```
 
-**Fuzzy Search Constant Query:**
+**Fuzzy Search:**
 ```
-[ fuzzy search constant query ]
-       │
-       ▼
-[ WebFlux Controller ] (constant-tracker-app)
-       │
-       ▼
-[ Redis Cache ] → [ Solr Index ] (constant-tracker-app)
+Search Query
+        ↓
+WebFlux Controller
+        ↓
+Solr Index (with Redis caching)
 ```
 
 ### Technology Stack
 
-**Backend:**
-- Spring Boot 3 / WebFlux – reactive REST interface
-- Solr 10 – full-text indexing of constant references
-- Postgres 17 – relational storage for detailed class constants usage (R2DBC + Flyway)
-- Redis 7 – caching
-- Java 25 – uses latest features including ClassFile API
+**Backend Stack:**
+- **Spring Boot 3 / WebFlux** — Reactive REST interface
+- **Solr 10** — Full-text search and constant indexing
+- **Postgres 17** — Relational storage (R2DBC + Flyway migrations)
+- **Redis 7** — Caching and versioning
+- **Java 25** — Latest JVM features including ClassFile API
 
-**Frontend (search-ui):**
-- React 19 + TypeScript – UI framework and language
-- Vite 8 – build tool and dev server
-- Tailwind CSS v4 – utility-first CSS framework
-- Lucide React – icon library
-- Native fetch API – for backend communication
-- ESLint – code linting
-- Nginx – static file serving in production Docker
-- Docker – containerization for deployment
+**Frontend Stack (search-ui):**
+- **React 19 + TypeScript** — UI framework
+- **Vite 8** — Build tool and dev server
+- **Tailwind CSS v4** — Utility-first styling
+- **Lucide React** — Icon library
+- **ESLint** — Code linting
+- **Nginx** — Production static file serving
+- **Docker** — Containerization
 
----
-
-## 🖥️ UI
-
-This project includes a search UI for browsing, querying, uploading, and managing indexed constants.
-
-- **Location:** `search-ui/` directory (served as a static site)
-- **Features:**
-  - Fuzzy constant search across projects
-  - **Version diff** — compare two versions of the same project, see added/removed/changed constants per class
-  - Class constant lookup by project/class/version
-  - File upload (`.class`, `.jar`, `.yml`/`.yaml`, `.properties`)
-  - Version management (lookup, close/finalize, sync removals, delete units)
-- **Access:**
-  - When running with Docker Compose, the UI is available at: [http://localhost:5173](http://localhost:5173)
-  - The UI communicates with the backend API at [http://localhost:8080](http://localhost:8080)
+**Analysis Libraries:**
+- **JVM ClassFile API** — Java 25 bytecode parsing
+- **SnakeYAML** — YAML configuration parsing
+- **Guava** — Utility functions
 
 ---
 
-## 🗄️ Database
+## 🖥️ User Interface
 
+Web-based UI for searching, browsing, and managing indexed constants.
 
-The application uses three main data stores:
+**Location:** `search-ui/` directory (served as a static site via Nginx)
 
-- **Solr 9/10**: Full-text search and indexing of constant references.
-  - Default URL: [http://localhost:8983/solr/](http://localhost:8983/solr/)
-  - Collection: `Constants`
-  - Schema: `constant-tracker-app/solr/managed-schema.xml` (auto-mounted by Docker Compose)
-- **Postgres**: Relational database for persistent storage of metadata and application state.
-  - Default URL: `jdbc:postgresql://localhost:5432/constant_tracker`
-  - ⚠️ Before starting Postgres, ensure the database credentials are specified in the environment variables.
-- **Redis 7**: Caching and versioning.
-  - Default URL: `localhost:6379`
+**Features:**
+- Fuzzy search for constants across projects
+- **Version diff viewer** — compare two versions of a project and see added/removed/changed constants per class
+- Class constant lookup by project/class/version
+- Multi-format file upload (`.class`, `.jar`, `.yml`/`.yaml`, `.properties`)
+- Version management (view, finalize, sync removals, delete units)
 
-All services are started automatically with Docker Compose for local development. The Solr schema is auto-mounted into the container — no manual copy step required.
+**Access:**
+- UI: [http://localhost:5173](http://localhost:5173)
+- API: [http://localhost:8080](http://localhost:8080)
+- API Docs: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
+---
 
+## 🗄️ Data Stores
+
+The application uses three main data stores for indexing and persistence:
+
+**Solr 10** — Full-text search and constant indexing
+- Default URL: [http://localhost:8983/solr/](http://localhost:8983/solr/)
+- Collection name: `Constants`
+- Schema: `constant-tracker-app/solr/managed-schema.xml` (auto-mounted by Docker Compose)
+
+**Postgres 17** — Relational storage and metadata
+- Default URL: `jdbc:postgresql://localhost:5432/constant_tracker`
+- ⚠️ Configure database credentials via environment variables before first run
+
+**Redis 7** — Caching and atomic versioning
+- Default URL: `localhost:6379`
+
+All services start automatically with Docker Compose. The Solr schema is auto-mounted—no manual setup required.
 ---
 
 ## 🐳 Getting Started with Docker Compose
@@ -243,91 +210,166 @@ Once running:
 
 
 
-## 🧪 Tests
+---
 
-### Run All Tests
+## 🐳 Docker Compose
+
+All services are managed via Docker Compose. The complete stack includes the backend, Solr, Postgres, Redis, and search UI.
+
+### Profiles
+
+| Profile | Command | Description |
+|---------|---------|-------------|
+| *(default)* | `docker compose up -d` | Start all core services (backend, Solr, Postgres, Redis, UI) |
+| `seed` | `docker compose --profile=seed up -d` | Start services + auto-seed demo data |
+| `clear` | `docker compose --profile=clear up clear` | Wipe all data from Postgres, Solr, Redis |
+
+### Common Workflows
+
+**First time setup (with demo data):**
 ```bash
-./gradlew test              # Run tests in all modules
-./gradlew testAll           # Alternative: run all tests and show summary
-./gradlew testReport        # Generate combined test report
+docker compose --profile=seed up -d
 ```
 
-### Run Heavy Tests (JRT Filesystem Analysis)
+**Restart services after code changes:**
 ```bash
-./gradlew :constant-tracker-app:heavyTest   # Run with 16GB heap
+docker compose build app
+docker compose build search-ui
+docker compose up -d app search-ui
 ```
 
-### Module-Specific Tests
-- **`constant-extractor-bytecode`:** > 85% coverage (JaCoCo report under `constant-extractor-bytecode/build/jacocoHtml`)
-- **`constant-extractor-config-file`:** > 85% coverage (JaCoCo report under `constant-extractor-config-file/build/jacocoHtml`)
-- **`constant-tracker-app`:** Integration tests verifying upload, caching, and Solr indexing
+**Reset all data:**
+```bash
+docker compose --profile=clear up clear
+docker rm -f seed  # if seeding again
+docker compose --profile=seed up -d seed
+```
 
-### Test Reports
-- Combined report: `build/reports/allTests/index.html`
-- Per-module JaCoCo: `{module}/build/jacocoHtml/index.html`
+### Service Endpoints (when running)
+
+| Service | URL |
+|---------|-----|
+| Search UI | [http://localhost:5173](http://localhost:5173) |
+| Backend API | [http://localhost:8080](http://localhost:8080) |
+| Swagger API Docs | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) |
+| Solr Admin | [http://localhost:8983/solr/#/](http://localhost:8983/solr/#/) |
+| Postgres | `localhost:5432` |
+| Redis | `localhost:6379` |
 
 ---
 
-## 📦 Mock Files and Samples
+## 🧪 Testing
 
-Example `.class` and `.java` files are included in the test resources:
-- `.class` files: `constant-extractor-bytecode/src/test/resources/samples/` and `constant-tracker-app/src/test/resources/samples/`
-- `.java` files: `constant-extractor-bytecode/src/test/java/org/glodean/constants/samples/`
-
-They can be used to test or demonstrate the analysis process without compiling your own Java sources.
+### Run All Tests
 
 ```bash
-# Example: analyze a provided mock class
+./gradlew test              # Run all module tests
+./gradlew testReport        # Generate combined HTML report
+```
+
+### Run Heavy Tests
+
+For large-scale testing (e.g., analyzing full Java 25 runtime):
+
+```bash
+./gradlew :constant-tracker-app:heavyTest   # Runs with 16GB heap
+```
+
+### Module-Specific Tests
+
+Each core analysis module enforces **≥85% JaCoCo coverage** via the `check` task:
+
+```bash
+./gradlew :constant-extractor-bytecode:check    # >90% coverage
+./gradlew :constant-extractor-config-file:check  # >85% coverage
+```
+
+### View Coverage Reports
+
+After running tests:
+- **Combined report:** `build/reports/allTests/index.html`
+- **Bytecode module:** `constant-extractor-bytecode/build/jacocoHtml/index.html`
+- **Config file module:** `constant-extractor-config-file/build/jacocoHtml/index.html`
+
+### Sample Test Files
+
+Example test files are included in the repository:
+
+**Bytecode samples:**
+- `.class` files: `constant-extractor-bytecode/src/test/resources/samples/`
+- `.java` source: `constant-extractor-bytecode/src/test/java/org/glodean/constants/samples/`
+
+**App samples:**
+- `.class` files: `constant-tracker-app/src/test/resources/samples/`
+
+Example API call:
+```bash
 curl -X POST "http://localhost:8080/class?project=samples" \
   -H "Content-Type: application/octet-stream" \
   --data-binary @constant-extractor-bytecode/src/test/resources/samples/Greeter.class
 ```
 
+
 ---
 
-## 🧩 Technical Highlights
+## ✨ Technical Highlights
 
-- Custom parser for JVM constant pool (fields, methods, strings, class refs, dynamic invocations)
-- Handles `invokedynamic` and bootstrap method resolution
+**Bytecode Analysis:**
+- Custom JVM constant pool parser (fields, methods, strings, class references, dynamic invocations)
+- Full support for `invokedynamic` and bootstrap method resolution
 - Six semantic classifiers: Logging, SQL, URL/Resource, File Path, Error Message, Annotation
-- Config file extraction: YAML and Java properties
-- Exports constants and metadata to Solr documents
-- Project version lifecycle with inheritance and removal sync
-- **Constant diff analysis** — compares two finalized versions of a project, returning added/removed/changed constants per unit (class, config file, etc.) with full usage context
-- Reactive and container-ready (WebFlux + Redis + Solr + Postgres)
-- Built and tested on JDK 25 (it can analyze all the java 25 runtime in about 2 and a half minutes on an i7-13620 with 16 GB RAM allocated to the JVM)
+- >90% test coverage validating all constant types
+
+**Configuration Analysis:**
+- YAML (`.yml`, `.yaml`) extraction via SnakeYAML
+- Java properties (`.properties`) extraction
+- Unified constant model across all extraction types
+
+**Advanced Features:**
+- **Version diffing** — compare two finalized versions and see added/removed/changed constants with full context
+- **Project versioning** — open/finalized state, inheritance, removal sync
+- Reactive, container-ready architecture (WebFlux + Redis + Solr + Postgres)
+- Built on Java 25 (can analyze the full runtime in ~2.5 minutes on i7-13620 with 16GB heap)
 
 ---
 
-## 📚 API Documentation
+## 🚀 Build & Deployment
 
-- Swagger UI: /swagger-ui.html or /swagger-ui/index.html
-- OpenAPI JSON v3/api-docs
+### Build Everything
 
-## 🛠️ Build & Run Locally
-
-### Build All Modules
 ```bash
 ./gradlew clean build
 ```
 
-### Run the Application
-```bash
-# From the root directory
-./gradlew :constant-tracker-app:bootRun
+### Build Libraries Only
 
-# Or run the built JAR
-java -jar constant-tracker-app/build/libs/constant-tracker-app-0.1.0-SNAPSHOT.jar
-```
-
-### Build Only the Libraries
 ```bash
 ./gradlew :constant-extractor-api:build
 ./gradlew :constant-extractor-bytecode:build
 ./gradlew :constant-extractor-config-file:build
 ```
 
-The library JARs will be available under each module's `build/libs/` directory.
+Libraries are available in each module's `build/libs/` directory.
+
+### Run Locally (Without Docker)
+
+Start external services first (Postgres, Redis, Solr), then:
+
+```bash
+./gradlew :constant-tracker-app:bootRun
+```
+
+Or run the built JAR:
+
+```bash
+java -jar constant-tracker-app/build/libs/constant-tracker-app-0.1.0-SNAPSHOT.jar
+```
+
+### API Documentation
+
+**Interactive API docs** (when running):
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- OpenAPI JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
 ---
 

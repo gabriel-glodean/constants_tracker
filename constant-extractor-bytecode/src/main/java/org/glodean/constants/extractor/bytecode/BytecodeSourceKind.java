@@ -30,4 +30,3 @@ public enum BytecodeSourceKind implements SourceKind {
         return DIRECTORY;
     }
 }
-

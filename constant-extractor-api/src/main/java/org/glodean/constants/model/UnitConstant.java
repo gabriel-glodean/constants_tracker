@@ -145,5 +145,3 @@ public record UnitConstant(Object value, Set<ConstantUsage> usages) {
         }
     }
 }
-
-

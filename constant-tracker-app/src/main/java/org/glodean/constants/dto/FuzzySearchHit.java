@@ -17,4 +17,3 @@ import java.util.List;
  * @param semanticPairs  semantic type annotations in the form {@code "value|TYPE|confidence"}
  */
 public record FuzzySearchHit(String project, String unitName, int version, String sourceKind, List<String> constantValues, List<String> semanticPairs) {}
-

@@ -45,4 +45,3 @@
  * @see org.glodean.constants.extractor.bytecode.handlers.InstructionHandler
  */
 package org.glodean.constants.extractor.bytecode.types;
-

@@ -161,4 +161,3 @@ class LoggingConstantUsageInterpreterTest {
         assertEquals(0.0, usage.confidence());
     }
 }
-

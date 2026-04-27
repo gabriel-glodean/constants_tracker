@@ -30,4 +30,3 @@ public record ConstantDiffEntry(
     return ChangeKind.CHANGED;
   }
 }
-

@@ -19,4 +19,3 @@ import org.glodean.constants.model.UnitConstant;
  */
 public record GetUnitConstantsReply(Map<Object, Collection<UnitConstant.UsageType>> constants)
     implements Serializable {}
-

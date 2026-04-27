@@ -6,4 +6,3 @@ package org.glodean.constants.store;
  */
 class CompositeClassConstantsStoreTest {
 }
-

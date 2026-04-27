@@ -21,4 +21,3 @@ public class ConfigFileExtractionConfiguration {
         return new PropertiesConstantsExtractor();
     }
 }
-

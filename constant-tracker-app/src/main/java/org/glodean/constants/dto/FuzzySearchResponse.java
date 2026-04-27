@@ -10,4 +10,3 @@ import java.util.List;
  *                   pagination is in effect)
  */
 public record FuzzySearchResponse(List<FuzzySearchHit> hits, long totalFound) {}
-

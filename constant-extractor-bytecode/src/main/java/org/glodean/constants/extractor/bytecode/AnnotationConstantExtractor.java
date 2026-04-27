@@ -193,4 +193,3 @@ final class AnnotationConstantExtractor {
     }
   }
 }
-

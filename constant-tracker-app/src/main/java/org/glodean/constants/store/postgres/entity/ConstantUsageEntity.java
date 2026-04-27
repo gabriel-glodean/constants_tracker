@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
@@ -20,4 +20,3 @@ public record ConstantUsageEntity(
     Integer locationLineNumber,
     double confidence,
     String metadata) {}
-

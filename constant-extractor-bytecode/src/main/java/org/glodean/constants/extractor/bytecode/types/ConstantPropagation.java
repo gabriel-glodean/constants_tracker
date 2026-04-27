@@ -5,7 +5,11 @@ import java.lang.classfile.TypeKind;
 import java.util.Objects;
 import java.util.Set;
 
-/** Represents a propagated set of numeric constants (merge of multiple numeric constants). */
+/** Represents a propagated set of numeric constants (merge of multiple numeric constants).
+ *
+ * @param values the set of possible numeric values
+ * @param size the cell size for this propagation
+ */
 public record ConstantPropagation(Set<Number> values, SizeType size)
     implements StackAndParameterEntity, ConstantPropagatingEntity, ConvertibleEntity {
 

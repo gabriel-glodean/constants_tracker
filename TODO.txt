@@ -17,24 +17,152 @@
 - ✅ add Jest tests for search-ui
 - ✅ diff UI polish & debugging
 
-## V2 — Depth features (post-launch)
-##   At 10 hrs/week: ~3-5 weeks
+## V2A — Reliability & Stability (BLOCKING ISSUES)
+##   High impact, low effort. Should complete in 1-2 weeks @ 10 hrs/week
 
-- implement similar constant detection                                                  P1
-  → ~12-15 hrs (string similarity + Solr MLT or custom approach)
 
-- implement constant split/merge analysis                                               P2
-  → ~18-25 hrs (detect when constants split or merge across versions;
-    depends on diff infrastructure)
+CRITICAL (must-do for production readiness):
+- ⏳ Global exception handler (@ControllerAdvice + @ExceptionHandler)              P0a
+  → ~6-8 hrs | ~450 LOC (handler + DTO + tests)
+  → Handles: InvalidClassFormat, ProjectNotFound, Timeout, IOException
+  → Standardize ApiError(code, message, timestamp, traceId)
+  → Breakdown: Handler(150), DTO(50), Tests(250)
 
-## V3 — Polish & hardening
+- ⏳ Docker Compose health checks (postgres + app service_healthy condition)      P0b
+  → ~1 hr | ~0 LOC (config-only change)
+  → Fix app depends_on: postgres condition: service_healthy
+  → Fix Dockerfile health check validation query
 
-- add exception-flow bytecode analysis                                                  P3
-  → ~15-20 hrs (wire SuccessorBuilder handler starts into semantic layer)
+- ⏳ Input validation at controller level (@Validated, custom validators)        P0c
+  → ~4-6 hrs | ~850 LOC (impl + tests)
+  → Project name alphanumeric, version ≥1, file size limits
+  → Add: @ValidProjectName, @ValidVersion, @FileSize(max=512MB)
+  → Breakdown: Validators(280), Annotations(70), Controller updates(120), Tests(380)
 
-- fix Terraform docker image creation                                                   P3
-  → ~2-4 hrs (image reference in main.tf)
+- ⏳ Request timeout policies (@Timeout, circuit breaker for Solr)              P0d
+  → ~3-4 hrs | ~450 LOC (impl + tests)
+  → JAR: 5 min, class: 30s, add Resilience4j
+  → Prevent hangs on slow uploads
+  → Breakdown: TimeoutConfig(100), CircuitBreaker(140), Tests(210)
 
-## Estimates
-##   V2 (depth):   ~34-46 hrs
-##   V3 (polish):  ~23-34 hrs
+IMPORTANT (closes usability gaps):
+- ⏳ API documentation (OpenAPI annotations, examples, error scenarios)          P1a
+  → ~5-7 hrs | ~1000 LOC (impl + tests)
+  → Use @Operation, @ApiResponse, document binary handling
+  → Include request/response examples with actual constant data
+  → Breakdown: Annotations(500), Response DTOs(250), Contract tests(250)
+
+- ⏳ Search-UI error boundary + offline detection                               P1b
+  → ~4-5 hrs | ~700 LOC (TypeScript/JSX + tests)
+  → React Error Boundary, healthcheck polling, Service Worker caching
+  → Breakdown: ErrorBoundary(120), OfflineHook(100), ServiceWorker(280), Tests(200)
+
+- ⏳ Structured logging + correlation IDs (ThreadContext, traceId)             P1c
+  → ~6-8 hrs | ~850 LOC (impl + tests)
+  → Move org.springframework.web to INFO, add metrics logging
+  → Breakdown: LogConfig(120), MDC setup(80), Service logging updates(450), Tests(200)
+
+## V2B — Performance & Operations (PRODUCTION READINESS)
+##   Medium effort, high value. ~2-3 weeks @ 10 hrs/week
+
+- ⏳ Performance documentation (PERFORMANCE.md with benchmarks)                  P2a
+  → ~8-12 hrs | ~1100 LOC (docs + JMH benchmarks)
+  → Test JAR sizes: 10MB, 100MB, 1GB; extraction time/MB; scaling limits
+  → Create JMH benchmarks for constant pool parsing
+  → Breakdown: Docs(400), JMH benchmarks(700)
+
+- ⏳ Integration test coverage gaps (failure scenarios, concurrency)            P2b
+  → ~8-10 hrs | ~1200 LOC (tests)
+  → Testcontainers chaos; concurrent version increments; large file upload
+  → Test: Solr write failures, Redis timeouts, partial data recovery
+  → Breakdown: Test classes(1000), Chaos helpers(200)
+
+- ⏳ Database connection pooling config (connectionLimit, validation query)     P2c
+  → ~2-3 hrs | ~400 LOC (impl + docs + tests)
+  → R2DBC pool size, Flyway validation, document optimal configs
+  → Breakdown: Config(100), Docs(200), Tests(100)
+
+- ⏳ Secrets management (git-crypt or encrypted .env)                          P2d
+  → ~4-6 hrs | ~350 LOC (docs + CI/CD updates)
+  → Encrypt .env, add Kubernetes secrets docs, update README
+  → Breakdown: Docs(350), CI/CD automation(0 LOC - scripting)
+
+- ⏳ Monitoring & alerting setup (Grafana dashboards, alert rules)             P2e
+  → ~6-10 hrs | ~1600 LOC (docs + configs)
+  → Create MONITORING.md; dashboards for latency, index size, memory
+  → Alerting: extraction >5min, Solr lag >10s, disk full
+  → Breakdown: Docs(450), Prometheus config(300), Grafana dashboards(700), Tests(150)
+
+- ⏳ Rate limiting (Spring Cloud Gateway or manual IP-based limiter)           P2f
+  → ~3-4 hrs | ~500 LOC (impl + tests)
+  → Prevent DOS; document rate limit headers in OpenAPI
+  → Breakdown: RateLimiter(200), Config(100), Tests(200)
+
+## V2C — Feature Enhancements (DEPTH)
+##   Post-stability. ~3-5 weeks @ 10 hrs/week
+
+- ⏳ Similar constant detection (string similarity + Solr MLT)                 P3a (DEPTH)
+  → ~12-15 hrs | ~1400 LOC (impl + tests)
+  → Find constants that changed slightly between versions
+  → Breakdown: Algorithm(500), Solr integration(250), Endpoint(120), Tests(530)
+
+- ⏳ Constant split/merge analysis (detect refactoring patterns)              P3b (DEPTH)
+  → ~18-25 hrs | ~1900 LOC (impl + tests)
+  → e.g., "String sql1=" split into multiple constants
+  → Depends on diff infrastructure—can run after P3a
+  → Breakdown: PatternDetection(650), Service(400), Endpoints(200), Tests(650)
+
+## V3 — Advanced Analysis (LONG-TERM)
+
+- ⏳ Exception-flow bytecode analysis (wire SuccessorBuilder into semantic)   P4a
+  → ~15-20 hrs | ~1200 LOC (impl + tests)
+  → Extract exception message constants from catch blocks
+  → Breakdown: SuccessorBuilder enhancements(400), ExceptionInterpreter(300), Tests(500)
+
+- ⏳ Fix Terraform (main.tf docker image reference, ECS/RDS/ElastiCache)     P4b
+  → ~4-6 hrs | ~600 LOC (impl + docs)
+  → Test Terraform plan/apply; document AWS deployment flow
+  → Breakdown: Terraform(300), Docs(300)
+
+## Time & LOC Summary (per phase)
+##
+## V2A (Reliability):       ~21-33 hrs | ~3800 LOC
+##   - P0a: 6-8 hrs, 450 LOC
+##   - P0b: 1 hr, 0 LOC
+##   - P0c: 4-6 hrs, 850 LOC
+##   - P0d: 3-4 hrs, 450 LOC
+##   - P1a: 5-7 hrs, 1000 LOC
+##   - P1b: 4-5 hrs, 700 LOC
+##   - P1c: 6-8 hrs, 850 LOC
+##
+## V2B (Operations):       ~31-45 hrs | ~5750 LOC
+##   - P2a: 8-12 hrs, 1100 LOC
+##   - P2b: 8-10 hrs, 1200 LOC
+##   - P2c: 2-3 hrs, 400 LOC
+##   - P2d: 4-6 hrs, 350 LOC
+##   - P2e: 6-10 hrs, 1600 LOC
+##   - P2f: 3-4 hrs, 500 LOC
+##
+## V2C (Features):         ~30-40 hrs | ~3300 LOC
+##   - P3a: 12-15 hrs, 1400 LOC
+##   - P3b: 18-25 hrs, 1900 LOC
+##
+## V3 (Advanced):          ~19-26 hrs | ~1800 LOC
+##   - P4a: 15-20 hrs, 1200 LOC
+##   - P4b: 4-6 hrs, 600 LOC
+##
+## ════════════════════════════════════════════════════
+## TOTAL:                  ~101-144 hrs | ~14650 LOC
+## ════════════════════════════════════════════════════
+##
+## Notes:
+## - V2A (reliability): 21-33 hrs to ship v1.1 (production-ready)
+## - V2B (operations): 31-45 hrs to mature for enterprise use (~5-6 weeks add'l)
+## - V2C (features): 30-40 hrs for differentiated depth (~3-5 weeks add'l)
+## - V3 (advanced): 19-26 hrs for long-tail improvements (~2 weeks add'l)
+##
+## LOC breakdown by language:
+## - Java: ~8500 LOC (60% impl, 40% tests)
+## - TypeScript/JSX: ~700 LOC (search-ui error handling)
+## - Markdown/Docs: ~2700 LOC (PERFORMANCE.md, MONITORING.md, etc.)
+## - Configuration (YAML/JSON/HCL): ~2500 LOC (Terraform, Docker, Solr)

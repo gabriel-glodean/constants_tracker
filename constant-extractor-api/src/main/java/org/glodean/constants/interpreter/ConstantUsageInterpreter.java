@@ -42,4 +42,3 @@ public interface ConstantUsageInterpreter {
      */
     boolean canInterpret(UsageType type);
 }
-

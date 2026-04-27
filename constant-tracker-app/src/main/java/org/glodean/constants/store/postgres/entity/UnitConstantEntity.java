@@ -1,4 +1,4 @@
-package org.glodean.constants.store.postgres;
+package org.glodean.constants.store.postgres.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
@@ -7,4 +7,3 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("unit_constants")
 public record UnitConstantEntity(
     @Id Long id, Long snapshotId, String constantValue, String constantValueType) {}
-
