@@ -17,11 +17,50 @@
 - ✅ add Jest tests for search-ui
 - ✅ diff UI polish & debugging
 
-## V2A — Reliability & Stability (BLOCKING ISSUES)
-##   High impact, low effort. Should complete in 1-2 weeks @ 10 hrs/week
+## 🚀 Deployment — TOP PRIORITY (do before anything else)
+##
+## Stack: Hetzner CX22 (€4.35/mo, 4 GB RAM, x86) + Cloudflare Tunnel (free)
+##
+##   Idle RAM budget (no Prometheus/Grafana on VPS — offloaded, see P2e):
+##     Solr 10          ~1.2 GB
+##     Spring Boot app  ~400 MB  (ZGC: -Xmx768m -XX:+UseZGC)
+##     PostgreSQL 17    ~200 MB
+##     Redis 7          ~50 MB
+##     Nginx (UI)       ~20 MB
+##     OS + Docker      ~400 MB
+##     ─────────────────────────
+##     Total idle       ~2.3 GB  ✓ fits CX22 with 1.7 GB headroom
+##     Extraction spike eliminated by streaming refactor (P0e)
+##
+##   Networking (zero open ports on VPS):
+##     - Cloudflare Tunnel: cloudflared daemon on VPS → tracker.yourdomain.com
+##     - search-ui: ports "127.0.0.1:80:80"  (localhost only, tunnel reaches it)
+##     - app/solr/redis/postgres: expose: only (no host ports)
+##     - Hetzner Firewall: allow port 22 (SSH) only
+##
+##   Steps:
+##     1. Create Hetzner CX22 (Ubuntu 24.04), install Docker + cloudflared
+##     2. cloudflared tunnel login && tunnel create constant-tracker
+##     3. Create ~/.cloudflared/config.yml → service: http://localhost:80
+##     4. scp docker-compose.yml .env → VPS; docker compose up -d
+##     5. cloudflared tunnel route dns constant-tracker tracker.yourdomain.com
+##     6. sudo cloudflared service install && systemctl enable --now cloudflared
+##
+##   Cost: €4.35/mo VPS + ~€10/yr domain = ~€62/yr total
+##   Traces/logs → Axiom EU free tier (see P2e) — 0 extra RAM, 0 extra cost
 
+## V2A — Reliability & Stability
+##   Complete in this order: P0e → P0b → P0a → P0c → P0d → P1c → P1a → P1b
 
 CRITICAL (must-do for production readiness):
+- ⏳ JAR upload streaming refactor (temp file + ZipInputStream, drop Jimfs)   P0e  ← NEW
+  → ~4-6 hrs | ~300 LOC (impl + tests)
+  → Current: Mono<DataBuffer>→byte[]→Jimfs = 3× JAR size in RAM simultaneously
+  → Fix: Flux<DataBuffer> → DataBufferUtils.write(tmpFile) → ZipInputStream per entry
+  → Eliminates extraction RAM spike entirely; CX22 viable for any JAR size
+  → ⚠ Do in same sprint as P1c — both touch Schedulers.boundedElastic + MDC
+  → Breakdown: Controller(80), ExtractionService(120), Tests(100)
+
 - ⏳ Global exception handler (@ControllerAdvice + @ExceptionHandler)              P0a
   → ~6-8 hrs | ~450 LOC (handler + DTO + tests)
   → Handles: InvalidClassFormat, ProjectNotFound, Timeout, IOException
@@ -59,8 +98,12 @@ IMPORTANT (closes usability gaps):
 
 - ⏳ Structured logging + correlation IDs (ThreadContext, traceId)             P1c
   → ~6-8 hrs | ~850 LOC (impl + tests)
-  → Move org.springframework.web to INFO, add metrics logging
-  → Breakdown: LogConfig(120), MDC setup(80), Service logging updates(450), Tests(200)
+  → ⚠ Do in same sprint as P0e — shared Schedulers.boundedElastic thread-switch concern
+  → MdcContextLifter: Hooks.onEachOperator to copy Reactor context → Log4j2
+    ThreadContext on every thread switch (Netty I/O → boundedElastic → Netty I/O)
+  → Add [%X{traceId}] to log4j2.xml pattern; generate traceId at controller boundary
+  → Move org.springframework.web to INFO, add per-extraction structured log events
+  → Breakdown: LogConfig(120), MdcContextLifter(80), Service logging(450), Tests(200)
 
 ## V2B — Performance & Operations (PRODUCTION READINESS)
 ##   Medium effort, high value. ~2-3 weeks @ 10 hrs/week
@@ -82,21 +125,29 @@ IMPORTANT (closes usability gaps):
   → R2DBC pool size, Flyway validation, document optimal configs
   → Breakdown: Config(100), Docs(200), Tests(100)
 
-- ⏳ Secrets management (git-crypt or encrypted .env)                          P2d
-  → ~4-6 hrs | ~350 LOC (docs + CI/CD updates)
-  → Encrypt .env, add Kubernetes secrets docs, update README
-  → Breakdown: Docs(350), CI/CD automation(0 LOC - scripting)
+- ⏳ Secrets management (.env file + .gitignore hygiene)                       P2d
+  → ~1 hr | ~0 LOC (config-only)
+  → Ensure .env is in .gitignore; document required vars in README
+  → No git-crypt or Kubernetes needed for personal project
 
-- ⏳ Monitoring & alerting setup (Grafana dashboards, alert rules)             P2e
-  → ~6-10 hrs | ~1600 LOC (docs + configs)
-  → Create MONITORING.md; dashboards for latency, index size, memory
-  → Alerting: extraction >5min, Solr lag >10s, disk full
-  → Breakdown: Docs(450), Prometheus config(300), Grafana dashboards(700), Tests(150)
+- ⏳ Monitoring: metrics widget in UI + Axiom for traces/logs                  P2e
+  → ~3-4 hrs | ~250 LOC
+  → NO Prometheus/Grafana containers on VPS — saves ~550 MB RAM, keeps CX22 viable
+  →
+  → A) Metrics widget in search-ui (~150 LOC React):
+  →    Poll /actuator/metrics/{name} every 30s; show extraction count,
+  →    JVM heap used, last extraction duration. Uses existing actuator, 0 backend work.
+  →
+  → B) Traces + logs → Axiom EU free tier (500 GB/mo, 0 LOC Java code):
+  →    Add micrometer-tracing-bridge-otel + opentelemetry-exporter-otlp deps
+  →    application.yml: management.otlp.tracing.endpoint=https://api.eu.axiom.co/v1/traces
+  →    Authorization: Bearer ${AXIOM_API_KEY} via env var in docker-compose.yml
+  →    Same dataset receives structured logs via log4j2-appender-otlp (optional)
+  →
+  → Breakdown: React widget(150), application.yml OTLP config(20), Tests(80)
 
-- ⏳ Rate limiting (Spring Cloud Gateway or manual IP-based limiter)           P2f
-  → ~3-4 hrs | ~500 LOC (impl + tests)
-  → Prevent DOS; document rate limit headers in OpenAPI
-  → Breakdown: RateLimiter(200), Config(100), Tests(200)
+- ~~Rate limiting (Spring Cloud Gateway or manual IP-based limiter)~~          P2f ❌ DROPPED
+  → Not needed for a personal/portfolio project with no public traffic
 
 ## V2C — Feature Enhancements (DEPTH)
 ##   Post-stability. ~3-5 weeks @ 10 hrs/week
@@ -119,50 +170,61 @@ IMPORTANT (closes usability gaps):
   → Extract exception message constants from catch blocks
   → Breakdown: SuccessorBuilder enhancements(400), ExceptionInterpreter(300), Tests(500)
 
-- ⏳ Fix Terraform (main.tf docker image reference, ECS/RDS/ElastiCache)     P4b
-  → ~4-6 hrs | ~600 LOC (impl + docs)
-  → Test Terraform plan/apply; document AWS deployment flow
-  → Breakdown: Terraform(300), Docs(300)
+- ⏳ Fix Terraform (main.tf docker image reference)                            P4b
+  → ~1-2 hrs | ~20 LOC (config fix)
+  → main.tf already uses kreuzwerker/docker provider (no AWS)
+  → Just fix the app image name reference so `terraform apply` works locally
+  → Breakdown: Terraform(20)
+
+## Deployment — cheapest option for personal project
+##
+## Hetzner CX22 (€4.35/mo) + Cloudflare Tunnel (free) — see top of file for full details.
+## No open inbound ports. HTTPS via Cloudflare. Traces/logs via Axiom EU free tier.
+## Idle RAM ~2.3 GB after removing Prometheus/Grafana + streaming refactor (P0e).
 
 ## Time & LOC Summary (per phase)
 ##
-## V2A (Reliability):       ~21-33 hrs | ~3800 LOC
+## Deployment setup:       ~2 hrs | ~0 LOC  (Hetzner + Cloudflare Tunnel, config only)
+##
+## V2A (Reliability):      ~26-40 hrs | ~4100 LOC
+##   - P0e: 4-6 hrs, 300 LOC   ← NEW first: streaming refactor (same sprint as P1c)
 ##   - P0a: 6-8 hrs, 450 LOC
 ##   - P0b: 1 hr, 0 LOC
 ##   - P0c: 4-6 hrs, 850 LOC
 ##   - P0d: 3-4 hrs, 450 LOC
 ##   - P1a: 5-7 hrs, 1000 LOC
 ##   - P1b: 4-5 hrs, 700 LOC
-##   - P1c: 6-8 hrs, 850 LOC
+##   - P1c: 6-8 hrs, 850 LOC   (same sprint as P0e)
 ##
-## V2B (Operations):       ~31-45 hrs | ~5750 LOC
+## V2B (Operations):       ~14-19 hrs | ~2350 LOC  ← no local monitoring stack
 ##   - P2a: 8-12 hrs, 1100 LOC
 ##   - P2b: 8-10 hrs, 1200 LOC
 ##   - P2c: 2-3 hrs, 400 LOC
-##   - P2d: 4-6 hrs, 350 LOC
-##   - P2e: 6-10 hrs, 1600 LOC
-##   - P2f: 3-4 hrs, 500 LOC
+##   - P2d: 1 hr, 0 LOC
+##   - P2e: 3-4 hrs, 250 LOC   (UI widget + OTLP config, no containers)
+##   - P2f: DROPPED
 ##
 ## V2C (Features):         ~30-40 hrs | ~3300 LOC
 ##   - P3a: 12-15 hrs, 1400 LOC
 ##   - P3b: 18-25 hrs, 1900 LOC
 ##
-## V3 (Advanced):          ~19-26 hrs | ~1800 LOC
+## V3 (Advanced):          ~16-22 hrs | ~1220 LOC
 ##   - P4a: 15-20 hrs, 1200 LOC
-##   - P4b: 4-6 hrs, 600 LOC
+##   - P4b: 1-2 hrs, 20 LOC
 ##
 ## ════════════════════════════════════════════════════
-## TOTAL:                  ~101-144 hrs | ~14650 LOC
+## TOTAL:                  ~88-123 hrs | ~10970 LOC
 ## ════════════════════════════════════════════════════
 ##
-## Notes:
-## - V2A (reliability): 21-33 hrs to ship v1.1 (production-ready)
-## - V2B (operations): 31-45 hrs to mature for enterprise use (~5-6 weeks add'l)
-## - V2C (features): 30-40 hrs for differentiated depth (~3-5 weeks add'l)
-## - V3 (advanced): 19-26 hrs for long-tail improvements (~2 weeks add'l)
+## Recommended sprint order:
+##   1. Deployment (Hetzner + Cloudflare Tunnel)                ~2 hrs
+##   2. P0e + P1c  (streaming refactor + MDC propagation)      ~10-14 hrs  ← do together
+##   3. P0a + P0b + P0c + P0d  (stability blockers)            ~14-19 hrs
+##   4. P1a + P1b  (usability gaps)                            ~9-12 hrs
+##   5. P2b + P2c + P2d + P2e  (ops, no new containers)        ~14-18 hrs
+##   6. V2C + V3  (features, long-term)                        ~46-62 hrs
 ##
 ## LOC breakdown by language:
-## - Java: ~8500 LOC (60% impl, 40% tests)
-## - TypeScript/JSX: ~700 LOC (search-ui error handling)
-## - Markdown/Docs: ~2700 LOC (PERFORMANCE.md, MONITORING.md, etc.)
-## - Configuration (YAML/JSON/HCL): ~2500 LOC (Terraform, Docker, Solr)
+## - Java: ~8800 LOC (60% impl, 40% tests)
+## - TypeScript/JSX: ~850 LOC (metrics widget + error handling)
+## - Configuration (YAML/application.yml): ~320 LOC (OTLP, ZGC, pool sizes)
