@@ -109,7 +109,7 @@ public record UnitConstant(Object value, Set<ConstantUsage> usages) {
     ) {
         public ConstantUsage{
             Objects.requireNonNull(structuralType, "Structural type cannot be null");
-            Objects.requireNonNull(semanticType, "Semantic type cannot be null");
+            // semanticType is intentionally nullable — some usages have no semantic classification
             Objects.requireNonNull(location, "Location cannot be null");
             if (confidence < 0.0 || confidence > 1.0) {
                 throw new IllegalArgumentException("Confidence must be between 0.0 and 1.0");

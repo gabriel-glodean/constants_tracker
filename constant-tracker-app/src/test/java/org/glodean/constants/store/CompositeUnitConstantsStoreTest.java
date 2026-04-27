@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,7 +70,6 @@ class CompositeUnitConstantsStoreTest {
     var openVersion = new ProjectVersionEntity(1L, "proj", 5, null, "OPEN", null, null);
     when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
     when(postgresService.store(any(), eq("proj"), eq(5))).thenReturn(Mono.just(sample()));
-    when(solrService.store(any(), eq("proj"), eq(5))).thenReturn(Mono.just(sample()));
 
     UnitConstants result = store.store(sample(), "proj").block();
 
@@ -86,14 +87,14 @@ class CompositeUnitConstantsStoreTest {
     when(projectVersionService.ensureVersionExists("proj", 3)).thenReturn(Mono.just(openVersion));
     when(projectVersionService.isVersionOpen("proj", 3)).thenReturn(Mono.just(true));
     when(postgresService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(sample()));
-    when(solrService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(sample()));
 
     UnitConstants result = store.store(sample(), "proj", 3).block();
 
     assertThat(result).isNotNull();
     assertThat(result.source().path()).isEqualTo("com/example/Greeter");
     verify(postgresService).store(any(), eq("proj"), eq(3));
-    verify(solrService).store(any(), eq("proj"), eq(3));
+    // Solr is indexed asynchronously via the outbox — no direct call expected here
+    verify(solrService, never()).store(any(), anyString(), anyInt());
   }
 
   @Test
@@ -104,26 +105,24 @@ class CompositeUnitConstantsStoreTest {
         .thenReturn(Mono.just(openVersion));
     when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(expected));
-    when(solrService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(expected));
 
     UnitConstants result = store.store(expected, "proj", 7).block();
 
     assertThat(result).isSameAs(expected);
   }
 
-  // ── Solr failure is non-fatal ──────────────────────────────────────────────
+  // ── Solr failure is non-fatal (Solr is async via outbox) ──────────────────
 
   @Test
   void solrFailureIsNonFatalWhenPostgresSucceeds() {
+    // Solr is indexed asynchronously via the outbox — the synchronous store path only
+    // calls PostgresService. If postgres succeeds the store always succeeds.
     var openVersion = new ProjectVersionEntity(1L, "proj", 1, null, "OPEN", null, null);
     when(projectVersionService.ensureVersionExists(anyString(), anyInt()))
         .thenReturn(Mono.just(openVersion));
     when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(sample()));
-    when(solrService.store(any(), anyString(), anyInt()))
-        .thenReturn(Mono.error(new RuntimeException("Solr unavailable")));
 
-    // operation must still complete successfully despite Solr failure
     UnitConstants result = store.store(sample(), "proj", 1).block();
     assertThat(result).isNotNull();
     assertThat(result.source().path()).isEqualTo("com/example/Greeter");
@@ -137,7 +136,6 @@ class CompositeUnitConstantsStoreTest {
     when(projectVersionService.isVersionOpen(anyString(), anyInt())).thenReturn(Mono.just(true));
     when(postgresService.store(any(), anyString(), anyInt()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
-    when(solrService.store(any(), anyString(), anyInt())).thenReturn(Mono.just(sample()));
 
     assertThatThrownBy(() -> store.store(sample(), "proj", 1).block())
         .isInstanceOf(RuntimeException.class);
@@ -192,5 +190,76 @@ class CompositeUnitConstantsStoreTest {
 
     assertThatThrownBy(() -> store.fuzzySearch("proj", "test", 0, 10).block())
         .isInstanceOf(RuntimeException.class);
+  }
+
+  // ── store(constants, project, version) — finalized version ────────────────
+
+  @Test
+  void storeWithFinalizedVersionRejectsUpload() {
+    var closedVersion = new ProjectVersionEntity(1L, "proj", 2, null, "CLOSED", null, null);
+    when(projectVersionService.ensureVersionExists("proj", 2)).thenReturn(Mono.just(closedVersion));
+    when(projectVersionService.isVersionOpen("proj", 2)).thenReturn(Mono.just(false));
+
+    assertThatThrownBy(() -> store.store(sample(), "proj", 2).block())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("finalized");
+  }
+
+  // ── storeAll ──────────────────────────────────────────────────────────────
+
+  @Test
+  void storeAllCallsPostgresForEachUnitAndRecordsRemovals() {
+    UnitConstants s = sample();
+    var openVersion = new ProjectVersionEntity(1L, "proj", 3, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
+    when(postgresService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(s));
+    when(projectVersionService.recordRemovals(eq("proj"), eq(3), anySet()))
+        .thenReturn(Flux.empty());
+
+    List<UnitConstants> result = store.storeAll(List.of(s), "proj").block();
+
+    assertThat(result).hasSize(1);
+    verify(postgresService).store(any(), eq("proj"), eq(3));
+    verify(projectVersionService).recordRemovals(eq("proj"), eq(3), anySet());
+  }
+
+  @Test
+  void storeAllWithEmptyListRecordsRemovalsForAllOldUnits() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 4, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
+    when(projectVersionService.recordRemovals(eq("proj"), eq(4), anySet()))
+        .thenReturn(Flux.empty());
+
+    List<UnitConstants> result = store.storeAll(List.of(), "proj").block();
+
+    assertThat(result).isEmpty();
+    verify(projectVersionService).recordRemovals(eq("proj"), eq(4), anySet());
+    verify(postgresService, never()).store(any(), anyString(), anyInt());
+  }
+
+  // ── UnitConstantsStore interface default methods ───────────────────────────
+
+  @Test
+  void defaultStoreAllThrowsUnsupportedOperationForBaseImplementation() {
+    UnitConstantsStore minimal = new UnitConstantsStore() {
+      @Override public Mono<UnitConstants> store(UnitConstants c, String p, int v) { return null; }
+      @Override public Mono<UnitConstants> store(UnitConstants c, String p) { return null; }
+      @Override public Mono<java.util.Map<Object, Collection<UnitConstant.UsageType>>> find(String k) { return null; }
+    };
+
+    assertThatThrownBy(() -> minimal.storeAll(List.of(), "proj").block())
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void defaultFuzzySearchThrowsUnsupportedOperationForBaseImplementation() {
+    UnitConstantsStore minimal = new UnitConstantsStore() {
+      @Override public Mono<UnitConstants> store(UnitConstants c, String p, int v) { return null; }
+      @Override public Mono<UnitConstants> store(UnitConstants c, String p) { return null; }
+      @Override public Mono<java.util.Map<Object, Collection<UnitConstant.UsageType>>> find(String k) { return null; }
+    };
+
+    assertThatThrownBy(() -> minimal.fuzzySearch("proj", "term", 0, 10).block())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

@@ -23,6 +23,7 @@ import org.glodean.constants.store.postgres.repository.SolrOutboxRepository;
 import org.glodean.constants.store.postgres.repository.UnitConstantRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
+import org.glodean.constants.store.postgres.entity.SolrOutboxEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +57,11 @@ class PostgresServiceTest {
 
   static UsageLocation loc() {
     return new UsageLocation("com/example/Greeter", "greet", "()V", 0, null);
+  }
+
+  static SolrOutboxEntry savedOutboxEntry(String project, String path, int version) {
+    java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+    return new SolrOutboxEntry(99L, now, project, path, version, "{}", 0, null, now);
   }
 
   static UnitConstants sampleCoreType() {
@@ -139,6 +145,7 @@ class PostgresServiceTest {
     when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
         1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
         "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
+    when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/Greeter", 1)));
 
     UnitConstants result = service.store(sampleCoreType(), "proj", 1).block();
     assertThat(result).isNotNull();
@@ -162,6 +169,7 @@ class PostgresServiceTest {
     when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
         2L, 2L, "FIELD_STORE", "CUSTOM", "aws", "AWS ARN", "Amazon Resource Name",
         "com/example/Greeter", "greet", "()V", 0, null, 0.85, "{}")));
+    when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/AwsClient", 2)));
 
     UnitConstants result = service.store(sampleCustomType(), "proj", 2).block();
     assertThat(result).isNotNull();
@@ -197,6 +205,7 @@ class PostgresServiceTest {
     when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
         3L, 3L, "STRING_CONCATENATION_MEMBER", "CORE", "URL_RESOURCE", null, null,
         "com/example/Client", "send", "()V", 0, null, 0.75, "{\"key\":\"value\",\"retries\":3}")));
+    when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/Client", 1)));
 
     UnitConstants result = service.store(constants, "proj", 1).block();
     assertThat(result).isNotNull();
