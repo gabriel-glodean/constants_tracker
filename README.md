@@ -178,12 +178,34 @@ All services are managed via Docker Compose. The stack includes the backend, Sol
 # First time: start everything and seed demo data
 docker compose --profile=seed up -d
 
-# Reset data (e.g. after a re-index or code change):
+# Reset data and re-seed (see Troubleshooting below for details):
 docker compose --profile=clear up clear
+docker compose down
+docker compose --profile=seed up -d
+```
 
-# Re-seed after clearing:
-docker rm -f seed
-docker compose --profile=seed up -d seed
+### ⚠️ Troubleshooting
+
+#### Solr permission error on first start (self-hosted / VPS)
+
+If Solr fails with `cp: cannot create directory '/var/solr/data/Constants': Permission denied`, the data directory was created by root before Solr's `solr` user could write to it. Fix:
+
+```bash
+# On the VPS / host:
+sudo rm -rf ./.solr_data
+sudo mkdir -p ./.solr_data
+sudo chown -R 8983:8983 ./.solr_data   # 8983 is the solr UID inside the image
+docker compose up -d solr
+```
+
+#### Clear + reseed fails with "network … not found"
+
+After running `docker compose --profile=clear up clear`, the `seed` container retains a reference to the old network. Always do a full `docker compose down` before restarting with the seed profile:
+
+```bash
+docker compose --profile=clear up clear   # wipe data
+docker compose down                        # tear down network + stopped containers
+docker compose --profile=seed up -d       # fresh start with demo data
 ```
 
 ### Rebuilding after code changes
@@ -241,8 +263,8 @@ docker compose up -d app search-ui
 **Reset all data:**
 ```bash
 docker compose --profile=clear up clear
-docker rm -f seed  # if seeding again
-docker compose --profile=seed up -d seed
+docker compose down                        # required — tears down stale network
+docker compose --profile=seed up -d       # fresh start with demo data
 ```
 
 ### Service Endpoints (when running)
