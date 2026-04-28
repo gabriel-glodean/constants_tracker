@@ -68,7 +68,7 @@ public class SolrOutboxProcessor {
    * Claims a batch of ready outbox rows, submits them to Solr, and deletes the successfully
    * indexed rows. Retries are scheduled automatically via exponential back-off on failure.
    */
-  @Scheduled(fixedDelayString = "${constants.solr.outbox.drain-interval-ms:5000}")
+  @Scheduled(fixedRateString = "${constants.solr.outbox.drain-interval-ms:1000}")
   public void drain() {
     Mono<Integer> work =
         outboxRepository
