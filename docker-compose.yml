@@ -47,6 +47,7 @@ services:
       - app_network
 
   app:
+    image: ${APP_IMAGE:-ghcr.io/gabriel-glodean/constant-tracker-app:latest}
     build:
       context: .
       dockerfile: constant-tracker-app/Dockerfile
@@ -85,6 +86,7 @@ services:
     networks:
       - app_network
   search-ui:
+    image: ${UI_IMAGE:-ghcr.io/gabriel-glodean/constant-tracker-ui:latest}
     build:
       context: ./search-ui
       dockerfile: Dockerfile
