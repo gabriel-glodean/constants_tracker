@@ -1,0 +1,29 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is git-ignored — never commit real secrets.
+
+# IP of your existing Hetzner (or any) server
+server_ip = "1.2.3.4"
+
+# SSH access
+ssh_user             = "root"
+ssh_private_key_path = "~/.ssh/id_rsa"
+
+# Docker images to deploy
+app_image = "ghcr.io/gabriel-glodean/constant-tracker-app:latest"
+ui_image  = "ghcr.io/gabriel-glodean/constant-tracker-ui:latest"
+
+# PostgreSQL credentials
+postgres_user     = "ct_user"
+postgres_password = "change-me"
+
+# Spring R2DBC (reactive connection) — usually same as postgres creds
+spring_r2dbc_username = "ct_user"
+spring_r2dbc_password = "change-me"
+
+# Flyway (schema migration, JDBC) — usually same as postgres creds
+spring_flyway_user     = "ct_user"
+spring_flyway_password = "change-me"
+
+# CORS — set to your domain / UI URL in production
+cors_allowed_origins = "https://your-domain.com"
+

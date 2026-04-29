@@ -48,6 +48,7 @@ terraform.tfstate.backup
 # === Terraform working directory ===
 .terraform
 .terraform.lock.hcl
+.terraform.tfvars
 
 # === Crash logs ===
 crash.log

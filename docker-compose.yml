@@ -127,6 +127,47 @@ services:
     networks:
       - app_network
 
+  clear-demo:
+    image: alpine:latest
+    container_name: clear-demo
+    profiles:
+      - clear-demo
+    depends_on:
+      - postgres
+      - redis
+      - solr
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      DEMO_PROJECT: ${DEMO_PROJECT:-demo-crud-server}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
+        echo "=== Clearing demo project: $${DEMO_PROJECT} ==="
+        echo "--- PostgreSQL ---"
+        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "
+          DELETE FROM solr_outbox_dead WHERE project = '$${DEMO_PROJECT}';
+          DELETE FROM solr_outbox      WHERE project = '$${DEMO_PROJECT}';
+          DELETE FROM version_deletions WHERE project = '$${DEMO_PROJECT}';
+          DELETE FROM unit_descriptors  WHERE project = '$${DEMO_PROJECT}';
+          DELETE FROM project_versions  WHERE project = '$${DEMO_PROJECT}';
+        " && echo " PostgreSQL cleared"
+        echo "--- Solr ---"
+        until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
+        curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
+          -H "Content-Type: application/json" \
+          -d "{\"delete\":{\"query\":\"project:\\\"$${DEMO_PROJECT}\\\"\"}}" && echo " Solr cleared"
+        echo "--- Redis ---"
+        KEYS=$(redis-cli -h redis --scan --pattern "*$${DEMO_PROJECT}*")
+        if [ -n "$${KEYS}" ]; then
+          echo "$${KEYS}" | xargs redis-cli -h redis DEL && echo " Redis keys cleared"
+        else
+          echo " No Redis keys found for $${DEMO_PROJECT}"
+        fi
+        echo "=== Clear-demo complete ==="
+    networks:
+      - app_network
+
   seed:
     image: curlimages/curl:latest
     container_name: seed
