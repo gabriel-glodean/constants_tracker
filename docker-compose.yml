@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - "${POSTGRES_HOST_PATH:-./.postgres_data}:/var/lib/postgresql/data"
     networks:
@@ -29,7 +29,7 @@ services:
           cp /opt/solr-config/* $$CORE_DIR/conf/ 2>/dev/null || true;
         fi && exec solr-foreground --user-managed
     ports:
-      - "${SOLR_PORT:-8983}:8983"
+      - "127.0.0.1:${SOLR_PORT:-8983}:8983"
     volumes:
       - ${SOLR_HOST_PATH:-./.solr_data}:/var/solr/data
       - ./constant-tracker-app/solr/managed-schema.xml:/opt/solr-config/managed-schema.xml:ro
@@ -41,8 +41,8 @@ services:
     image: redis:7
     container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # No host ports exposed — reachable only via the internal app_network.
+    # Binding to a host port on 0.0.0.0 would expose Redis to the public internet.
     networks:
       - app_network
 
