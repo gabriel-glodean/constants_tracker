@@ -1,0 +1,46 @@
+# Configs for the Kubernetes cluster
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+    name: postgres-config
+    namespace: constant-tracker
+data:
+    POSTGRES_DB: constant_tracker
+    PGDATA: /var/lib/postgresql/data/pgdata
+
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+    name: solr-config
+    namespace: constant-tracker
+data:
+  SOLR_JAVA_MEM: "-Xms512m -Xmx2g"
+
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+    name: solr-init-config
+    namespace: constant-tracker
+data: {}
+
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config
+  namespace: constant-tracker
+data:
+    SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/constant_tracker
+    SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/constant_tracker
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    SPRING_DATA_REDIS_HOST: redis
+    SPRING_DATA_REDIS_PORT: "6379"
+    CONSTANTS_SOLR_URL: http://solr:8983/solr/
+    SPRING_DATA_SOLR_HOST: http://solr:8983/solr
+    SERVER_PORT: "8080"

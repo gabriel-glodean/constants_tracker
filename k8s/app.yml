@@ -1,0 +1,125 @@
+#Deployment and service for the main application
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+    name: app
+    namespace: constant-tracker
+    labels:
+        app: app
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: app
+    template:
+        metadata:
+            labels:
+                app: app
+        spec:
+            enableServiceLinks: false
+            containers:
+                - name: app
+                  image: ghcr.io/gabriel-glodean/constant-tracker-app:latest
+                  ports:
+                      - containerPort: 8080
+                  env:
+                      - name: SERVER_PORT
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SERVER_PORT
+                      - name: CONSTANTS_CORS_ALLOWED_ORIGINS
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: CORS_ALLOWED_ORIGINS
+                      - name: SPRING_DATA_SOLR_HOST
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_DATA_SOLR_HOST
+                      - name: CONSTANTS_SOLR_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: CONSTANTS_SOLR_URL
+                      - name: SPRING_DATA_REDIS_HOST
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_DATA_REDIS_HOST
+                      - name: SPRING_DATA_REDIS_PORT
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_DATA_REDIS_PORT
+                      - name: SPRING_R2DBC_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_R2DBC_URL
+                      - name: SPRING_FLYWAY_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_FLYWAY_URL
+                      - name: SPRING_R2DBC_USERNAME
+                        valueFrom:
+                            secretKeyRef:
+                                name: app-secret
+                                key: SPRING_R2DBC_USERNAME
+                      - name: SPRING_R2DBC_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: app-secret
+                                key: SPRING_R2DBC_PASSWORD
+                      - name: SPRING_FLYWAY_USER
+                        valueFrom:
+                            secretKeyRef:
+                                name: app-secret
+                                key: SPRING_FLYWAY_USER
+                      - name: SPRING_FLYWAY_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: app-secret
+                                key: SPRING_FLYWAY_PASSWORD
+                  readinessProbe:
+                      httpGet:
+                          path: /actuator/health
+                          port: 8080
+                      initialDelaySeconds: 30
+                      periodSeconds: 5
+                      failureThreshold: 20
+                  livenessProbe:
+                      httpGet:
+                          path: /actuator/health
+                          port: 8080
+                      initialDelaySeconds: 60
+                      periodSeconds: 10
+                      failureThreshold: 5
+                  resources:
+                      requests:
+                          memory: "512Mi"
+                          cpu: "250m"
+                      limits:
+                          memory: "1Gi"
+                          cpu: "1000m"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: app
+    namespace: constant-tracker
+    labels:
+        app: app
+spec:
+    selector:
+        app: app
+    ports:
+        - protocol: TCP
+          port: 8080
+          targetPort: 8080
+    type: ClusterIP

@@ -1,0 +1,170 @@
+# seed and remove jobs for k8s, these are one-off jobs that run to seed data and clear data, they can be triggered manually or via a CI/CD pipeline
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: seed-job
+  namespace: constant-tracker
+  labels:
+    app: seed-job
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      volumes:
+        - name: jars-v1
+          hostPath:
+            path: /opt/constant-tracker/demo-crud-server/build/libs
+        - name: jars-v2
+          hostPath:
+            path: /opt/constant-tracker/demo-crud-server-v2/build/libs
+      containers:
+        - name: seed
+          image: curlimages/curl:latest
+          volumeMounts:
+            - name: jars-v1
+              mountPath: /seed/jars/v1
+            - name: jars-v2
+              mountPath: /seed/jars/v2
+          command: ["sh", "-c"]
+          args:
+            # Script mirrors docker-compose.yml seed service command — keep in sync
+            - |
+              upload_jar_dir() {
+                local jar_dir="$1"
+                for jar in "$jar_dir"/*.jar; do
+                  [ -f "$jar" ] || continue
+                  jarname=$(basename "$jar")
+                  echo "Uploading: $jarname"
+                  curl -sf -X POST "$APP/jar?project=$PROJECT&jarName=$jarname" \
+                    -H "Content-Type: application/octet-stream" \
+                    --data-binary "@$jar" && echo " OK" || echo " FAILED"
+                done
+              }
+
+              sync_and_finalize() {
+                local version="$1"
+                echo "--- Syncing removals: $PROJECT v$version ---"
+                curl -sf -X POST "$APP/project/$PROJECT/version/$version/sync" && echo " sync OK" || echo " sync FAILED"
+                echo "--- Finalizing: $PROJECT v$version ---"
+                curl -sf -X POST "$APP/project/$PROJECT/version/$version/finalize" && echo " finalize OK" || echo " finalize FAILED"
+              }
+
+              echo "=== Seeding v1 ==="
+              upload_jar_dir "/seed/jars/v1"
+              sync_and_finalize 1
+
+              echo "=== Seeding v2 ==="
+              upload_jar_dir "/seed/jars/v2"
+              sync_and_finalize 2
+
+              echo "=== Seed complete ==="
+          env:
+            - name: PROJECT
+              value: "demo-crud-server"
+            - name: APP
+              value: "http://app:8080"
+      restartPolicy: Never
+
+---
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: clear-job
+  namespace: constant-tracker
+  labels:
+    app: clear-job
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: clear
+          image: alpine:latest
+          # Script mirrors docker-compose.yml clear service command — keep in sync
+          command: ["sh", "-c"]
+          args:
+            - |
+              apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
+              echo "=== Clearing PostgreSQL ==="
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d constant_tracker -c "TRUNCATE unit_descriptors, project_versions, version_deletions, solr_outbox, solr_outbox_dead CASCADE;"
+              echo "=== Clearing Solr ==="
+              until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
+              curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
+                -H "Content-Type: application/json" \
+                -d '{"delete":{"query":"*:*"}}' && echo " Solr cleared"
+              echo "=== Clearing Redis ==="
+              redis-cli -h redis FLUSHALL && echo " Redis cleared"
+              echo "=== Clear complete ==="
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+      restartPolicy: Never
+
+---
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: clear-demo-job
+  namespace: constant-tracker
+  labels:
+    app: clear-demo-job
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: clear-demo
+          image: alpine:latest
+          # Script mirrors docker-compose.yml clear-demo service command — keep in sync
+          command: ["sh", "-c"]
+          args:
+            - |
+              apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
+              DEMO_PROJECT="${DEMO_PROJECT:-demo-crud-server}"
+              echo "=== Clearing demo project: $DEMO_PROJECT ==="
+              echo "--- PostgreSQL ---"
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d constant_tracker -c "
+                DELETE FROM solr_outbox_dead WHERE project = '$DEMO_PROJECT';
+                DELETE FROM solr_outbox      WHERE project = '$DEMO_PROJECT';
+                DELETE FROM version_deletions WHERE project = '$DEMO_PROJECT';
+                DELETE FROM unit_descriptors  WHERE project = '$DEMO_PROJECT';
+                DELETE FROM project_versions  WHERE project = '$DEMO_PROJECT';
+              " && echo " PostgreSQL cleared"
+              echo "--- Solr ---"
+              until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
+              curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
+                -H "Content-Type: application/json" \
+                -d "{\"delete\":{\"query\":\"project:\\\"$DEMO_PROJECT\\\"\"}}" && echo " Solr cleared"
+              echo "--- Redis ---"
+              KEYS=$(redis-cli -h redis --scan --pattern "*$DEMO_PROJECT*")
+              if [ -n "$KEYS" ]; then
+                echo "$KEYS" | xargs redis-cli -h redis DEL && echo " Redis keys cleared"
+              else
+                echo " No Redis keys found for $DEMO_PROJECT"
+              fi
+              echo "=== Clear-demo complete ==="
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DEMO_PROJECT
+              value: "demo-crud-server"
+      restartPolicy: Never

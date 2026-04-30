@@ -1,0 +1,52 @@
+#ui - deployment abd service
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+    name: ui
+    namespace: constant-tracker
+    labels:
+        app: ui
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: ui
+    template:
+        metadata:
+            labels:
+                app: ui
+        spec:
+            containers:
+                - name: ui
+                  image: ghcr.io/gabriel-glodean/constant-tracker-ui:latest
+                  ports:
+                      - containerPort: 80
+                  readinessProbe:
+                      httpGet:
+                          path: /
+                          port: 80
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                  livenessProbe:
+                      httpGet:
+                          path: /
+                          port: 80
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: ui
+    namespace: constant-tracker
+spec:
+    type: ClusterIP
+    selector:
+        app: ui
+    ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 80

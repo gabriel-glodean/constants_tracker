@@ -1,0 +1,5 @@
+# namespace definition for the constant-tracker application
+kind: Namespace
+apiVersion: v1
+metadata:
+    name: constant-tracker

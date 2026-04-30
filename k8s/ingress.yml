@@ -1,0 +1,19 @@
+#ingress resource for the application
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+    name: constant-tracker-ingress
+    namespace: constant-tracker
+spec:
+  ingressClassName: traefik
+  rules:
+        - host: ${INGRESS_HOST}
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: ui
+                    port:
+                      number: 80

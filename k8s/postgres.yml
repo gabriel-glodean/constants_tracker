@@ -1,0 +1,100 @@
+# Postgres Deployment, Service, and PersistentVolumeClaim
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: postgres-pvc
+  namespace: constant-tracker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+    name: postgres
+    namespace: constant-tracker
+    labels:
+        app: postgres
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: postgres
+    template:
+        metadata:
+            labels:
+                app: postgres
+        spec:
+            volumes:
+                - name: postgres-data
+                  persistentVolumeClaim:
+                    claimName: postgres-pvc
+            containers:
+                - name: postgres
+                  image: postgres:17-alpine
+                  env:
+                    - name: POSTGRES_DB
+                      valueFrom:
+                        configMapKeyRef:
+                          name: postgres-config
+                          key: POSTGRES_DB
+                    - name: PGDATA
+                      valueFrom:
+                        configMapKeyRef:
+                          name: postgres-config
+                          key: PGDATA
+                    - name: POSTGRES_USER
+                      valueFrom:
+                        secretKeyRef:
+                          name: postgres-secret
+                          key: POSTGRES_USER
+                    - name: POSTGRES_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: postgres-secret
+                          key: POSTGRES_PASSWORD
+                  volumeMounts:
+                    - name: postgres-data
+                      mountPath: /var/lib/postgresql/data
+                  ports:
+                    - containerPort: 5432
+                  readinessProbe:
+                    exec:
+                      command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "constant_tracker"]
+                    initialDelaySeconds: 10
+                    periodSeconds: 5
+                  livenessProbe:
+                    exec:
+                      command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "constant_tracker"]
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  resources:
+                    requests:
+                      memory: "512Mi"
+                      cpu: "500m"
+                    limits:
+                      memory: "2Gi"
+                      cpu: "1000m"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: postgres
+    namespace: constant-tracker
+    labels:
+        app: postgres
+spec:
+    selector:
+        app: postgres
+    ports:
+        - protocol: TCP
+          port: 5432
+          targetPort: 5432

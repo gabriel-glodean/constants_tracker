@@ -1,0 +1,102 @@
+# solr vpc, deployment, and service
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+    name: solr-pvc
+    namespace: constant-tracker
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 5Gi
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+    name: solr
+    namespace: constant-tracker
+    labels:
+        app: solr
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: solr
+    template:
+        metadata:
+            labels:
+                app: solr
+        spec:
+            volumes:
+                - name: solr-data
+                  persistentVolumeClaim:
+                    claimName: solr-pvc
+                - name: solr-init-config
+                  configMap:
+                    name: solr-init-config
+            containers:
+                - name: solr
+                  image: solr:10.0.0
+                  command:
+                    - bash
+                    - -lc
+                    - >
+                      mkdir -p /var/solr/data;
+                      chown -R 8983:8983 /var/solr/data;
+                      CORE=Constants;
+                      CORE_DIR=/var/solr/data/$CORE;
+                      if [ ! -d "$CORE_DIR" ]; then
+                        solr-precreate $CORE /opt/solr-config;
+                      fi && exec solr-foreground --user-managed
+                  env:
+                    - name: SOLR_JAVA_MEM
+                      valueFrom:
+                        configMapKeyRef:
+                          name: solr-config
+                          key: SOLR_JAVA_MEM
+                  volumeMounts:
+                    - name: solr-init-config
+                      mountPath: /opt/solr-config
+                      readOnly: true
+                    - name: solr-data
+                      mountPath: /var/solr
+                  ports:
+                    - containerPort: 8983
+                  readinessProbe:
+                    httpGet:
+                      path: /solr/Constants/admin/ping
+                      port: 8983
+                    initialDelaySeconds: 20
+                    periodSeconds: 5
+                    failureThreshold: 12
+                  livenessProbe:
+                    httpGet:
+                      path: /solr/Constants/admin/ping
+                      port: 8983
+                    initialDelaySeconds: 60
+                    periodSeconds: 10
+                    failureThreshold: 5
+                  resources:
+                    requests:
+                      memory: "1Gi"
+                    limits:
+                      memory: "2Gi"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: solr
+    namespace: constant-tracker
+spec:
+    selector:
+        app: solr
+    ports:
+        - protocol: TCP
+          port: 8983
+          targetPort: 8983

@@ -1,5 +1,5 @@
 ###########################################################
-# Terraform: Docker Compose deployment to existing server
+# Terraform: k3s deployment to existing server
 ###########################################################
 terraform {
   required_version = ">= 1.5.0"
@@ -31,15 +31,10 @@ variable "ssh_user" {
   description = "SSH user on the target server"
 }
 
-# ---- Application images ----
-variable "app_image" {
-  type    = string
-  default = "ghcr.io/gabriel-glodean/constant-tracker-app:latest"
-}
-
-variable "ui_image" {
-  type    = string
-  default = "ghcr.io/gabriel-glodean/constant-tracker-ui:latest"
+variable "ingress_host" {
+  type        = string
+  default     = "tracker.gg-dev.org"
+  description = "Hostname for the Traefik ingress rule"
 }
 
 # ---- Secrets / environment ----
@@ -75,20 +70,18 @@ variable "spring_flyway_password" {
 
 variable "cors_allowed_origins" {
   type        = string
-  default     = "*"
+  default     = "https://tracker.gg-dev.org"
   description = "Comma-separated list of allowed CORS origins for the app"
 }
 
 ############################
-# Deploy via docker compose
+# Deploy via k3s
 ############################
 resource "null_resource" "deploy" {
-  # Re-deploy whenever the image tags or demo JARs change
   triggers = {
-    app_image   = var.app_image
-    ui_image    = var.ui_image
     v1_jar_hash = filemd5("${path.module}/demo-crud-server/build/libs/demo-crud-server-0.1.0-SNAPSHOT.jar")
     v2_jar_hash = filemd5("${path.module}/demo-crud-server-v2/build/libs/demo-crud-server-v2-0.2.0-SNAPSHOT.jar")
+    k8s_hash    = sha256(join("", [for f in sort(fileset("${path.module}/k8s", "*.yml")) : filemd5("${path.module}/k8s/${f}")]))
   }
 
   connection {
@@ -99,27 +92,41 @@ resource "null_resource" "deploy" {
     timeout     = "5m"
   }
 
+  # 0. Install k3s if not already present
+  provisioner "remote-exec" {
+    inline = [
+      "if ! command -v k3s > /dev/null 2>&1; then",
+      "  echo 'Installing k3s...'",
+      "  curl -sfL https://get.k3s.io | sh -",
+      "  echo 'k3s installed.'",
+      "else",
+      "  echo 'k3s already installed, skipping.'",
+      "fi",
+      "until kubectl get nodes > /dev/null 2>&1; do echo 'Waiting for k3s to be ready...'; sleep 3; done",
+      "echo 'k3s is ready.'",
+    ]
+  }
+
   # 1. Ensure directories exist
   provisioner "remote-exec" {
     inline = [
-      "mkdir -p /opt/constant-tracker/constant-tracker-app/solr",
-      "mkdir -p /opt/constant-tracker/.solr_data",
-      "mkdir -p /opt/constant-tracker/.postgres_data",
+      "mkdir -p /opt/constant-tracker/k8s",
+      "mkdir -p /opt/constant-tracker/solr",
       "mkdir -p /opt/constant-tracker/demo-crud-server/build/libs",
       "mkdir -p /opt/constant-tracker/demo-crud-server-v2/build/libs",
     ]
   }
 
-  # 2. Copy docker-compose.yml
+  # 2. Copy k8s manifests
   provisioner "file" {
-    source      = "${path.module}/docker-compose.yml"
-    destination = "/opt/constant-tracker/docker-compose.yml"
+    source      = "${path.module}/k8s/"
+    destination = "/opt/constant-tracker/k8s"
   }
 
-  # 3. Copy Solr config
+  # 3. Copy Solr config files (used for solr-init-config ConfigMap)
   provisioner "file" {
     source      = "${path.module}/constant-tracker-app/solr/"
-    destination = "/opt/constant-tracker/constant-tracker-app/solr"
+    destination = "/opt/constant-tracker/solr"
   }
 
   # 4. Copy demo JAR v1
@@ -134,56 +141,59 @@ resource "null_resource" "deploy" {
     destination = "/opt/constant-tracker/demo-crud-server-v2/build/libs/demo-crud-server-v2-0.2.0-SNAPSHOT.jar"
   }
 
-  # 6. Write .env file
-  provisioner "file" {
-    content     = <<-ENV
-      APP_IMAGE=${var.app_image}
-      UI_IMAGE=${var.ui_image}
-
-      POSTGRES_USER=${var.postgres_user}
-      POSTGRES_PASSWORD=${var.postgres_password}
-
-      SPRING_R2DBC_USERNAME=${var.spring_r2dbc_username}
-      SPRING_R2DBC_PASSWORD=${var.spring_r2dbc_password}
-
-      SPRING_FLYWAY_USER=${var.spring_flyway_user}
-      SPRING_FLYWAY_PASSWORD=${var.spring_flyway_password}
-
-      CORS_ALLOWED_ORIGINS=${var.cors_allowed_origins}
-
-      POSTGRES_HOST_PATH=/opt/constant-tracker/.postgres_data
-      SOLR_HOST_PATH=/opt/constant-tracker/.solr_data
-    ENV
-    destination = "/opt/constant-tracker/.env"
-  }
-
-  # 7. Tear down any stale containers, pull latest images, bring everything up fresh
+  # 6. Apply namespace and base configs; populate solr-init-config BEFORE solr.yml
+  #    so the Solr pod always starts with the real schema/solrconfig mounted.
   provisioner "remote-exec" {
     inline = [
-      "cd /opt/constant-tracker",
-      "echo 'Tearing down existing stack...'",
-      "docker compose down --remove-orphans --timeout 30 || true",
-      "echo 'Pulling latest images...'",
-      "docker compose pull",
-      "echo 'Starting services...'",
-      "docker compose up -d",
-      "echo 'Deployment complete.'",
+      "kubectl apply -f /opt/constant-tracker/k8s/namespace.yml",
+      "kubectl apply -f /opt/constant-tracker/k8s/configs.yml",
+      "kubectl create configmap solr-init-config --namespace=constant-tracker --from-file=managed-schema.xml=/opt/constant-tracker/solr/managed-schema.xml --from-file=solrconfig.xml=/opt/constant-tracker/solr/solrconfig.xml --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl apply -f /opt/constant-tracker/k8s/redis.yml",
+      "kubectl apply -f /opt/constant-tracker/k8s/postgres.yml",
+      "kubectl apply -f /opt/constant-tracker/k8s/solr.yml",
+      "kubectl apply -f /opt/constant-tracker/k8s/app.yml",
+      "kubectl apply -f /opt/constant-tracker/k8s/ui.yml",
     ]
   }
 
-  # 8. Clear stale demo data and seed — only when JARs have changed or never seeded
-  # --no-deps prevents compose run from trying to recreate already-running dependency containers
+  # 7. Create/update secrets (kubectl apply is idempotent via --dry-run trick)
   provisioner "remote-exec" {
     inline = [
-      "cd /opt/constant-tracker",
+      "kubectl create secret generic postgres-secret --namespace=constant-tracker --from-literal=POSTGRES_USER='${var.postgres_user}' --from-literal=POSTGRES_PASSWORD='${var.postgres_password}' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create secret generic app-secret --namespace=constant-tracker --from-literal=SPRING_R2DBC_USERNAME='${var.spring_r2dbc_username}' --from-literal=SPRING_R2DBC_PASSWORD='${var.spring_r2dbc_password}' --from-literal=SPRING_FLYWAY_USER='${var.spring_flyway_user}' --from-literal=SPRING_FLYWAY_PASSWORD='${var.spring_flyway_password}' --dry-run=client -o yaml | kubectl apply -f -",
+    ]
+  }
+
+
+  # 8. Patch app-config with runtime CORS value
+  provisioner "remote-exec" {
+    inline = [
+      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --dry-run=client -o yaml | kubectl apply -f -",
+    ]
+  }
+
+  # 9. Apply ingress with substituted host
+  provisioner "remote-exec" {
+    inline = [
+      "sed 's|$${INGRESS_HOST}|${var.ingress_host}|g' /opt/constant-tracker/k8s/ingress.yml | kubectl apply -f -",
+    ]
+  }
+
+  # 10. Seed demo data — only when JARs have changed or never seeded
+  provisioner "remote-exec" {
+    inline = [
       "CURRENT_HASH='${self.triggers.v1_jar_hash}_${self.triggers.v2_jar_hash}'",
-      "STORED_HASH=$(cat .seeded 2>/dev/null || echo '')",
+      "STORED_HASH=$(cat /opt/constant-tracker/.seeded 2>/dev/null || echo '')",
       "if [ \"$CURRENT_HASH\" != \"$STORED_HASH\" ]; then",
       "  echo 'JAR hashes differ or first run — clearing existing demo data...'",
-      "  docker compose --profile clear-demo run --rm --no-deps clear-demo || true",
+      "  kubectl delete job clear-demo-job --namespace=constant-tracker --ignore-not-found=true",
+      "  kubectl apply -f /opt/constant-tracker/k8s/jobs.yml --selector=app=clear-demo-job",
+      "  kubectl wait --for=condition=complete job/clear-demo-job --namespace=constant-tracker --timeout=120s || true",
       "  echo 'Seeding demo data...'",
-      "  docker compose --profile seed run --rm --no-deps seed",
-      "  echo \"$CURRENT_HASH\" > .seeded",
+      "  kubectl delete job seed-job --namespace=constant-tracker --ignore-not-found=true",
+      "  kubectl apply -f /opt/constant-tracker/k8s/jobs.yml --selector=app=seed-job",
+      "  kubectl wait --for=condition=complete job/seed-job --namespace=constant-tracker --timeout=300s",
+      "  echo \"$CURRENT_HASH\" > /opt/constant-tracker/.seeded",
       "  echo 'Seeding complete.'",
       "else",
       "  echo 'JARs unchanged — skipping clear and seed.'",
@@ -198,5 +208,5 @@ resource "null_resource" "deploy" {
 
 output "ui_url" {
   description = "Search UI endpoint"
-  value       = "http://${var.server_ip}:5173"
+  value       = "https://${var.ingress_host}"
 }
