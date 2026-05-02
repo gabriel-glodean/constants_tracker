@@ -82,6 +82,7 @@ resource "null_resource" "deploy" {
     v1_jar_hash = filemd5("${path.module}/demo-crud-server/build/libs/demo-crud-server-0.1.0-SNAPSHOT.jar")
     v2_jar_hash = filemd5("${path.module}/demo-crud-server-v2/build/libs/demo-crud-server-v2-0.2.0-SNAPSHOT.jar")
     k8s_hash    = sha256(join("", [for f in sort(fileset("${path.module}/k8s", "*.yml")) : filemd5("${path.module}/k8s/${f}")]))
+    always_run  = timestamp()
   }
 
   connection {
@@ -153,6 +154,16 @@ resource "null_resource" "deploy" {
       "kubectl apply -f /opt/constant-tracker/k8s/solr.yml",
       "kubectl apply -f /opt/constant-tracker/k8s/app.yml",
       "kubectl apply -f /opt/constant-tracker/k8s/ui.yml",
+    ]
+  }
+
+  # 6b. Force app and UI to pull latest image
+  provisioner "remote-exec" {
+    inline = [
+      "kubectl rollout restart deployment/app --namespace=constant-tracker",
+      "kubectl rollout restart deployment/ui --namespace=constant-tracker",
+      "kubectl rollout status deployment/app --namespace=constant-tracker --timeout=180s",
+      "kubectl rollout status deployment/ui --namespace=constant-tracker --timeout=120s",
     ]
   }
 

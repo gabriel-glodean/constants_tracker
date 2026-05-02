@@ -21,6 +21,7 @@ spec:
             containers:
                 - name: app
                   image: ghcr.io/gabriel-glodean/constant-tracker-app:latest
+                  imagePullPolicy: Always
                   ports:
                       - containerPort: 8080
                   env:
