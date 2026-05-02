@@ -17,7 +17,11 @@ import {
   Info,
 } from 'lucide-react'
 
-export function VersionManager() {
+interface VersionManagerProps {
+  authFetch?: typeof fetch
+}
+
+export function VersionManager({ authFetch }: VersionManagerProps = {}) {
   // ── lookup state ──
   const [project, setProject] = useState('')
   const [versionNum, setVersionNum] = useState('')
@@ -47,7 +51,7 @@ export function VersionManager() {
     setVersionData(null)
     setLoading(true)
     try {
-      const data = await getVersion(project.trim(), Number(versionNum))
+      const data = await getVersion(project.trim(), Number(versionNum), { fetcher: authFetch })
       setVersionData(data)
     } catch (err) {
       setStatus('error')
@@ -65,7 +69,7 @@ export function VersionManager() {
     clearStatus()
     setLoading(true)
     try {
-      const updated = await finalizeVersion(versionData.project, versionData.version)
+      const updated = await finalizeVersion(versionData.project, versionData.version, { fetcher: authFetch })
       setVersionData(updated)
       setStatus('success')
       setMessage(`Version ${updated.version} closed successfully.`)
@@ -82,7 +86,7 @@ export function VersionManager() {
     clearStatus()
     setLoading(true)
     try {
-      const removed = await syncRemovals(versionData.project, versionData.version)
+      const removed = await syncRemovals(versionData.project, versionData.version, { fetcher: authFetch })
       setSyncResult(removed)
       setStatus('success')
       setMessage(
@@ -104,7 +108,7 @@ export function VersionManager() {
     clearStatus()
     setLoading(true)
     try {
-      await deleteUnit(versionData.project, versionData.version, deleteClass.trim())
+      await deleteUnit(versionData.project, versionData.version, deleteClass.trim(), { fetcher: authFetch })
       setStatus('success')
       setMessage(`Unit "${deleteClass.trim()}" deleted from version ${versionData.version}.`)
       setDeleteClass('')

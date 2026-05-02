@@ -16,9 +16,11 @@ const API_BASE = ''
 
 export async function getVersion(
   project: string,
-  version: number
+  version: number,
+  options?: { fetcher?: typeof fetch }
 ): Promise<ProjectVersion> {
-  const res = await fetch(
+  const fetcher = options?.fetcher ?? globalThis.fetch
+  const res = await fetcher(
     `${API_BASE}/project/${encodeURIComponent(project)}/version/${version}`
   )
   if (!res.ok) {
@@ -30,9 +32,11 @@ export async function getVersion(
 
 export async function finalizeVersion(
   project: string,
-  version: number
+  version: number,
+  options?: { fetcher?: typeof fetch }
 ): Promise<ProjectVersion> {
-  const res = await fetch(
+  const fetcher = options?.fetcher ?? globalThis.fetch
+  const res = await fetcher(
     `${API_BASE}/project/${encodeURIComponent(project)}/version/${version}/finalize`,
     { method: 'POST' }
   )
@@ -46,9 +50,11 @@ export async function finalizeVersion(
 
 export async function syncRemovals(
   project: string,
-  version: number
+  version: number,
+  options?: { fetcher?: typeof fetch }
 ): Promise<string[]> {
-  const res = await fetch(
+  const fetcher = options?.fetcher ?? globalThis.fetch
+  const res = await fetcher(
     `${API_BASE}/project/${encodeURIComponent(project)}/version/${version}/sync`,
     { method: 'POST' }
   )
@@ -62,14 +68,16 @@ export async function syncRemovals(
 export async function deleteUnit(
   project: string,
   version: number,
-  className: string
+  className: string,
+  options?: { fetcher?: typeof fetch }
 ): Promise<void> {
+  const fetcher = options?.fetcher ?? globalThis.fetch
   const qs = new URLSearchParams({
     project,
     version: String(version),
     className,
   })
-  const res = await fetch(`${API_BASE}/class?${qs.toString()}`, {
+  const res = await fetcher(`${API_BASE}/class?${qs.toString()}`, {
     method: 'DELETE',
   })
   if (!res.ok) {
@@ -77,4 +85,3 @@ export async function deleteUnit(
     throw new Error(`Delete failed (HTTP ${res.status})`)
   }
 }
-

@@ -2,7 +2,11 @@ import { useRef, useState } from 'react'
 import { uploadClass, uploadJar, uploadConfig } from '@/api/uploadApi'
 import { Upload, FileArchive, FileCode2, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
 
-export function UploadForm() {
+interface UploadFormProps {
+  authFetch?: typeof fetch
+}
+
+export function UploadForm({ authFetch }: UploadFormProps = {}) {
   const [file, setFile] = useState<File | null>(null)
   const [project, setProject] = useState('')
   const [version, setVersion] = useState('')
@@ -17,11 +21,12 @@ export function UploadForm() {
     setStatus('loading')
     setMessage('')
     try {
+      const fetcher = authFetch
       const res = type === 'class'
-        ? await uploadClass({ file, project: project.trim(), version: version ? Number(version) : undefined })
+        ? await uploadClass({ file, project: project.trim(), version: version ? Number(version) : undefined, fetcher })
         : type === 'jar'
-        ? await uploadJar({ file, project: project.trim(), jarName: file.name })
-        : await uploadConfig({ file, project: project.trim(), version: version ? Number(version) : undefined })
+        ? await uploadJar({ file, project: project.trim(), jarName: file.name, fetcher })
+        : await uploadConfig({ file, project: project.trim(), version: version ? Number(version) : undefined, fetcher })
       setStatus(res.status)
       setMessage(res.message)
       if (res.status === 'success') setFile(null)
