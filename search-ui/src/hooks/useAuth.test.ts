@@ -59,9 +59,9 @@ describe('useAuth', () => {
       const { result } = renderHook(() => useAuth())
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      await act(async () => { await result.current.signIn('admin') })
+      await act(async () => { await result.current.signIn('alice', 'admin') })
 
-      expect(mockedLogin).toHaveBeenCalledWith('admin')
+      expect(mockedLogin).toHaveBeenCalledWith('alice', 'admin')
       expect(result.current.isAuthenticated).toBe(true)
       expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe(MOCK_TOKENS.refreshToken)
     })
@@ -73,7 +73,7 @@ describe('useAuth', () => {
       const { result } = renderHook(() => useAuth())
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      await expect(act(async () => { await result.current.signIn('wrong') })).rejects.toThrow('Invalid password.')
+      await expect(act(async () => { await result.current.signIn('alice', 'wrong') })).rejects.toThrow('Invalid password.')
       expect(result.current.isAuthenticated).toBe(false)
     })
   })

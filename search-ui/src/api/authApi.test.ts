@@ -14,10 +14,9 @@
 
 const MOCK_ACCESS_TOKEN = 'mock-access-token'
 const MOCK_REFRESH_TOKEN = 'mock-refresh-token'
-const MOCK_PASSWORD = 'admin'
 
 describe('authApi — mock mode (USE_MOCK = true)', () => {
-  let login: (p: string) => Promise<{ accessToken: string; refreshToken: string }>
+  let login: (u: string, p: string) => Promise<{ accessToken: string; refreshToken: string }>
   let refreshAccessToken: (rt: string) => Promise<{ accessToken: string }>
   let logout: (rt: string) => Promise<void>
 
@@ -31,15 +30,12 @@ describe('authApi — mock mode (USE_MOCK = true)', () => {
     logout = mod.logout
   })
 
-  it('login resolves with tokens on correct password', async () => {
-    const result = await login(MOCK_PASSWORD)
+  it('login resolves with tokens for any username and password', async () => {
+    const result = await login('anyuser', 'anypassword')
     expect(result.accessToken).toBe(MOCK_ACCESS_TOKEN)
     expect(result.refreshToken).toBe(MOCK_REFRESH_TOKEN)
   })
 
-  it('login rejects with "Invalid password." on wrong password', async () => {
-    await expect(login('wrong')).rejects.toThrow('Invalid password.')
-  })
 
   it('refreshAccessToken resolves with a new access token for valid refresh token', async () => {
     const result = await refreshAccessToken(MOCK_REFRESH_TOKEN)
@@ -74,7 +70,7 @@ describe('authApi — real mode (fetch-based)', () => {
       const res = await fetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: 'secret' }),
+        body: JSON.stringify({ username: 'alice', password: 'secret' }),
       })
       const body = await res.json()
 

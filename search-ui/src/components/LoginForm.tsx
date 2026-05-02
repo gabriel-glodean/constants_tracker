@@ -4,10 +4,11 @@ import { Lock, X, LogIn } from 'lucide-react'
 interface LoginModalProps {
   onSuccess: () => void
   onClose: () => void
-  signIn: (password: string) => Promise<void>
+  signIn: (username: string, password: string) => Promise<void>
 }
 
 export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -17,7 +18,7 @@ export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
     setError('')
     setIsLoading(true)
     try {
-      await signIn(password)
+      await signIn(username, password)
       onSuccess()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -57,13 +58,26 @@ export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="Enter username"
+              autoFocus
+              autoComplete="username"
+              className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Enter password"
-              autoFocus
+              autoComplete="current-password"
               className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
@@ -74,7 +88,7 @@ export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
 
           <button
             type="submit"
-            disabled={!password || isLoading}
+            disabled={!username || !password || isLoading}
             className="w-full h-10 rounded-lg bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             {isLoading
@@ -88,4 +102,3 @@ export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
     </div>
   )
 }
-

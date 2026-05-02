@@ -5,7 +5,6 @@ export interface AuthTokens {
 
 // ─── Toggle this to false once the real backend is ready ───────────────────
 const USE_MOCK = true
-const MOCK_PASSWORD = 'admin'
 const MOCK_ACCESS_TOKEN = 'mock-access-token'
 const MOCK_REFRESH_TOKEN = 'mock-refresh-token'
 
@@ -15,11 +14,11 @@ function delay(ms = 600) {
 
 // ─── Real implementations ───────────────────────────────────────────────────
 
-async function realLogin(password: string): Promise<AuthTokens> {
+async function realLogin(username: string, password: string): Promise<AuthTokens> {
   const res = await fetch('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
   })
   if (!res.ok) {
     if (res.status === 401) throw new Error('Invalid password.')
@@ -48,9 +47,8 @@ async function realLogout(refreshToken: string): Promise<void> {
 
 // ─── Mock implementations ───────────────────────────────────────────────────
 
-async function mockLogin(password: string): Promise<AuthTokens> {
+async function mockLogin(_username: string, _password: string): Promise<AuthTokens> {
   await delay()
-  if (password !== MOCK_PASSWORD) throw new Error('Invalid password.')
   return { accessToken: MOCK_ACCESS_TOKEN, refreshToken: MOCK_REFRESH_TOKEN }
 }
 

@@ -17,46 +17,64 @@ beforeEach(() => {
 })
 
 describe('LoginModal', () => {
-  it('renders the password field and sign in button', () => {
+  it('renders the username field, password field and sign in button', () => {
     renderModal()
+    expect(screen.getByPlaceholderText(/enter username/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter password/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
-  it('sign in button is disabled when password is empty', () => {
+  it('sign in button is disabled when both fields are empty', () => {
     renderModal()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled()
   })
 
-  it('sign in button becomes enabled when password is typed', async () => {
+  it('sign in button is disabled when only username is filled', async () => {
     const user = userEvent.setup()
     renderModal()
+    await user.type(screen.getByPlaceholderText(/enter username/i), 'alice')
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled()
+  })
+
+  it('sign in button is disabled when only password is filled', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.type(screen.getByPlaceholderText(/enter password/i), 'secret')
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled()
+  })
+
+  it('sign in button becomes enabled when both fields are filled', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.type(screen.getByPlaceholderText(/enter username/i), 'alice')
     await user.type(screen.getByPlaceholderText(/enter password/i), 'secret')
     expect(screen.getByRole('button', { name: /sign in/i })).toBeEnabled()
   })
 
-  it('calls signIn and onSuccess on correct password', async () => {
+  it('calls signIn with username and password and calls onSuccess', async () => {
     const user = userEvent.setup()
     mockSignIn.mockResolvedValue(undefined)
     renderModal()
 
-    await user.type(screen.getByPlaceholderText(/enter password/i), 'admin')
+    await user.type(screen.getByPlaceholderText(/enter username/i), 'alice')
+    await user.type(screen.getByPlaceholderText(/enter password/i), 'anypassword')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    await waitFor(() => expect(mockSignIn).toHaveBeenCalledWith('admin'))
+    await waitFor(() => expect(mockSignIn).toHaveBeenCalledWith('alice', 'anypassword'))
     expect(mockOnSuccess).toHaveBeenCalledTimes(1)
     expect(screen.queryByText(/invalid/i)).not.toBeInTheDocument()
   })
 
   it('shows error message when signIn rejects', async () => {
     const user = userEvent.setup()
-    mockSignIn.mockRejectedValue(new Error('Invalid password.'))
+    mockSignIn.mockRejectedValue(new Error('Invalid credentials.'))
     renderModal()
 
+    await user.type(screen.getByPlaceholderText(/enter username/i), 'alice')
     await user.type(screen.getByPlaceholderText(/enter password/i), 'wrong')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    await waitFor(() => expect(screen.getByText('Invalid password.')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Invalid credentials.')).toBeInTheDocument())
     expect(mockOnSuccess).not.toHaveBeenCalled()
   })
 
@@ -65,6 +83,7 @@ describe('LoginModal', () => {
     mockSignIn.mockRejectedValue('boom')
     renderModal()
 
+    await user.type(screen.getByPlaceholderText(/enter username/i), 'alice')
     await user.type(screen.getByPlaceholderText(/enter password/i), 'pw')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
@@ -96,19 +115,21 @@ describe('LoginModal', () => {
   it('clears the previous error when submitting again', async () => {
     const user = userEvent.setup()
     mockSignIn
-      .mockRejectedValueOnce(new Error('Invalid password.'))
+      .mockRejectedValueOnce(new Error('Invalid credentials.'))
       .mockResolvedValueOnce(undefined)
 
     renderModal()
-    const input = screen.getByPlaceholderText(/enter password/i)
+    const usernameInput = screen.getByPlaceholderText(/enter username/i)
+    const passwordInput = screen.getByPlaceholderText(/enter password/i)
     const btn = screen.getByRole('button', { name: /sign in/i })
 
-    await user.type(input, 'bad')
+    await user.type(usernameInput, 'alice')
+    await user.type(passwordInput, 'bad')
     await user.click(btn)
-    await waitFor(() => expect(screen.getByText('Invalid password.')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Invalid credentials.')).toBeInTheDocument())
 
     await user.click(btn)
-    await waitFor(() => expect(screen.queryByText('Invalid password.')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Invalid credentials.')).not.toBeInTheDocument())
   })
 })
 

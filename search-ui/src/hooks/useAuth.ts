@@ -22,8 +22,8 @@ export function useAuth() {
     restorePromise.finally(() => setIsLoading(false))
   }, [])
 
-  const signIn = useCallback(async (password: string) => {
-    const { accessToken: at, refreshToken: rt } = await apiLogin(password)
+  const signIn = useCallback(async (username: string, password: string) => {
+    const { accessToken: at, refreshToken: rt } = await apiLogin(username, password)
     localStorage.setItem(REFRESH_TOKEN_KEY, rt)
     setAccessToken(at)
   }, [])
