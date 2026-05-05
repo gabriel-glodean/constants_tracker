@@ -71,17 +71,8 @@ public class SecurityConfiguration {
                     .referrerPolicy(r -> r.policy(
                             ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
             );
-            http.authorizeExchange(ex -> ex
-                    .pathMatchers(
-                            "/auth/login",
-                            "/auth/refresh",
-                            "/auth/status",
-                            "/actuator/health",
-                            "/actuator/health/**",
-                            "/actuator/info",
-                            "/actuator/prometheus"
-                    ).permitAll()
-                    .anyExchange().authenticated());
+            http.authorizeExchange(ex -> ex.anyExchange().permitAll());
+
             // Custom entry point that returns 401 without WWW-Authenticate header
             http.exceptionHandling(exceptions -> exceptions
                     .authenticationEntryPoint((exchange, _) -> {

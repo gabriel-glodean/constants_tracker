@@ -81,7 +81,7 @@ function App() {
               )
             )}
             <a
-              href="https://github.com/gabrielglodean/constant-tracker"
+              href="https://github.com/gabriel-glodean/constants_tracker"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"

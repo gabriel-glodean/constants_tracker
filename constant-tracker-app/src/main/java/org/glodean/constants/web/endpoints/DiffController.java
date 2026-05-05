@@ -4,7 +4,6 @@ import org.glodean.constants.dto.ProjectDiffResponse;
 import org.glodean.constants.services.DiffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,7 +34,6 @@ public class DiffController {
     this.diffService = diffService;
   }
 
-  @PreAuthorize("permitAll()")
   @GetMapping("/{project}/diff")
   public Mono<ResponseEntity<ProjectDiffResponse>> diff(
       @PathVariable("project") String project,

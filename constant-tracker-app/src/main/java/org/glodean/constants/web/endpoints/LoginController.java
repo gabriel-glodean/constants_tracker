@@ -50,7 +50,7 @@ public class LoginController {
      *
      * @return 200 OK with {@link TokenResponse}, or 401 Unauthorized on bad credentials
      */
-    @PreAuthorize("permitAll()")
+
     @PostMapping("/login")
     public Mono<ResponseEntity<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
         return jwtService.authenticate(request.username(), request.password())
@@ -66,7 +66,6 @@ public class LoginController {
      * @param request body containing the raw refresh token
      * @return 200 OK with a new {@link TokenResponse}, or 401 if the refresh token is invalid
      */
-    @PreAuthorize("permitAll()")
     @PostMapping("/refresh")
     public Mono<ResponseEntity<TokenResponse>> refresh(@RequestBody RefreshRequest request) {
         return jwtService.refresh(request.refreshToken())
@@ -116,7 +115,7 @@ public class LoginController {
         String rawRefreshToken = body != null ? body.refreshToken() : null;
         log.atInfo().log("Logout requested by: {}", authentication.getName());
         return jwtService.logout(accessToken, rawRefreshToken)
-                .thenReturn(ResponseEntity.noContent().<Void>build());
+                .thenReturn(ResponseEntity.noContent().build());
     }
 
     private static String extractBearer(String authHeader) {

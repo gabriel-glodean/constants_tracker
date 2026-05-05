@@ -59,8 +59,6 @@ import reactor.core.publisher.Mono;
  *      -d '{"key": "java/lang/String"}'
  * </pre>
  *
- * @param storage           the backing store for persisting analysis results
- * @param extractionService service for creating bytecode extractors
  */
 @RestController
 @RequestMapping("/class")

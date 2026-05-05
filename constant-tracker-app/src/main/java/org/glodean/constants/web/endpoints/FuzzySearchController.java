@@ -4,7 +4,6 @@ import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,8 +35,6 @@ import reactor.core.publisher.Mono;
  * # Cross-project search
  * GET /search?project=*&amp;term=log4j
  * </pre>
- *
- * @param store the composite store (primary bean); fuzzy search is routed to Solr internally
  */
 @RestController
 @RequestMapping("/search")
@@ -61,7 +58,6 @@ public class FuzzySearchController {
      * @return 200 OK with {@link FuzzySearchResponse}, or 400 if parameters are invalid,
      * or 500 on search-engine failure
      */
-    @PreAuthorize("permitAll()")
     @GetMapping
     public Mono<ResponseEntity<FuzzySearchResponse>> search(
             @RequestParam("project") String project,
