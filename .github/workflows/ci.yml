@@ -41,6 +41,9 @@ jobs:
               - 'build.gradle'
               - 'settings.gradle'
               - 'gradle.properties'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
             ui:
               - 'search-ui/**'
               - 'k8s/ui.yml'
