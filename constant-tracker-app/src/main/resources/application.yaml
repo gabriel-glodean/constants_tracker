@@ -48,3 +48,17 @@ constants:
       compaction-cron: ${CONSTANTS_SOLR_OUTBOX_COMPACTION_CRON:0 0 3 * * *}
   cors:
     allowed-origin: http://localhost:5173
+  auth:
+    enabled: ${CONSTANTS_AUTH_ENABLED:true}
+    jwt:
+      secret: ${CONSTANTS_AUTH_JWT_SECRET:dev-only-secret-key-change-in-production-32ch}
+      expiration-ms: ${CONSTANTS_AUTH_JWT_EXPIRATION_MS:3600000} # 1 hour
+    refresh-token:
+      ttl-ms: ${CONSTANTS_AUTH_REFRESH_TOKEN_TTL_MS:604800000} # 7 days
+    cleanup:
+      # Cron for purging expired rows from auth_token_blacklist (default: 02:00 daily)
+      blacklist-cron: ${CONSTANTS_AUTH_CLEANUP_BLACKLIST_CRON:0 0 2 * * *}
+      # Cron for purging expired rows from auth_refresh_tokens (default: 02:15 daily)
+      refresh-tokens-cron: ${CONSTANTS_AUTH_CLEANUP_REFRESH_TOKENS_CRON:0 15 2 * * *}
+  cache:
+    ttl-seconds: ${CONSTANTS_CACHE_TTL_SECONDS:3600} # 1 hour

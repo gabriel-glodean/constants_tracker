@@ -15,6 +15,10 @@
  *   <li>{@code PUT /class?project=X&version=Y} - Upload class with explicit version</li>
  *   <li>{@code POST /jar?project=X} - Upload JAR (all classes analyzed)</li>
  *   <li>{@code POST /class/search} - Query stored constants</li>
+ *   <li>{@code POST /auth/login} - Authenticate and receive a JWT</li>
+ *   <li>{@code POST /auth/token/renew} - Renew an existing JWT</li>
+ *   <li>{@code POST /auth/logout} - Invalidate the current token</li>
+ *   <li>{@code GET  /auth/status} - Discover whether auth is enforced</li>
  * </ul>
  *
  * <p><b>Example: Upload and query</b>

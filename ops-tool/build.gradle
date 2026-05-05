@@ -1,0 +1,66 @@
+plugins {
+    id 'application'
+    id 'org.graalvm.buildtools.native' version '0.10.6'
+}
+
+group = 'org.glodean'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Ensure all Java source files are compiled as UTF-8 regardless of the OS locale.
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Pin the JAR base name so the native-image classpath always resolves correctly.
+// (Gradle falls back to the directory name when rootProject.name is not resolved early.)
+tasks.named('jar') {
+    archiveBaseName.set('ops-tool')
+}
+
+application {
+    mainClass = 'org.glodean.opstool.Main'
+}
+
+dependencies {
+    // PostgreSQL JDBC — ships with its own native-image metadata since 42.7
+    implementation 'org.postgresql:postgresql:42.7.5'
+
+    // Redis — sync client (3.x keeps ScanParams / ScanResult at the root package)
+    implementation 'redis.clients:jedis:3.9.0'
+
+    // BCrypt — pure Java, no reflection required
+    implementation 'at.favre.lib:bcrypt:0.10.2'
+
+    runtimeOnly 'org.slf4j:slf4j-nop:2.0.17'
+
+}
+
+graalvmNative {
+    // Pull native-image metadata for Jedis and PostgreSQL JDBC automatically
+    metadataRepository {
+        enabled = true
+    }
+
+    binaries {
+        main {
+            imageName = 'ops-tool'
+            mainClass = 'org.glodean.opstool.Main'
+            buildArgs.addAll([
+                '--no-fallback',
+                '-H:+ReportExceptionStackTraces',
+            ])        }
+    }
+
+    // Use the GraalVM JDK already on PATH in the builder image
+    toolchainDetection = false
+}
+

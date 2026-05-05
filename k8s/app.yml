@@ -85,6 +85,16 @@ spec:
                             secretKeyRef:
                                 name: app-secret
                                 key: SPRING_FLYWAY_PASSWORD
+                      - name: CONSTANTS_AUTH_JWT_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: app-secret
+                                key: CONSTANTS_AUTH_JWT_SECRET
+                      - name: CONSTANTS_AUTH_ENABLED
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: CONSTANTS_AUTH_ENABLED
                   readinessProbe:
                       httpGet:
                           path: /actuator/health

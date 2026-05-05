@@ -147,6 +147,24 @@ describe('createAuthFetch', () => {
       await expect(authFetch('/api/data')).rejects.toThrow()
       expect(mockGlobalFetch).toHaveBeenCalledTimes(1)
     })
+
+    it('calls onSessionExpired when provided and refresh fails', async () => {
+      mockGlobalFetch.mockResolvedValue({ status: 401, ok: false })
+      const onSessionExpired = jest.fn()
+      const opts = makeOptions({ refresh: async () => { throw new Error('expired') } })
+      const authFetch = createAuthFetch({ ...opts, onSessionExpired })
+
+      await expect(authFetch('/api/data')).rejects.toThrow()
+      expect(onSessionExpired).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not throw if onSessionExpired is not provided', async () => {
+      mockGlobalFetch.mockResolvedValue({ status: 401, ok: false })
+      const opts = makeOptions({ refresh: async () => { throw new Error('expired') } })
+      const authFetch = createAuthFetch(opts) // no onSessionExpired
+
+      await expect(authFetch('/api/data')).rejects.toThrow('Session expired. Please sign in again.')
+    })
   })
 })
 

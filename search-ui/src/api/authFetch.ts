@@ -7,15 +7,18 @@ export interface AuthFetchOptions {
   refresh: () => Promise<string>
   /** Called with the newly obtained access token so the hook can update state. */
   onNewToken: (token: string) => void
+  /** Called when the refresh itself fails so the caller can clear session state. */
+  onSessionExpired?: () => void
 }
 
 /**
  * Returns a drop-in `fetch` replacement that:
  *  1. Injects `Authorization: Bearer <token>` on every request.
  *  2. On a 401 response, silently refreshes the access token and retries once.
- *  3. If the refresh itself fails, throws "Session expired. Please sign in again."
+ *  3. If the refresh itself fails, calls onSessionExpired (if provided) then
+ *     throws "Session expired. Please sign in again."
  */
-export function createAuthFetch({ getToken, refresh, onNewToken }: AuthFetchOptions): AuthFetch {
+export function createAuthFetch({ getToken, refresh, onNewToken, onSessionExpired }: AuthFetchOptions): AuthFetch {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     // ── First attempt ────────────────────────────────────────────────────────
     const token = getToken()
@@ -31,6 +34,7 @@ export function createAuthFetch({ getToken, refresh, onNewToken }: AuthFetchOpti
       newToken = await refresh()
       onNewToken(newToken)
     } catch {
+      onSessionExpired?.()
       throw new Error('Session expired. Please sign in again.')
     }
 
@@ -39,4 +43,3 @@ export function createAuthFetch({ getToken, refresh, onNewToken }: AuthFetchOpti
     return globalThis.fetch(input, { ...init, headers: retryHeaders })
   }
 }
-

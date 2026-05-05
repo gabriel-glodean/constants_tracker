@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -36,10 +37,21 @@ import reactor.core.scheduler.Schedulers;
  */
 @RestController
 @RequestMapping("/config")
-public record ConfigFileController(
-        @Autowired UnitConstantsStore storage,
-        @Autowired YamlConstantsExtractor yamlExtractor,
-        @Autowired PropertiesConstantsExtractor propertiesExtractor) {
+public class ConfigFileController {
+
+    private final UnitConstantsStore storage;
+    private final YamlConstantsExtractor yamlExtractor;
+    private final PropertiesConstantsExtractor propertiesExtractor;
+
+    @Autowired
+    public ConfigFileController(
+            UnitConstantsStore storage,
+            YamlConstantsExtractor yamlExtractor,
+            PropertiesConstantsExtractor propertiesExtractor) {
+        this.storage = storage;
+        this.yamlExtractor = yamlExtractor;
+        this.propertiesExtractor = propertiesExtractor;
+    }
 
     /**
      * Upload a config file and store extracted constants with an explicit version.
@@ -49,19 +61,14 @@ public record ConfigFileController(
      * @param version  the explicit version number
      * @return 200 OK if successful, 422 if the file type is unsupported, 500 on error
      */
+    @PreAuthorize("isAuthenticated()")
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<Object>> storeConfigVersioned(
             @RequestPart("file") Mono<FilePart> filePart,
             @RequestParam("project") String project,
             @RequestParam("version") int version) {
         return extractFromUpload(filePart)
-                .flatMap(unit -> storage.store(unit, project, version).thenReturn(ResponseEntity.ok().build()))
-                .onErrorResume(
-                        IllegalArgumentException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        Exception.class,
-                        _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                .flatMap(unit -> storage.store(unit, project, version).thenReturn(ResponseEntity.ok().build()));
     }
 
     /**
@@ -71,18 +78,13 @@ public record ConfigFileController(
      * @param project  the project identifier
      * @return 200 OK if successful, 422 if the file type is unsupported, 500 on error
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<Object>> storeConfig(
             @RequestPart("file") Mono<FilePart> filePart,
             @RequestParam("project") String project) {
         return extractFromUpload(filePart)
-                .flatMap(unit -> storage.store(unit, project).thenReturn(ResponseEntity.ok().build()))
-                .onErrorResume(
-                        IllegalArgumentException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        Exception.class,
-                        _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                .flatMap(unit -> storage.store(unit, project).thenReturn(ResponseEntity.ok().build()));
     }
 
     /**
@@ -106,7 +108,7 @@ public record ConfigFileController(
         });
     }
 
-    private UnitConstants extractConstants(Path path, String fileName) {
+    private UnitConstants extractConstants(Path path, String fileName) throws Exception {
         String lower = fileName.toLowerCase();
         var result = (lower.endsWith(".yml") || lower.endsWith(".yaml"))
                 ? yamlExtractor.extract(path)
@@ -115,7 +117,7 @@ public record ConfigFileController(
                         : null;
 
         if (result == null || result.isEmpty()) {
-            throw new IllegalArgumentException(
+            throw new org.glodean.constants.extractor.ModelExtractor.ExtractionException(
                     "Unsupported config file type: " + fileName
                             + ". Supported: .yml, .yaml, .properties");
         }

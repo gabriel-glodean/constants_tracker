@@ -100,76 +100,47 @@ services:
       - app_network
 
   clear:
-    image: alpine:latest
+    image: ${OPS_TOOL_IMAGE:-ghcr.io/gabriel-glodean/ops-tool:latest}
+    build:
+      context: .
+      dockerfile: ops-tool/Dockerfile
     container_name: clear
     profiles:
       - clear
     depends_on:
-      - postgres
-      - redis
-      - solr
+      app:
+        condition: service_healthy
     environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
-        echo "=== Clearing PostgreSQL ==="
-        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "TRUNCATE unit_descriptors, project_versions, version_deletions, solr_outbox, solr_outbox_dead CASCADE;"
-        echo "=== Clearing Solr ==="
-        until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
-        curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
-          -H "Content-Type: application/json" \
-          -d '{"delete":{"query":"*:*"}}' && echo " Solr cleared"
-        echo "=== Clearing Redis ==="
-        redis-cli -h redis FLUSHALL && echo " Redis cleared"
-        echo "=== Clear complete ==="
+      CMD: clear
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
       - app_network
 
   clear-demo:
-    image: alpine:latest
+    image: ${OPS_TOOL_IMAGE:-ghcr.io/gabriel-glodean/ops-tool:latest}
+    build:
+      context: .
+      dockerfile: ops-tool/Dockerfile
     container_name: clear-demo
     profiles:
       - clear-demo
     depends_on:
-      - postgres
-      - redis
-      - solr
+      app:
+        condition: service_healthy
     environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD}
+      CMD: clear-demo
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DEMO_PROJECT: ${DEMO_PROJECT:-demo-crud-server}
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        apk add --no-cache postgresql-client redis curl > /dev/null 2>&1
-        echo "=== Clearing demo project: $${DEMO_PROJECT} ==="
-        echo "--- PostgreSQL ---"
-        psql -h postgres -U ${POSTGRES_USER} -d constant_tracker -c "
-          DELETE FROM solr_outbox_dead WHERE project = '$${DEMO_PROJECT}';
-          DELETE FROM solr_outbox      WHERE project = '$${DEMO_PROJECT}';
-          DELETE FROM version_deletions WHERE project = '$${DEMO_PROJECT}';
-          DELETE FROM unit_descriptors  WHERE project = '$${DEMO_PROJECT}';
-          DELETE FROM project_versions  WHERE project = '$${DEMO_PROJECT}';
-        " && echo " PostgreSQL cleared"
-        echo "--- Solr ---"
-        until curl -sf http://solr:8983/solr/Constants/admin/ping > /dev/null 2>&1; do sleep 1; done
-        curl -sf -X POST "http://solr:8983/solr/Constants/update?commit=true" \
-          -H "Content-Type: application/json" \
-          -d "{\"delete\":{\"query\":\"project:\\\"$${DEMO_PROJECT}\\\"\"}}" && echo " Solr cleared"
-        echo "--- Redis ---"
-        KEYS=$(redis-cli -h redis --scan --pattern "*$${DEMO_PROJECT}*")
-        if [ -n "$${KEYS}" ]; then
-          echo "$${KEYS}" | xargs redis-cli -h redis DEL && echo " Redis keys cleared"
-        else
-          echo " No Redis keys found for $${DEMO_PROJECT}"
-        fi
-        echo "=== Clear-demo complete ==="
     networks:
       - app_network
 
   seed:
-    image: curlimages/curl:latest
+    image: ${OPS_TOOL_IMAGE:-ghcr.io/gabriel-glodean/ops-tool:latest}
+    build:
+      context: .
+      dockerfile: ops-tool/Dockerfile
     container_name: seed
     profiles:
       - seed
@@ -179,41 +150,31 @@ services:
     volumes:
       - ./demo-crud-server/build/libs:/seed/jars/v1:ro
       - ./demo-crud-server-v2/build/libs:/seed/jars/v2:ro
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        PROJECT="demo-crud-server"
-        APP="http://app:8080"
+    environment:
+      CMD: seed
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      DEMO_USERNAME: ${DEMO_USERNAME:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    networks:
+      - app_network
 
-        upload_jar_dir() {
-          local jar_dir="$$1"
-          for jar in "$$jar_dir"/*.jar; do
-            [ -f "$$jar" ] || continue
-            jarname=$$(basename "$$jar")
-            echo "Uploading: $$jarname"
-            curl -sf -X POST "$$APP/jar?project=$$PROJECT&jarName=$$jarname" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary "@$$jar" && echo " OK" || echo " FAILED"
-          done
-        }
-
-        sync_and_finalize() {
-          local version="$$1"
-          echo "--- Syncing removals: $$PROJECT v$$version ---"
-          curl -sf -X POST "$$APP/project/$$PROJECT/version/$$version/sync" && echo " sync OK" || echo " sync FAILED"
-          echo "--- Finalizing: $$PROJECT v$$version ---"
-          curl -sf -X POST "$$APP/project/$$PROJECT/version/$$version/finalize" && echo " finalize OK" || echo " finalize FAILED"
-        }
-
-        echo "=== Seeding v1 ==="
-        upload_jar_dir "/seed/jars/v1"
-        sync_and_finalize 1
-
-        echo "=== Seeding v2 ==="
-        upload_jar_dir "/seed/jars/v2"
-        sync_and_finalize 2
-
-        echo "=== Seed complete ==="
+  seed-auth-user:
+    image: ${OPS_TOOL_IMAGE:-ghcr.io/gabriel-glodean/ops-tool:latest}
+    build:
+      context: .
+      dockerfile: ops-tool/Dockerfile
+    container_name: seed-auth-user
+    profiles:
+      - seed-auth-user
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CMD: seed-auth-user
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEMO_USERNAME: ${DEMO_USERNAME}
+      DEMO_PASSWORD: ${DEMO_PASSWORD}
     networks:
       - app_network
 

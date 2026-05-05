@@ -47,6 +47,8 @@ jest.mock('@/components/LoginForm', () => ({
 // ── Auth hook — expose a setter so individual tests can flip the auth state ──
 
 let mockIsAuthenticated = false
+let mockAuthRequired = true
+let mockBackendAvailable = true
 const mockSignIn = jest.fn()
 const mockSignOut = jest.fn()
 const mockAuthFetch = jest.fn()
@@ -55,6 +57,9 @@ jest.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     isLoading: false,
+    authRequired: mockAuthRequired,
+    backendAvailable: mockBackendAvailable,
+    canAccess: !mockAuthRequired || mockIsAuthenticated,
     signIn: mockSignIn,
     signOut: mockSignOut,
     authFetch: mockAuthFetch,
@@ -95,6 +100,8 @@ function mockMatchMedia(mobileWidth = 375) {
 
 beforeEach(() => {
   mockIsAuthenticated = false
+  mockAuthRequired = true
+  mockBackendAvailable = true
   jest.clearAllMocks()
   mockMatchMedia(375) // default to mobile width
 })
@@ -393,7 +400,51 @@ describe('Auth gate — mobile behaviour', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6. window.matchMedia availability
+// 7. Backend status — warning banner and auth-not-required behaviour
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Backend status', () => {
+  it('shows a warning banner when backend is unavailable', () => {
+    mockBackendAvailable = false
+    render(<App />)
+    expect(screen.getByText(/Backend unavailable/i)).toBeInTheDocument()
+  })
+
+  it('does not show the warning banner when backend is available', () => {
+    mockBackendAvailable = true
+    render(<App />)
+    expect(screen.queryByText(/Backend unavailable/i)).not.toBeInTheDocument()
+  })
+
+  it('hides the sign-in/sign-out buttons when auth is not required', () => {
+    mockAuthRequired = false
+    render(<App />)
+    expect(screen.queryByTitle('Sign in')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Sign out')).not.toBeInTheDocument()
+  })
+
+  it('upload form is fully enabled when auth is not required', async () => {
+    mockAuthRequired = false
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByTitle(/Index a .class/i))
+    const wrapper = screen.getByTestId('upload-form').parentElement
+    expect(wrapper?.className).not.toContain('pointer-events-none')
+    expect(screen.queryByText(/Sign in to use this feature/i)).not.toBeInTheDocument()
+  })
+
+  it('versions form is fully enabled when auth is not required', async () => {
+    mockAuthRequired = false
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByTitle(/Manage project versions/i))
+    const wrapper = screen.getByTestId('version-manager').parentElement
+    expect(wrapper?.className).not.toContain('pointer-events-none')
+    expect(screen.queryByText(/Sign in to use this feature/i)).not.toBeInTheDocument()
+  })
+})
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('window.matchMedia — mobile environment', () => {

@@ -15,9 +15,12 @@ import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 /**
@@ -61,10 +64,21 @@ import reactor.core.publisher.Mono;
  */
 @RestController
 @RequestMapping("/class")
-public record ClassBinariesController(
-        @Autowired UnitConstantsStore storage,
-        @Autowired ExtractionService extractionService,
-        @Autowired ProjectVersionService projectVersionService) {
+public class ClassBinariesController {
+
+    private final UnitConstantsStore storage;
+    private final ExtractionService extractionService;
+    private final ProjectVersionService projectVersionService;
+
+    @Autowired
+    public ClassBinariesController(
+            UnitConstantsStore storage,
+            ExtractionService extractionService,
+            ProjectVersionService projectVersionService) {
+        this.storage = storage;
+        this.extractionService = extractionService;
+        this.projectVersionService = projectVersionService;
+    }
 
     /**
      * Store a class file for a specific project and version.
@@ -79,6 +93,7 @@ public record ClassBinariesController(
      * 422 Unprocessable Entity if bytecode is invalid,
      * 500 Internal Server Error for other failures
      */
+    @PreAuthorize("isAuthenticated()")
     @PutMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeClass(
             @RequestBody Mono<DataBuffer> javaClass,
@@ -86,15 +101,7 @@ public record ClassBinariesController(
             @RequestParam("version") int version) {
         return modelMono(javaClass)
                 .flatMap(classConstants -> storage.store(classConstants, project, version)
-                        .thenReturn(ResponseEntity.ok().build()))
-                .onErrorResume(
-                        ModelExtractor.ExtractionException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        IllegalArgumentException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                        .thenReturn(ResponseEntity.ok().build()));
     }
 
     /**
@@ -110,22 +117,13 @@ public record ClassBinariesController(
      * 422 Unprocessable Entity if bytecode is invalid,
      * 500 Internal Server Error for other failures
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeClass(
             @RequestBody Mono<DataBuffer> javaClass, @RequestParam("project") String project) {
         return modelMono(javaClass)
                 .flatMap(classConstants -> storage.store(classConstants, project)
-                        .thenReturn(ResponseEntity.ok().build()))
-                .onErrorResume(
-                        ModelExtractor.ExtractionException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        IllegalArgumentException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        Exception.class,
-                        _ -> Mono.just(ResponseEntity.internalServerError().build()));
-
+                        .thenReturn(ResponseEntity.ok().build()));
     }
 
     /**
@@ -180,6 +178,7 @@ public record ClassBinariesController(
      *         404 Not Found if no matching snapshot exists,
      *         500 Internal Server Error for other failures
      */
+    @PreAuthorize("permitAll()")
     @GetMapping
     public Mono<ResponseEntity<GetUnitConstantsReply>> classConstants(
             @RequestParam("project") String project,
@@ -189,10 +188,9 @@ public record ClassBinariesController(
         return storage.find(key)
                 .map(GetUnitConstantsReply::new)
                 .map(ResponseEntity::ok)
-                .onErrorResume(
-                        IllegalArgumentException.class, _ -> Mono.just(ResponseEntity.notFound().build()))
-                .onErrorResume(
-                        Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                // "Unknown unit" from the store is semantically 404, not 400
+                .onErrorMap(IllegalArgumentException.class,
+                        e -> new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
     }
 
     /**
@@ -205,17 +203,13 @@ public record ClassBinariesController(
      * @return 204 No Content on success, 409 Conflict if the version is finalized,
      *         500 Internal Server Error for other failures
      */
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping
     public Mono<ResponseEntity<Object>> deleteUnit(
             @RequestParam("project") String project,
             @RequestParam("className") String className,
             @RequestParam("version") int version) {
         return projectVersionService.deleteUnit(project, version, className)
-                .thenReturn(ResponseEntity.noContent().<Object>build())
-                .onErrorResume(
-                        IllegalStateException.class,
-                        _ -> Mono.just(ResponseEntity.status(409).build()))
-                .onErrorResume(
-                        Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                .thenReturn(ResponseEntity.noContent().build());
     }
 }

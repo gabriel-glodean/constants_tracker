@@ -19,7 +19,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @Configuration
 public class WebCorsConfiguration {
 
-  @Value("${constants.cors.allowed-origins:http://localhost:5173}")
+  @Value("${constants.cors.allowed-origin:http://localhost:5173}")
   private String allowedOrigins;
 
   @Bean
@@ -31,8 +31,12 @@ public class WebCorsConfiguration {
     config.addAllowedMethod("GET");
     config.addAllowedMethod("POST");
     config.addAllowedMethod("PUT");
+    config.addAllowedMethod("DELETE");
     config.addAllowedMethod("OPTIONS");
     config.addAllowedHeader("*");
+    // Credentials (Authorization header) must be explicitly allowed; note that
+    // allowedOrigins must not contain "*" when credentials are enabled.
+    config.setAllowCredentials(true);
     config.setMaxAge(3600L);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

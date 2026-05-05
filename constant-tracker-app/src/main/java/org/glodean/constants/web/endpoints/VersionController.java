@@ -7,8 +7,11 @@ import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 /**
@@ -32,9 +35,18 @@ import reactor.core.publisher.Mono;
  */
 @RestController
 @RequestMapping("/project")
-public record VersionController(
-    @Autowired ProjectVersionService projectVersionService,
-    @Autowired UnitDescriptorRepository descriptorRepo) {
+public class VersionController {
+
+  private final ProjectVersionService projectVersionService;
+  private final UnitDescriptorRepository descriptorRepo;
+
+  @Autowired
+  public VersionController(
+      ProjectVersionService projectVersionService,
+      UnitDescriptorRepository descriptorRepo) {
+    this.projectVersionService = projectVersionService;
+    this.descriptorRepo = descriptorRepo;
+  }
 
   /**
    * Finalize a version — sealing it against further uploads or deletions.
@@ -47,22 +59,17 @@ public record VersionController(
    *         409 Conflict if the version is already finalized,
    *         500 Internal Server Error for other failures
    */
+  @PreAuthorize("isAuthenticated()")
   @PostMapping("/{project}/version/{version}/finalize")
   public Mono<ResponseEntity<ProjectVersionEntity>> finalizeVersion(
       @PathVariable("project") String project,
       @PathVariable("version") int version) {
     return projectVersionService
         .finalizeVersion(project, version)
-        .map(entity -> ResponseEntity.ok(entity))
-        .onErrorResume(
-            IllegalArgumentException.class,
-            _ -> Mono.just(ResponseEntity.notFound().build()))
-        .onErrorResume(
-            IllegalStateException.class,
-            _ -> Mono.just(ResponseEntity.status(409).build()))
-        .onErrorResume(
-            Exception.class,
-            _ -> Mono.just(ResponseEntity.internalServerError().build()));
+        .map(ResponseEntity::ok)
+        // "Version not found" is semantically 404, not 400
+        .onErrorMap(IllegalArgumentException.class,
+            e -> new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
   }
 
   /**
@@ -72,13 +79,14 @@ public record VersionController(
    * @param version the version number
    * @return 200 OK with the version entity, 404 Not Found if it does not exist
    */
+  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{project}/version/{version}")
   public Mono<ResponseEntity<ProjectVersionEntity>> getVersion(
       @PathVariable("project") String project,
       @PathVariable("version") int version) {
     return projectVersionService
         .getVersion(project, version)
-        .map(entity -> ResponseEntity.ok(entity))
+        .map(ResponseEntity::ok)
         .defaultIfEmpty(ResponseEntity.notFound().build());
   }
 
@@ -98,11 +106,11 @@ public record VersionController(
    *         409 Conflict if the version is finalized,
    *         500 Internal Server Error for other failures
    */
+  @PreAuthorize("isAuthenticated()")
   @PostMapping("/{project}/version/{version}/sync")
   public Mono<ResponseEntity<List<String>>> syncRemovals(
       @PathVariable("project") String project,
       @PathVariable("version") int version) {
-    // Collect the set of unit paths that were explicitly uploaded to this version
     return descriptorRepo
         .findAllByProjectAndVersion(project, version)
         .map(UnitDescriptorEntity::path)
@@ -111,12 +119,6 @@ public record VersionController(
             projectVersionService
                 .recordRemovals(project, version, uploadedPaths)
                 .collectList())
-        .map(removed -> ResponseEntity.ok(removed))
-        .onErrorResume(
-            IllegalStateException.class,
-            _ -> Mono.just(ResponseEntity.status(409).build()))
-        .onErrorResume(
-            Exception.class,
-            _ -> Mono.just(ResponseEntity.internalServerError().build()));
+        .map(ResponseEntity::ok);
   }
 }

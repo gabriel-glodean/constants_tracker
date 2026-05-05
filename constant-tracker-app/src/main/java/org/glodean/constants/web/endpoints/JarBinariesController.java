@@ -13,6 +13,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -44,6 +45,7 @@ public class JarBinariesController {
      *         422 Unprocessable Entity if the JAR is invalid,
      *         500 Internal Server Error for other failures
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeJar(
             @RequestBody Mono<DataBuffer> jarFile,
@@ -59,7 +61,13 @@ public class JarBinariesController {
                 .flatMapMany(bytes -> {
                     var descriptor = new UnitDescriptor(
                             BytecodeSourceKind.JAR, jarName, bytes.length, sha256(bytes));
-                    var modelExtractor = extractionService.extractorForJarFile(bytes);
+                    ModelExtractor modelExtractor;
+                    try {
+                        modelExtractor = extractionService.extractorForJarFile(bytes);
+                    } catch (IllegalArgumentException e) {
+                        return reactor.core.publisher.Flux.error(
+                                new ModelExtractor.ExtractionException(e.getMessage()));
+                    }
                     try {
                         return reactor.core.publisher.Flux.fromIterable(modelExtractor.extract(descriptor));
                     } catch (ModelExtractor.ExtractionException e) {
@@ -68,16 +76,7 @@ public class JarBinariesController {
                 })
                 .collectList()
                 .flatMap(allUnits -> storage.storeAll(allUnits, project))
-                .thenReturn(ResponseEntity.ok().build())
-                .onErrorResume(
-                        ModelExtractor.ExtractionException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        IllegalArgumentException.class,
-                        _ -> Mono.just(ResponseEntity.unprocessableEntity().build()))
-                .onErrorResume(
-                        Exception.class,
-                        _ -> Mono.just(ResponseEntity.internalServerError().build()));
+                .thenReturn(ResponseEntity.ok().build());
     }
 
     private static String sha256(byte[] bytes) {

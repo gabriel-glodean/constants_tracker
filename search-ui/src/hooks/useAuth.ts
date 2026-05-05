@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
-import { login as apiLogin, logout as apiLogout, refreshAccessToken } from '@/api/authApi'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { login as apiLogin, logout as apiLogout, refreshAccessToken, getAuthStatus } from '@/api/authApi'
+import { createAuthFetch } from '@/api/authFetch'
 
 const REFRESH_TOKEN_KEY = 'ct_refresh_token'
 
@@ -7,19 +8,36 @@ export function useAuth() {
   // Access token lives only in memory — never written to localStorage.
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authRequired, setAuthRequired] = useState(true)
+  const [backendAvailable, setBackendAvailable] = useState(true)
 
   const isAuthenticated = accessToken !== null
+  /** True when the user can access protected features (auth disabled OR signed in). */
+  const canAccess = !authRequired || isAuthenticated
 
-  // On mount: try to silently restore session from stored refresh token.
+  // On mount: probe /auth/status + silently restore session from stored refresh token.
   useEffect(() => {
+    const statusPromise = getAuthStatus()
+      .then(({ enabled }) => {
+        setAuthRequired(enabled)
+        setBackendAvailable(true)
+      })
+      .catch(() => {
+        setBackendAvailable(false)
+        // Keep authRequired as true so login UI still shows when connectivity returns.
+      })
+
     const stored = localStorage.getItem(REFRESH_TOKEN_KEY)
     const restorePromise = stored
       ? refreshAccessToken(stored)
-          .then(({ accessToken: newToken }: { accessToken: string }) => setAccessToken(newToken))
+          .then(({ accessToken: newToken, refreshToken: newRt }: { accessToken: string; refreshToken: string }) => {
+            localStorage.setItem(REFRESH_TOKEN_KEY, newRt)
+            setAccessToken(newToken)
+          })
           .catch(() => localStorage.removeItem(REFRESH_TOKEN_KEY))
       : Promise.resolve()
 
-    restorePromise.finally(() => setIsLoading(false))
+    Promise.all([statusPromise, restorePromise]).finally(() => setIsLoading(false))
   }, [])
 
   const signIn = useCallback(async (username: string, password: string) => {
@@ -38,28 +56,23 @@ export function useAuth() {
   }, [])
 
   // Injects Bearer token on every request and retries once on 401.
-  // Recreates when accessToken changes, so it always carries the latest token.
-  const authFetch = useCallback<typeof fetch>(async (input, init) => {
-    const headers = new Headers(init?.headers)
-    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+  // Recreated when accessToken changes so it always carries the latest token.
+  // Uses createAuthFetch — no logic is duplicated here.
+  const authFetch = useMemo(() => createAuthFetch({
+    getToken: () => accessToken,
+    refresh: async () => {
+      const rt = localStorage.getItem(REFRESH_TOKEN_KEY)
+      if (!rt) throw new Error('No refresh token')
+      const { accessToken: newAt, refreshToken: newRt } = await refreshAccessToken(rt)
+      localStorage.setItem(REFRESH_TOKEN_KEY, newRt)
+      return newAt
+    },
+    onNewToken: setAccessToken,
+    onSessionExpired: () => {
+      setAccessToken(null)
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
+    },
+  }), [accessToken])
 
-    const res = await globalThis.fetch(input, { ...init, headers })
-    if (res.status !== 401) return res
-
-    // Token expired — attempt silent refresh
-    const rt = localStorage.getItem(REFRESH_TOKEN_KEY)
-    if (!rt) throw new Error('Session expired. Please sign in again.')
-
-    try {
-      const { accessToken: newAt } = await refreshAccessToken(rt)
-      setAccessToken(newAt)
-      const retryHeaders = new Headers(init?.headers)
-      retryHeaders.set('Authorization', `Bearer ${newAt}`)
-      return globalThis.fetch(input, { ...init, headers: retryHeaders })
-    } catch {
-      throw new Error('Session expired. Please sign in again.')
-    }
-  }, [accessToken])
-
-  return { isAuthenticated, isLoading, accessToken, signIn, signOut, authFetch }
+  return { isAuthenticated, isLoading, authRequired, backendAvailable, canAccess, accessToken, signIn, signOut, authFetch }
 }

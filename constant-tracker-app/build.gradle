@@ -69,6 +69,24 @@ dependencies {
 
     // Testcontainers – PostgreSQL for integration tests
     testImplementation "org.testcontainers:postgresql"
+
+    // Spring Security – reactive (WebFlux) support
+    implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+
+    // Bean Validation (Hibernate Validator) — @NotBlank / @Valid on request bodies
+    implementation("org.springframework.boot:spring-boot-starter-validation:$springBootVersion") {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+
+    // JWT – JJWT 0.12.x (api on compile path; impl + jackson processor at runtime only)
+    implementation "io.jsonwebtoken:jjwt-api:$jjwtVersion"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:$jjwtVersion"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:$jjwtVersion"
+
+    // Security test support (MockUser, SecurityMockServerConfigurers, etc.)
+    testImplementation "org.springframework.security:spring-security-test"
 }
 
 // Safety: remove any accidental Logback on any configuration

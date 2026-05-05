@@ -4,6 +4,7 @@ import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,41 +41,47 @@ import reactor.core.publisher.Mono;
  */
 @RestController
 @RequestMapping("/search")
-public record FuzzySearchController(@Autowired UnitConstantsStore store) {
+public class FuzzySearchController {
 
-  /**
-   * Performs a fuzzy / full-text search over indexed constant values.
-   *
-   * @param project      restrict results to this project; pass {@code *} for all projects
-   * @param term         plain-text search term – no Lucene syntax required
-   * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo
-   *                     (default), {@code 2} = two typos
-   * @param rows         maximum number of hits (default 10, max 100)
-   * @return 200 OK with {@link FuzzySearchResponse}, or 400 if parameters are invalid,
-   *         or 500 on search-engine failure
-   */
-  @GetMapping
-  public Mono<ResponseEntity<FuzzySearchResponse>> search(
-      @RequestParam("project") String project,
-      @RequestParam("term") String term,
-      @RequestParam(value = "fuzzy", defaultValue = "1") int editDistance,
-      @RequestParam(value = "rows", defaultValue = "10") int rows) {
+    private final UnitConstantsStore store;
 
-    if (project == null || project.isBlank()) {
-      return Mono.just(ResponseEntity.badRequest().build());
-    }
-    if (term == null || term.isBlank()) {
-      return Mono.just(ResponseEntity.badRequest().build());
-    }
-    if (editDistance < 0 || editDistance > 2) {
-      return Mono.just(ResponseEntity.badRequest().build());
+    @Autowired
+    public FuzzySearchController(UnitConstantsStore store) {
+        this.store = store;
     }
 
-    int cappedRows = Math.min(Math.max(rows, 1), 100);
+    /**
+     * Performs a fuzzy / full-text search over indexed constant values.
+     *
+     * @param project      restrict results to this project; pass {@code *} for all projects
+     * @param term         plain-text search term – no Lucene syntax required
+     * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo
+     *                     (default), {@code 2} = two typos
+     * @param rows         maximum number of hits (default 10, max 100)
+     * @return 200 OK with {@link FuzzySearchResponse}, or 400 if parameters are invalid,
+     * or 500 on search-engine failure
+     */
+    @PreAuthorize("permitAll()")
+    @GetMapping
+    public Mono<ResponseEntity<FuzzySearchResponse>> search(
+            @RequestParam("project") String project,
+            @RequestParam("term") String term,
+            @RequestParam(value = "fuzzy", defaultValue = "1") int editDistance,
+            @RequestParam(value = "rows", defaultValue = "10") int rows) {
 
-    return store.fuzzySearch(project, term, editDistance, cappedRows)
-        .map(ResponseEntity::ok)
-        .onErrorResume(
-            Exception.class, _ -> Mono.just(ResponseEntity.internalServerError().build()));
-  }
+        if (project == null || project.isBlank()) {
+            throw new IllegalArgumentException("'project' must not be blank");
+        }
+        if (term == null || term.isBlank()) {
+            throw new IllegalArgumentException("'term' must not be blank");
+        }
+        if (editDistance < 0 || editDistance > 2) {
+            throw new IllegalArgumentException("'fuzzy' must be 0, 1, or 2");
+        }
+
+        int cappedRows = Math.clamp(rows, 1, 100);
+
+        return store.fuzzySearch(project, term, editDistance, cappedRows)
+                .map(ResponseEntity::ok);
+    }
 }

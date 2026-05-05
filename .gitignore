@@ -69,3 +69,5 @@ logs
 .env
 !.env.example
 *.postgres_data
+
+build-ops-tool.log

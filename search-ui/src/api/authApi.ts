@@ -3,18 +3,13 @@ export interface AuthTokens {
   refreshToken: string
 }
 
-// ─── Toggle this to false once the real backend is ready ───────────────────
-const USE_MOCK = true
-const MOCK_ACCESS_TOKEN = 'mock-access-token'
-const MOCK_REFRESH_TOKEN = 'mock-refresh-token'
-
-function delay(ms = 600) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+export interface AuthStatus {
+  enabled: boolean
 }
 
-// ─── Real implementations ───────────────────────────────────────────────────
+// ─── Auth endpoints ─────────────────────────────────────────────────────────
 
-async function realLogin(username: string, password: string): Promise<AuthTokens> {
+export async function login(username: string, password: string): Promise<AuthTokens> {
   const res = await fetch('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -22,22 +17,30 @@ async function realLogin(username: string, password: string): Promise<AuthTokens
   })
   if (!res.ok) {
     if (res.status === 401) throw new Error('Invalid password.')
+    if (res.status === 400) throw new Error('Username and password must not be blank.')
     throw new Error(`Login failed (HTTP ${res.status})`)
   }
   return res.json()
 }
 
-async function realRefreshAccessToken(refreshToken: string): Promise<Pick<AuthTokens, 'accessToken'>> {
+/**
+ * Exchanges a refresh token for a new access token **and** a rotated refresh token.
+ * The caller is responsible for persisting the new refresh token.
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<AuthTokens> {
   const res = await fetch('/auth/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
   })
-  if (!res.ok) throw new Error('Session expired. Please sign in again.')
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Session expired. Please sign in again.')
+    throw new Error(`Token refresh failed (HTTP ${res.status})`)
+  }
   return res.json()
 }
 
-async function realLogout(refreshToken: string): Promise<void> {
+export async function logout(refreshToken: string): Promise<void> {
   await fetch('/auth/logout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -45,26 +48,12 @@ async function realLogout(refreshToken: string): Promise<void> {
   })
 }
 
-// ─── Mock implementations ───────────────────────────────────────────────────
-
-async function mockLogin(_username: string, _password: string): Promise<AuthTokens> {
-  await delay()
-  return { accessToken: MOCK_ACCESS_TOKEN, refreshToken: MOCK_REFRESH_TOKEN }
+/**
+ * Fetches the backend auth status. Throws if the backend is unreachable.
+ * GET /auth/status → { enabled: boolean }
+ */
+export async function getAuthStatus(): Promise<AuthStatus> {
+  const res = await fetch('/auth/status')
+  if (!res.ok) throw new Error(`Auth status check failed (HTTP ${res.status})`)
+  return res.json()
 }
-
-async function mockRefreshAccessToken(refreshToken: string): Promise<Pick<AuthTokens, 'accessToken'>> {
-  await delay(300)
-  if (refreshToken !== MOCK_REFRESH_TOKEN) throw new Error('Session expired. Please sign in again.')
-  return { accessToken: MOCK_ACCESS_TOKEN }
-}
-
-async function mockLogout(): Promise<void> {
-  await delay(200)
-  // no-op in mock
-}
-
-// ─── Exported API (switches based on USE_MOCK) ───────────────────────────────
-
-export const login              = USE_MOCK ? mockLogin              : realLogin
-export const refreshAccessToken = USE_MOCK ? mockRefreshAccessToken : realRefreshAccessToken
-export const logout             = USE_MOCK ? mockLogout             : realLogout

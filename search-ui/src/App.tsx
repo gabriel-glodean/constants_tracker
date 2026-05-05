@@ -1,5 +1,5 @@
 import { useState, useRef, Fragment } from 'react'
-import { Database, GithubIcon, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch, GitCompareArrows, Lock, LogIn, LogOut } from 'lucide-react'
+import { Database, GithubIcon, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch, GitCompareArrows, Lock, LogIn, LogOut, ServerCrash } from 'lucide-react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { useSearch } from '@/hooks/useSearch'
@@ -24,13 +24,22 @@ type TabKey = typeof TABS[number]['key']
 function App() {
   const [tab, setTab] = useState<TabKey>('search')
   const { data, isLoading, error, hasSearched, search } = useSearch()
-  const { isAuthenticated, signIn, signOut, authFetch } = useAuth()
+  const { isAuthenticated, authRequired, backendAvailable, canAccess, signIn, signOut, authFetch } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [lastTerm, setLastTerm] = useState('')
   const resultsRef = useRef<HTMLDivElement>(null)
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Backend unavailable banner */}
+      {!backendAvailable && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-destructive/10 border-b border-destructive/30 text-sm text-destructive">
+          <ServerCrash className="h-4 w-4 shrink-0" />
+          <span className="font-medium">Backend unavailable</span>
+          <span className="text-destructive/80">— The server could not be reached. Search, upload, and other features may not work.</span>
+        </div>
+      )}
+
       {/* Login modal */}
       {showLoginModal && (
         <LoginModal
@@ -50,24 +59,26 @@ function App() {
             <span className="font-semibold text-sm tracking-tight">Constant Tracker</span>
           </div>
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <button
-                onClick={() => signOut()}
-                title="Sign out"
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign out</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowLoginModal(true)}
-                title="Sign in"
-                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline transition-colors"
-              >
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign in</span>
-              </button>
+            {authRequired && (
+              isAuthenticated ? (
+                <button
+                  onClick={() => signOut()}
+                  title="Sign out"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  title="Sign in"
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline transition-colors"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign in</span>
+                </button>
+              )
             )}
             <a
               href="https://github.com/gabrielglodean/constant-tracker"
@@ -177,7 +188,7 @@ function App() {
         {tab === 'upload' && (
           <section className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Upload Class, JAR, or Config</h1>
-            {!isAuthenticated && (
+            {!canAccess && (
               <div className="flex items-center gap-3 p-4 mb-6 rounded-xl border border-destructive/50 bg-destructive/5 text-sm">
                 <Lock className="h-4 w-4 text-destructive shrink-0" />
                 <p className="text-destructive">Sign in to use this feature.</p>
@@ -189,7 +200,7 @@ function App() {
                 </button>
               </div>
             )}
-            <div className={!isAuthenticated ? 'pointer-events-none opacity-40 select-none' : ''}>
+            <div className={!canAccess ? 'pointer-events-none opacity-40 select-none' : ''}>
               <UploadForm authFetch={authFetch} />
             </div>
           </section>
@@ -203,7 +214,7 @@ function App() {
         {tab === 'versions' && (
           <section className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Version Manager</h1>
-            {!isAuthenticated && (
+            {!canAccess && (
               <div className="flex items-center gap-3 p-4 mb-6 rounded-xl border border-destructive/50 bg-destructive/5 text-sm">
                 <Lock className="h-4 w-4 text-destructive shrink-0" />
                 <p className="text-destructive">Sign in to use this feature.</p>
@@ -215,7 +226,7 @@ function App() {
                 </button>
               </div>
             )}
-            <div className={!isAuthenticated ? 'pointer-events-none opacity-40 select-none' : ''}>
+            <div className={!canAccess ? 'pointer-events-none opacity-40 select-none' : ''}>
               <VersionManager authFetch={authFetch} />
             </div>
           </section>

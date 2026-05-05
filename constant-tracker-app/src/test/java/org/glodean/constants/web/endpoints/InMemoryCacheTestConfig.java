@@ -10,6 +10,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 
 @TestConfiguration
 public class InMemoryCacheTestConfig {
@@ -23,5 +25,13 @@ public class InMemoryCacheTestConfig {
   ExtractionService extractionService() {
     return new ConcreteExtractionService(
         new AnalysisMerger(new InternalStringConcatPatternSplitter()));
+  }
+
+  /** Disable security for controller slice tests — no auth headers required. */
+  @Bean
+  public SecurityWebFilterChain testSecurityFilterChain(ServerHttpSecurity http) {
+    http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+    http.authorizeExchange(ex -> ex.anyExchange().permitAll());
+    return http.build();
   }
 }

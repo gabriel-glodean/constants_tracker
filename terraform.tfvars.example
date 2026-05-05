@@ -27,3 +27,13 @@ spring_flyway_password = "change-me"
 # CORS — set to your domain / UI URL in production
 cors_allowed_origins = "https://your-domain.com"
 
+# Auth — JWT signing secret (Base64-encoded, min 32 bytes before encoding)
+# Generate with: openssl rand -base64 48
+auth_jwt_secret = "change-me-use-openssl-rand-base64-48"
+
+# Whether JWT authentication is enforced (set to false for local dev only)
+auth_enabled = true
+
+# Demo account seeded into auth_users on every deploy (idempotent)
+demo_username = "demo"
+demo_password = "change-me"

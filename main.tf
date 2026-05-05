@@ -74,6 +74,30 @@ variable "cors_allowed_origins" {
   description = "Comma-separated list of allowed CORS origins for the app"
 }
 
+variable "auth_enabled" {
+  type        = bool
+  default     = true
+  description = "Set to false to disable JWT enforcement (dev/test only)"
+}
+
+variable "auth_jwt_secret" {
+  type        = string
+  sensitive   = true
+  description = "Base64-encoded HS256 secret used to sign JWTs (min 32 chars before encoding)"
+}
+
+variable "demo_username" {
+  type        = string
+  default     = "demo"
+  description = "Username of the seeded demo account"
+}
+
+variable "demo_password" {
+  type        = string
+  sensitive   = true
+  description = "Plain-text password for the demo account (BCrypt-hashed inside Postgres via pgcrypto)"
+}
+
 ############################
 # Deploy via k3s
 ############################
@@ -171,7 +195,8 @@ resource "null_resource" "deploy" {
   provisioner "remote-exec" {
     inline = [
       "kubectl create secret generic postgres-secret --namespace=constant-tracker --from-literal=POSTGRES_USER='${var.postgres_user}' --from-literal=POSTGRES_PASSWORD='${var.postgres_password}' --dry-run=client -o yaml | kubectl apply -f -",
-      "kubectl create secret generic app-secret --namespace=constant-tracker --from-literal=SPRING_R2DBC_USERNAME='${var.spring_r2dbc_username}' --from-literal=SPRING_R2DBC_PASSWORD='${var.spring_r2dbc_password}' --from-literal=SPRING_FLYWAY_USER='${var.spring_flyway_user}' --from-literal=SPRING_FLYWAY_PASSWORD='${var.spring_flyway_password}' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create secret generic app-secret --namespace=constant-tracker --from-literal=SPRING_R2DBC_USERNAME='${var.spring_r2dbc_username}' --from-literal=SPRING_R2DBC_PASSWORD='${var.spring_r2dbc_password}' --from-literal=SPRING_FLYWAY_USER='${var.spring_flyway_user}' --from-literal=SPRING_FLYWAY_PASSWORD='${var.spring_flyway_password}' --from-literal=CONSTANTS_AUTH_JWT_SECRET='${var.auth_jwt_secret}' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create secret generic demo-secret --namespace=constant-tracker --from-literal=DEMO_USERNAME='${var.demo_username}' --from-literal=DEMO_PASSWORD='${var.demo_password}' --dry-run=client -o yaml | kubectl apply -f -",
     ]
   }
 
@@ -179,7 +204,7 @@ resource "null_resource" "deploy" {
   # 8. Patch app-config with runtime CORS value
   provisioner "remote-exec" {
     inline = [
-      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --dry-run=client -o yaml | kubectl apply -f -",
     ]
   }
 
@@ -190,7 +215,9 @@ resource "null_resource" "deploy" {
     ]
   }
 
-  # 10. Seed demo data — only when JARs have changed or never seeded
+  # 10. Seed demo data — only when JARs have changed or never seeded.
+  #     When auth is enabled the demo auth user is created FIRST so the
+  #     seed-job can authenticate against the app API before uploading JARs.
   provisioner "remote-exec" {
     inline = [
       "CURRENT_HASH='${self.triggers.v1_jar_hash}_${self.triggers.v2_jar_hash}'",
@@ -200,6 +227,15 @@ resource "null_resource" "deploy" {
       "  kubectl delete job clear-demo-job --namespace=constant-tracker --ignore-not-found=true",
       "  kubectl apply -f /opt/constant-tracker/k8s/jobs.yml --selector=app=clear-demo-job",
       "  kubectl wait --for=condition=complete job/clear-demo-job --namespace=constant-tracker --timeout=120s || true",
+      "  if [ '${var.auth_enabled}' = 'true' ]; then",
+      "    echo 'Auth is enabled — seeding demo auth user before uploading JARs...'",
+      "    kubectl delete job seed-auth-user-job --namespace=constant-tracker --ignore-not-found=true",
+      "    kubectl apply -f /opt/constant-tracker/k8s/jobs.yml --selector=app=seed-auth-user-job",
+      "    kubectl wait --for=condition=complete job/seed-auth-user-job --namespace=constant-tracker --timeout=120s",
+      "    echo 'Demo auth user ready.'",
+      "  else",
+      "    echo 'Auth is disabled — skipping demo user seed.'",
+      "  fi",
       "  echo 'Seeding demo data...'",
       "  kubectl delete job seed-job --namespace=constant-tracker --ignore-not-found=true",
       "  kubectl apply -f /opt/constant-tracker/k8s/jobs.yml --selector=app=seed-job",
