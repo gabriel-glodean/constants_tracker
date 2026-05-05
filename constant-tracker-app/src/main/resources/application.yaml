@@ -47,7 +47,7 @@ constants:
       # Cron expression for the dead-letter compaction job (default: every night at 03:00)
       compaction-cron: ${CONSTANTS_SOLR_OUTBOX_COMPACTION_CRON:0 0 3 * * *}
   cors:
-    allowed-origin: http://localhost:5173
+    allowed-origin: ${CONSTANTS_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   auth:
     enabled: ${CONSTANTS_AUTH_ENABLED:true}
     jwt:
