@@ -19,76 +19,126 @@
 - ✅ k3s migration (Terraform + kubectl, Cloudflare Tunnel, seed jobs)
 
 ## ════════════════════════════════════════════════════
-## 🔒 SECURITY — Fix real issues + add authentication
+## 🔒 SECURITY — Done
 ## ════════════════════════════════════════════════════
 
-- ✅ Fix docker-compose.yml: bind app port to 127.0.0.1:8080:8080 (currently 0.0.0.0)
+- ✅ Fix docker-compose.yml: bind app port to 127.0.0.1:8080:8080
 - ✅ Fix main.tf: tighten cors_allowed_origins default from "*" to actual domain
-- ⏳ Add spring-boot-starter-security to constant-tracker-app build.gradle
-- ⏳ Implement SecurityWebFilterChain (WebFlux): permit /actuator/health, require JWT on all other routes
-- ⏳ Add /auth/login endpoint: username+password → signed JWT (HMAC-SHA256, secret from env)
-- ⏳ Add login page to search-ui: POST credentials, store JWT in memory, attach as Bearer header
-- ⏳ Add API_KEY / JWT_SECRET env vars to docker-compose.yml + main.tf variables
-- ⏳ Write integration tests: no token → 401, valid token → 200, expired token → 401
+- ✅ Add spring-boot-starter-security to constant-tracker-app build.gradle
+- ✅ Implement SecurityWebFilterChain (WebFlux): permit /actuator/health, require JWT on all other routes
+- ✅ Add /auth/login endpoint: username+password → signed JWT (HMAC-SHA256, secret from env)
+- ✅ Add /auth/refresh + /auth/logout + /auth/token/renew endpoints with refresh-token rotation
+- ✅ Add login page to search-ui: POST credentials, store JWT in memory, attach as Bearer header
+- ✅ Integration tests: no token → 401, valid token → 200, expired token → 401 (AuthE2ETest)
+- ✅ Auth gating via @ConditionalOnProperty (constants.auth.enabled); CONSTANTS_AUTH_ENABLED=false skips auth
+- ✅ AuthCleanupScheduler: cron-based purge of expired blacklisted + refresh tokens
 
 ## ════════════════════════════════════════════════════
 ## V2A — Reliability & Stability
 ## ════════════════════════════════════════════════════
 
-- ⏳ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)     P0e
-  → Current: byte[]→Jimfs = 3× JAR size in RAM; Fix: DataBufferUtils.write(tmpFile) → ZipInputStream
-  → Do in same sprint as P1c
+- ✅ Global exception handler (@RestControllerAdvice + ErrorResponse record)            P0a
+  → Handles: BadCredentials/401, WebExchangeBindException/400, ExtractionException/422,
+             IllegalStateException/409, IllegalArgumentException/400, ResponseStatusException, generic/500
 
-- ⏳ Docker Compose health check: postgres service_healthy condition               P0b
+- ✅ API documentation (OpenAPI / springdoc-openapi-starter-webflux-ui in build.gradle)  P1a
 
-- ⏳ Global exception handler (@ControllerAdvice + ApiError record)               P0a
-  → Handles: InvalidClassFormat, ProjectNotFound, Timeout, IOException
+- ⏳ Docker Compose health check: postgres service_healthy condition                     P0b
+  → postgres service has no healthcheck block; app depends_on postgres with service_started, not service_healthy
 
-- ⏳ Input validation at controller level (@Validated, custom validators)          P0c
-  → @ValidProjectName, @ValidVersion (≥1), @FileSize(max=512MB)
+- ⏳ Input validation at controller level                                                P0c
+  → @Valid is only on LoginController; @ValidProjectName, @ValidVersion (≥1), @FileSize(max=512MB)
+     custom validators are not implemented; other controllers (ClassBinariesController,
+     JarBinariesController, VersionController) lack @Valid on request params
 
-- ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                    P0d
+- ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                          P0d
   → JAR: 5 min, class: 30s
 
-- ⏳ Structured logging + correlation IDs (Log4j2 ThreadContext + Reactor MDC)    P1c
+- ⏳ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)           P0e
+  → Current: byte[]→Jimfs = 3× JAR size in RAM; Fix: DataBufferUtils.write(tmpFile) → ZipInputStream
+  → ConcreteExtractionService.fromZipBytesWithJimfs() still uses Jimfs
+  → Do in same sprint as P1c
+
+- ⏳ Structured logging + correlation IDs (Log4j2 ThreadContext + Reactor MDC)          P1c
   → MdcContextLifter; [%X{traceId}] in log4j2.xml; generate traceId at controller boundary
   → Do in same sprint as P0e
 
-- ⏳ API documentation (OpenAPI / springdoc-webflux)                              P1a
-
-- ⏳ Search-UI error boundary + offline detection (React ErrorBoundary + SW cache) P1b
+- ⏳ Search-UI error boundary + offline detection (React ErrorBoundary + SW cache)      P1b
 
 ## ════════════════════════════════════════════════════
 ## V2B — Operations
 ## ════════════════════════════════════════════════════
 
-- ⏳ Performance docs + JMH benchmarks (PERFORMANCE.md)                           P2a
-- ⏳ Integration tests: failure scenarios + concurrency (Testcontainers chaos)     P2b
-- ⏳ R2DBC connection pool config + Flyway validation documented in application.yml P2c
-- ⏳ Secrets hygiene (.env in .gitignore, vars documented in README)              P2d
-- ⏳ Monitoring: React metrics widget (poll /actuator/metrics) + Axiom OTLP traces P2e
+- ⏳ Performance docs + JMH benchmarks (PERFORMANCE.md)                                 P2a
+- ⏳ Integration tests: failure scenarios + concurrency (Testcontainers chaos)           P2b
+- ⏳ R2DBC connection pool config + Flyway validation documented in application.yaml     P2c
+- ⏳ Secrets hygiene (.env in .gitignore, vars documented in README)                    P2d
+- ⏳ Monitoring: React metrics widget (poll /actuator/metrics) + Axiom OTLP traces      P2e
+
+## ════════════════════════════════════════════════════
+## V2B+ — Diff Explainer (LLM microservice)
+## ════════════════════════════════════════════════════
+
+- ⏳ New module: `constant-diff-explainer` — Quarkus + GraalVM native microservice      P2f
+  → Embeds llama.cpp (via JNI or Panama FFI) + a quantised model (e.g. Mistral-7B-Q4_K_M)
+  → Exposes POST /explain  { diff: DiffResult } → { explanation: string }
+  → GPU acceleration: detect CUDA / Metal / Vulkan at startup; fall back to CPU if unavailable
+  → GraalVM native-image: bundle model weights as a resource or mount at runtime via
+     QUARKUS_EXPLAINER_MODEL_PATH env var (avoid baking large binary into the image)
+  → Docker Compose: add `explainer` service (image built with --features=gpu flag toggle);
+     app calls it over internal app_network only
+  → UI: "Explain diff" button in DiffViewer.tsx — calls /api/explain, shows markdown tooltip
+  → Auth: inherit Bearer token forwarded from constant-tracker-app (no separate login)
+  → Fallback: if explainer service is unreachable, button is disabled with a tooltip
 
 ## ════════════════════════════════════════════════════
 ## V2C — Feature Depth
 ## ════════════════════════════════════════════════════
 
-- ⏳ Similar constant detection (string similarity + Solr MLT)                    P3a
-- ⏳ Constant split/merge analysis (detect refactoring patterns)                   P3b
+- ⏳ Similar constant detection (string similarity + Solr MLT)                          P3a
+- ⏳ Constant split/merge analysis (detect refactoring patterns)                        P3b
 
 ## ════════════════════════════════════════════════════
 ## V3 — Advanced / Long-term
 ## ════════════════════════════════════════════════════
 
-- ⏳ Exception-flow bytecode analysis (catch block constant extraction)            P4a
+- ⏳ Exception-flow bytecode analysis (catch block constant extraction)                  P4a
 
 ## ════════════════════════════════════════════════════
-## Sprint order
+## Sprint order + timeline estimates
+## (assuming part-time: ~1 productive weekend / sprint)
 ## ════════════════════════════════════════════════════
 ##
-##  1. Security (JWT login + port fixes)                   ~1 weekend
-##  2. k3s migration Phases 1-5                            ~2 weekends
-##  3. P0e + P1c  (streaming + MDC — do together)
-##  4. P0a + P0b + P0c + P0d  (stability)
-##  5. P1a + P1b  (usability)
-##  6. P2b + P2c + P2d + P2e  (ops)
-##  7. V2C + V3  (features, long-term)
+##  1. ✅ Security (JWT login + port fixes)                    done
+##  2. ✅ k3s migration Phases 1-5                             done
+##  3. P0b + P0c  (Docker health + input validation)          ~1 weekend   [May 2026]
+##       P0b: add postgres healthcheck + service_healthy       ~2 h
+##       P0c: @Valid on all controllers + custom validators    ~1.5 d
+##  4. P0e + P1c  (streaming + MDC — do together)             ~1 weekend   [May 2026]
+##       P0e: replace Jimfs with DataBufferUtils.write()       ~1 d
+##       P1c: MdcContextLifter + traceId in log4j2.xml        ~1 d
+##  5. P0d        (Resilience4j circuit breaker)              ~1 weekend   [Jun 2026]
+##       add dependency, time-limiter + CB around Solr calls   ~1.5 d
+##  6. P1b        (UI error boundary + SW offline cache)      ~1 weekend   [Jun 2026]
+##       React ErrorBoundary                                    ~0.5 d
+##       Service Worker + cache strategy                        ~1.5 d
+##  7. P2a + P2b + P2c + P2d + P2e  (ops)                    ~2 weekends  [Jun–Jul 2026]
+##       P2a: PERFORMANCE.md + JMH benchmarks                  ~1 d
+##       P2b: failure/concurrency integration tests            ~2 d
+##       P2c: R2DBC pool + Flyway config docs                  ~0.5 d
+##       P2d: .env hygiene + README secrets section            ~0.5 d
+##       P2e: metrics widget + Axiom OTLP traces               ~2 d
+##  8. P2f  (diff explainer — Quarkus/GraalVM/llama.cpp)     ~4 weekends  [Jul–Aug 2026]
+##       Quarkus project scaffold + build                       ~0.5 d
+##       llama.cpp JNI/Panama FFI bindings                     ~3 d
+##       GPU detection (CUDA/Metal/Vulkan) + CPU fallback      ~2 d
+##       GraalVM native-image config (reflection, resources)   ~1 d
+##       Docker Compose integration + gpu profile              ~0.5 d
+##       UI "Explain diff" button + markdown display           ~1 d
+##       Auth forwarding + unavailability fallback             ~0.5 d
+##  9. P3a + P3b  (V2C feature depth)                         ~2 weekends  [Sep 2026]
+##       P3a: similar constant detection (Solr MLT)            ~1.5 d
+##       P3b: split/merge pattern analysis                     ~2 d
+## 10. P4a  (V3 exception-flow bytecode analysis)             ~2 weekends  [Oct 2026]
+##
+## Total remaining estimate: ~13 weekends ≈ 3–4 months (part-time)

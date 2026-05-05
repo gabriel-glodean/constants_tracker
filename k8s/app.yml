@@ -34,7 +34,7 @@ spec:
                         valueFrom:
                             configMapKeyRef:
                                 name: app-config
-                                key: CORS_ALLOWED_ORIGINS
+                                key: CONSTANTS_CORS_ALLOWED_ORIGINS
                       - name: SPRING_DATA_SOLR_HOST
                         valueFrom:
                             configMapKeyRef:

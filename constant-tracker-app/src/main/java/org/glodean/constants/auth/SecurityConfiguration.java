@@ -58,6 +58,10 @@ public class SecurityConfiguration {
         @Bean
         public SecurityWebFilterChain securedFilterChain(ServerHttpSecurity http, JwtService jwtService) {
             http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+            // Disable HTTP Basic to prevent browser auth popup on 401
+            http.httpBasic(ServerHttpSecurity.HttpBasicSpec::disable);
+            // Disable form login as well
+            http.formLogin(ServerHttpSecurity.FormLoginSpec::disable);
             http.addFilterAt(jwtAuthFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
             http.headers(headers -> headers
                     .frameOptions(f -> f.mode(XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
@@ -78,6 +82,12 @@ public class SecurityConfiguration {
                             "/actuator/prometheus"
                     ).permitAll()
                     .anyExchange().authenticated());
+            // Custom entry point that returns 401 without WWW-Authenticate header
+            http.exceptionHandling(exceptions -> exceptions
+                    .authenticationEntryPoint((exchange, _) -> {
+                        exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().setComplete();
+                    }));
             return http.build();
         }
 

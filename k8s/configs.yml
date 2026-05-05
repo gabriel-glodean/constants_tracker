@@ -38,7 +38,7 @@ metadata:
 data:
     SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/constant_tracker
     SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/constant_tracker
-    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    CONSTANTS_CORS_ALLOWED_ORIGINS: ${CONSTANTS_CORS_ALLOWED_ORIGINS}
     SPRING_DATA_REDIS_HOST: redis
     SPRING_DATA_REDIS_PORT: "6379"
     CONSTANTS_SOLR_URL: http://solr:8983/solr/
