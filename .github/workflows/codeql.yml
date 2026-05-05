@@ -3,8 +3,18 @@ name: CodeQL Analysis
 on:
   push:
     branches: [ "main", "master", "develop" ]
+    paths:
+      - 'constant-tracker-app/src/**'
+      - 'constant-extractor-api/src/**'
+      - 'constant-extractor-bytecode/src/**'
+      - 'constant-extractor-config-file/src/**'
   pull_request:
     branches: [ "main", "master", "develop" ]
+    paths:
+      - 'constant-tracker-app/src/**'
+      - 'constant-extractor-api/src/**'
+      - 'constant-extractor-bytecode/src/**'
+      - 'constant-extractor-config-file/src/**'
   schedule:
     # Every Monday at 09:00 UTC
     - cron: '0 9 * * 1'
