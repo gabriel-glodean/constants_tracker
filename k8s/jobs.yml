@@ -1,5 +1,7 @@
 # ops-tool jobs for k8s — seed, clear, clear-demo, and seed-auth-user.
 # All logic lives in the ops-tool container; these manifests only wire env vars.
+# enableServiceLinks: false is set on every job to prevent Kubernetes from injecting
+# POSTGRES_PORT=tcp://... (and similar) which would break the ops-tool int parsing.
 
 kind: Job
 apiVersion: batch/v1
@@ -12,6 +14,7 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      enableServiceLinks: false
       volumes:
         - name: jars-v1
           hostPath:
@@ -64,12 +67,17 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      enableServiceLinks: false
       containers:
         - name: clear
           image: ghcr.io/gabriel-glodean/ops-tool:latest
           env:
             - name: CMD
               value: "clear"
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -95,12 +103,17 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      enableServiceLinks: false
       containers:
         - name: clear-demo
           image: ghcr.io/gabriel-glodean/ops-tool:latest
           env:
             - name: CMD
               value: "clear-demo"
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -128,12 +141,17 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      enableServiceLinks: false
       containers:
         - name: seed-auth-user
           image: ghcr.io/gabriel-glodean/ops-tool:latest
           env:
             - name: CMD
               value: "seed-auth-user"
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

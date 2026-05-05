@@ -181,7 +181,24 @@ resource "null_resource" "deploy" {
     ]
   }
 
-  # 6b. Force app and UI to pull latest image
+  # 7. Create/update secrets BEFORE rollout so pods never start with missing keys.
+  provisioner "remote-exec" {
+    inline = [
+      "kubectl create secret generic postgres-secret --namespace=constant-tracker --from-literal=POSTGRES_USER='${var.postgres_user}' --from-literal=POSTGRES_PASSWORD='${var.postgres_password}' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create secret generic app-secret --namespace=constant-tracker --from-literal=SPRING_R2DBC_USERNAME='${var.spring_r2dbc_username}' --from-literal=SPRING_R2DBC_PASSWORD='${var.spring_r2dbc_password}' --from-literal=SPRING_FLYWAY_USER='${var.spring_flyway_user}' --from-literal=SPRING_FLYWAY_PASSWORD='${var.spring_flyway_password}' --from-literal=CONSTANTS_AUTH_JWT_SECRET='${var.auth_jwt_secret}' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create secret generic demo-secret --namespace=constant-tracker --from-literal=DEMO_USERNAME=$(printf '%s' '${var.demo_username}') --from-literal=DEMO_PASSWORD=$(printf '%s' '${var.demo_password}') --dry-run=client -o yaml | kubectl apply -f -",
+    ]
+  }
+
+  # 8. Patch app-config with runtime values BEFORE rollout.
+  provisioner "remote-exec" {
+    inline = [
+      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --dry-run=client -o yaml | kubectl apply -f -",
+    ]
+  }
+
+  # 9. Force app and UI to pull latest image — secrets and configmap are guaranteed
+  #    to exist at this point so pods start cleanly.
   provisioner "remote-exec" {
     inline = [
       "kubectl rollout restart deployment/app --namespace=constant-tracker",
@@ -191,31 +208,14 @@ resource "null_resource" "deploy" {
     ]
   }
 
-  # 7. Create/update secrets (kubectl apply is idempotent via --dry-run trick)
-  provisioner "remote-exec" {
-    inline = [
-      "kubectl create secret generic postgres-secret --namespace=constant-tracker --from-literal=POSTGRES_USER='${var.postgres_user}' --from-literal=POSTGRES_PASSWORD='${var.postgres_password}' --dry-run=client -o yaml | kubectl apply -f -",
-      "kubectl create secret generic app-secret --namespace=constant-tracker --from-literal=SPRING_R2DBC_USERNAME='${var.spring_r2dbc_username}' --from-literal=SPRING_R2DBC_PASSWORD='${var.spring_r2dbc_password}' --from-literal=SPRING_FLYWAY_USER='${var.spring_flyway_user}' --from-literal=SPRING_FLYWAY_PASSWORD='${var.spring_flyway_password}' --from-literal=CONSTANTS_AUTH_JWT_SECRET='${var.auth_jwt_secret}' --dry-run=client -o yaml | kubectl apply -f -",
-      "kubectl create secret generic demo-secret --namespace=constant-tracker --from-literal=DEMO_USERNAME='${var.demo_username}' --from-literal=DEMO_PASSWORD='${var.demo_password}' --dry-run=client -o yaml | kubectl apply -f -",
-    ]
-  }
-
-
-  # 8. Patch app-config with runtime CORS value
-  provisioner "remote-exec" {
-    inline = [
-      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --dry-run=client -o yaml | kubectl apply -f -",
-    ]
-  }
-
-  # 9. Apply ingress with substituted host
+  # 10. Apply ingress with substituted host
   provisioner "remote-exec" {
     inline = [
       "sed 's|$${INGRESS_HOST}|${var.ingress_host}|g' /opt/constant-tracker/k8s/ingress.yml | kubectl apply -f -",
     ]
   }
 
-  # 10. Seed demo data — only when JARs have changed or never seeded.
+  # 11. Seed demo data — only when JARs have changed or never seeded.
   #     When auth is enabled the demo auth user is created FIRST so the
   #     seed-job can authenticate against the app API before uploading JARs.
   provisioner "remote-exec" {
