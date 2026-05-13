@@ -8,6 +8,7 @@ on:
       - 'constant-extractor-api/src/**'
       - 'constant-extractor-bytecode/src/**'
       - 'constant-extractor-config-file/src/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main", "master", "develop" ]
     paths:
@@ -15,9 +16,13 @@ on:
       - 'constant-extractor-api/src/**'
       - 'constant-extractor-bytecode/src/**'
       - 'constant-extractor-config-file/src/**'
+      - '.github/workflows/**'
   schedule:
     # Every Monday at 09:00 UTC
     - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions: {}
 
 jobs:
   analyze:
@@ -35,6 +40,8 @@ jobs:
         include:
           - language: java-kotlin
             build-mode: manual
+          - language: actions
+            build-mode: none
 
     steps:
       - uses: actions/checkout@v4
