@@ -81,7 +81,7 @@ public class SolrService implements UnitConstantsStore {
   public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
     String sourcePath = constants.source().path();
     logger.atInfo().log(
-        "Storing to Solr (direct): {} project={} version={}", sanitize(sourcePath), project, version);
+        "Storing to Solr (direct): {} project={} version={}", sanitize(sourcePath), sanitize(project), version);
     SolrInputDocument doc = SolrOutboxPayload.from(constants, project, version).toSolrDocument();
     return storeDocumentBatch(List.of(doc)).thenReturn(constants);
   }
@@ -133,7 +133,7 @@ public class SolrService implements UnitConstantsStore {
     String queryText = SearchQueryBuilder.build(term, editDistance);
     logger.atInfo().log(
         "Fuzzy search: project={} term={} editDistance={} rows={} query={}",
-        project, sanitize(term), editDistance, maxRows, sanitize(queryText));
+        sanitize(project), sanitize(term), editDistance, maxRows, sanitize(queryText));
 
     QueryRequest query = getQueryRequest(project, maxRows, queryText);
     query.setPath("/select");

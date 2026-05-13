@@ -18,6 +18,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Restrict the default GITHUB_TOKEN to no permissions; each job grants only what it needs.
+permissions: {}
+
 jobs:
 
   changes:

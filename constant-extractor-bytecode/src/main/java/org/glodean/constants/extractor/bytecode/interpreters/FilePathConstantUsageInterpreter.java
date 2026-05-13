@@ -41,18 +41,18 @@ public class FilePathConstantUsageInterpreter implements ConstantUsageInterprete
 
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _)) {
-            if (isFilePathMethod(targetClass, targetMethod)) {
-                double confidence = calculateConfidence(targetClass);
+        if (context instanceof MethodCallContext mc) {
+            if (isFilePathMethod(mc.targetClass(), mc.targetMethod())) {
+                double confidence = calculateConfidence(mc.targetClass());
                 return new ConstantUsage(
                         UsageType.METHOD_INVOCATION_PARAMETER,
                         CoreSemanticType.FILE_PATH,
                         location,
                         confidence,
                         Map.of(
-                                "fileClass", targetClass,
-                                "fileMethod", targetMethod,
-                                "methodDescriptor", methodDescriptor
+                                "fileClass", mc.targetClass(),
+                                "fileMethod", mc.targetMethod(),
+                                "methodDescriptor", mc.methodDescriptor()
                         )
                 );
             }

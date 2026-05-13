@@ -35,18 +35,18 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
 
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _)) {
-            if (isErrorMessage(targetClass, targetMethod)) {
-                double confidence = calculateConfidence(targetClass, targetMethod);
+        if (context instanceof MethodCallContext mc) {
+            if (isErrorMessage(mc.targetClass(), mc.targetMethod())) {
+                double confidence = calculateConfidence(mc.targetClass(), mc.targetMethod());
                 return new ConstantUsage(
                         UsageType.METHOD_INVOCATION_PARAMETER,
                         CoreSemanticType.ERROR_MESSAGE,
                         location,
                         confidence,
                         Map.of(
-                                "errorClass", targetClass,
-                                "errorMethod", targetMethod,
-                                "methodDescriptor", methodDescriptor
+                                "errorClass", mc.targetClass(),
+                                "errorMethod", mc.targetMethod(),
+                                "methodDescriptor", mc.methodDescriptor()
                         )
                 );
             }

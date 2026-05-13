@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.server.WebFilter;
 
 import java.util.List;
@@ -59,9 +60,9 @@ public class SecurityConfiguration {
         public SecurityWebFilterChain securedFilterChain(ServerHttpSecurity http, JwtService jwtService) {
             // CSRF is intentionally disabled: this is a stateless REST API that uses JWT bearer tokens,
             // not session cookies, so CSRF attacks are architecturally impossible.
-            http.csrf(ServerHttpSecurity.CsrfSpec::disable); // lgtm[java/spring-disabled-csrf-protection]
+            http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(
+                    _ -> ServerWebExchangeMatcher.MatchResult.notMatch()));
             // Disable HTTP Basic to prevent browser auth popup on 401
-            http.httpBasic(ServerHttpSecurity.HttpBasicSpec::disable);
             // Disable form login as well
             http.formLogin(ServerHttpSecurity.FormLoginSpec::disable);
             http.addFilterAt(jwtAuthFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
@@ -135,7 +136,8 @@ public class SecurityConfiguration {
             log.warn("*** Authentication is DISABLED — all endpoints are publicly accessible ***");
             // CSRF is intentionally disabled: this is a stateless REST API that uses JWT bearer tokens,
             // not session cookies, so CSRF attacks are architecturally impossible.
-            http.csrf(ServerHttpSecurity.CsrfSpec::disable); // lgtm[java/spring-disabled-csrf-protection]
+            http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(
+                    _ -> ServerWebExchangeMatcher.MatchResult.notMatch()));
             http.authorizeExchange(ex -> ex.anyExchange().permitAll());
             return http.build();
         }

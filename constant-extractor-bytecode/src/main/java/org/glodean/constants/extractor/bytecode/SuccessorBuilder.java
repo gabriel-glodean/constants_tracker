@@ -67,7 +67,6 @@ final class SuccessorBuilder {
             handleSwitchInstruction(i, lsi.defaultTarget(), lsi.cases(), code, successors);
         case TableSwitchInstruction tsi ->
             handleSwitchInstruction(i, tsi.defaultTarget(), tsi.cases(), code, successors);
-        case ReturnInstruction _, ThrowInstruction _ -> {} // lgtm[java/unused-local-variable]
         case BranchInstruction bi -> {
           if (bi.opcode() != Opcode.GOTO && bi.opcode() != Opcode.GOTO_W) {
             successors.get(i).add(i + 1);
@@ -75,7 +74,13 @@ final class SuccessorBuilder {
           int nextInstruction = indexOfLabel(bi.target(), code);
           successors.get(i).add(nextInstruction);
         }
-        default -> successors.get(i).add(i + 1);
+        default -> {
+          // ReturnInstruction and ThrowInstruction are terminal — no fall-through successor.
+          if (!(element instanceof ReturnInstruction)
+              && !(element instanceof ThrowInstruction)) {
+            successors.get(i).add(i + 1);
+          }
+        }
       }
     }
 

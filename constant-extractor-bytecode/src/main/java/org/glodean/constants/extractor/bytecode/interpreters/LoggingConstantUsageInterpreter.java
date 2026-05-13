@@ -65,18 +65,18 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
      */
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _)) {
-            if (isLoggingMethod(targetClass, targetMethod)) {
-                double confidence = calculateConfidence(targetClass);
+        if (context instanceof MethodCallContext mc) {
+            if (isLoggingMethod(mc.targetClass(), mc.targetMethod())) {
+                double confidence = calculateConfidence(mc.targetClass());
                 return new ConstantUsage(
                         UsageType.METHOD_INVOCATION_PARAMETER,
                         CoreSemanticType.LOG_MESSAGE,
                         location,
                         confidence,
                         Map.of(
-                                "loggerClass", targetClass,
-                                "loggerMethod", targetMethod,
-                                "methodDescriptor", methodDescriptor
+                                "loggerClass", mc.targetClass(),
+                                "loggerMethod", mc.targetMethod(),
+                                "methodDescriptor", mc.methodDescriptor()
                         )
                 );
             }

@@ -89,7 +89,7 @@ public class PostgresService implements UnitConstantsStore {
 
     logger.atInfo().log(
         "Storing to PostgreSQL: {} (kind={}, size={}) project={} version={}",
-        sanitize(sourcePath), sourceKind, sizeBytes, project, version);
+        sanitize(sourcePath), sourceKind, sizeBytes, sanitize(project), version);
 
     return upsertDescriptor(project, version, sourceKind, sourcePath, sizeBytes, contentHash)
         .flatMap(descriptor -> upsertSnapshot(descriptor, sourcePath, unitConstantsJson))
@@ -97,7 +97,7 @@ public class PostgresService implements UnitConstantsStore {
         .flatMap(snapshot -> persistConstantsAndUsages(snapshot, constants))
         .doOnNext(snapshot -> logger.atInfo().log(
             "Saved snapshot id={} for descriptor project={} path={} v{}",
-            snapshot.id(), project, sanitize(sourcePath), version))
+            snapshot.id(), sanitize(project), sanitize(sourcePath), version))
         .thenReturn(constants)
         .flatMap(uc -> queueSolrOutbox(uc, project, sourcePath, version));
   }

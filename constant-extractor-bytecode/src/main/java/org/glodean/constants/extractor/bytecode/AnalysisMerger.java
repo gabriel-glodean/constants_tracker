@@ -295,8 +295,8 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
                     }
                 }
             }
-            if (entity instanceof ConstantPropagation(Set<Number> values, _)) { // lgtm[java/unused-local-variable]
-                values.forEach(v -> {
+            if (entity instanceof ConstantPropagation cp) {
+                cp.values().forEach(v -> {
                     List<ConstantUsage> results = interpreters.stream()
                             .map(interp -> interp.interpret(location, context))
                             .toList();
