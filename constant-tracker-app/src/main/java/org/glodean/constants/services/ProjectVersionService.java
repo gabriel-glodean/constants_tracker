@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import static org.glodean.constants.util.LogSanitizer.sanitize;
 /**
  * Manages the lifecycle of project versions and the inheritance chain.
  *
@@ -97,8 +99,8 @@ public class ProjectVersionService {
          .switchIfEmpty(Mono.fromSupplier(() -> new ProjectVersionEntity(
              null, project, version, null,
              ProjectVersionEntity.STATUS_OPEN, LocalDateTime.now(), null)))
-         .doOnNext(e -> logger.atInfo().log(
-             "Creating version {} for project {} (parent={})", version, project, e.parentVersion()))
+          .doOnNext(e -> logger.atInfo().log(
+              "Creating version {} for project {} (parent={})", version, sanitize(project), e.parentVersion()))
          .flatMap(versionRepo::save);
    }
   /**
@@ -121,7 +123,7 @@ public class ProjectVersionService {
           var finalized = new ProjectVersionEntity(
               entity.id(), entity.project(), entity.version(), entity.parentVersion(),
               ProjectVersionEntity.STATUS_FINALIZED, entity.createdAt(), LocalDateTime.now());
-          logger.atInfo().log("Finalizing version {} for project {}", version, project);
+          logger.atInfo().log("Finalizing version {} for project {}", version, sanitize(project));
           return versionRepo.save(finalized);
         });
   }
@@ -137,12 +139,12 @@ public class ProjectVersionService {
         .then(Mono.defer(() -> deletionRepo.existsByProjectAndVersionAndUnitPath(project, version, unitPath)))
         .flatMap(exists -> {
           if (exists) {
-            return Mono.<Void>empty();
+            return Mono.empty();
           }
           var deletion = new VersionDeletionEntity(
               null, project, version, unitPath, LocalDateTime.now());
           logger.atInfo().log(
-              "Deleting unit {} from version {} of project {}", unitPath, version, project);
+              "Deleting unit {} from version {} of project {}", sanitize(unitPath), version, sanitize(project));
           return deletionRepo.save(deletion).then();
         });
   }
@@ -194,9 +196,9 @@ public class ProjectVersionService {
                         }
                         var deletion = new VersionDeletionEntity(
                             null, project, version, removedPath, LocalDateTime.now());
-                        logger.atInfo().log(
-                            "Auto-deleting unit {} from version {} of project {} (absent from upload)",
-                            removedPath, version, project);
+                         logger.atInfo().log(
+                             "Auto-deleting unit {} from version {} of project {} (absent from upload)",
+                             sanitize(removedPath), version, sanitize(project));
                         return deletionRepo.save(deletion).thenReturn(removedPath);
                       }));
         });
@@ -234,10 +236,10 @@ public class ProjectVersionService {
         .findByProjectAndVersion(project, version)
         .flatMap(entity -> {
           if (ProjectVersionEntity.STATUS_FINALIZED.equals(entity.status())) {
-            return Mono.<Void>error(new IllegalStateException(
+            return Mono.error(new IllegalStateException(
                 "Version " + version + " is finalized for project " + project));
           }
-          return Mono.<Void>empty();
+          return Mono.empty();
         });
   }
 }

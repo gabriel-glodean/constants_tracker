@@ -80,6 +80,9 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
 
+    // OWASP Java Encoder — log injection prevention (CWE-117)
+    implementation "org.owasp.encoder:encoder:$owaspEncoderVersion"
+
     // JWT – JJWT 0.12.x (api on compile path; impl + jackson processor at runtime only)
     implementation "io.jsonwebtoken:jjwt-api:$jjwtVersion"
     runtimeOnly "io.jsonwebtoken:jjwt-impl:$jjwtVersion"

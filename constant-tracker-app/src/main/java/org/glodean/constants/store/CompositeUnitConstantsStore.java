@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static org.glodean.constants.util.LogSanitizer.sanitize;
+
 /**
  * Primary {@link UnitConstantsStore} that writes to PostgreSQL (authoritative) and queues a Solr
  * outbox entry atomically in the same transaction via {@link PostgresService}.
@@ -39,6 +41,7 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
 
   private static final Logger logger = LogManager.getLogger(CompositeUnitConstantsStore.class);
   private static final int MAX_INHERITANCE_DEPTH = 50;
+
 
   private final SolrService solrService;
   private final PostgresService postgresService;
@@ -81,7 +84,7 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
     return postgresService
         .store(constants, project, version)
         .doOnError(e -> logger.atError().withThrowable(e).log(
-            "Postgres store failed for {}:{} v{}", project, constants.source().path(), version));
+            "Postgres store failed for {}:{} v{}", sanitize(project), sanitize(constants.source().path()), version));
   }
 
   /**
@@ -107,7 +110,7 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
                 return projectVersionService
                     .recordRemovals(project, version, uploadedPaths)
                     .doOnNext(removedPath -> logger.atInfo().log(
-                        "Recorded removal of {} in v{} of {}", removedPath, version, project))
+                        "Recorded removal of {} in v{} of {}", sanitize(removedPath), version, sanitize(project)))
                     .then(Mono.just(stored));
               });
         });

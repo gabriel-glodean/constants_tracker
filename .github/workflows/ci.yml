@@ -23,6 +23,8 @@ jobs:
   changes:
     name: Detect changed paths
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       app: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.app }}
       ui: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.ui }}
@@ -58,6 +60,8 @@ jobs:
   format-check:
     name: Format Check (Spotless)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: changes
     if: needs.changes.outputs.app == 'true'
     steps:
@@ -79,6 +83,8 @@ jobs:
   build-and-test:
     name: Build & Test (Gradle, Java 25)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [format-check, changes]
     if: needs.changes.outputs.app == 'true'
 
@@ -132,6 +138,8 @@ jobs:
   ui-check:
     name: UI Lint, Test & Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: changes
     if: needs.changes.outputs.ui == 'true'
     defaults:
@@ -170,6 +178,8 @@ jobs:
   docker-build-app:
     name: Docker Build Sanity (App)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [build-and-test, changes]
     if: needs.changes.outputs.app == 'true'
     steps:
@@ -181,6 +191,8 @@ jobs:
   docker-build-ui:
     name: Docker Build Sanity (UI)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [ui-check, changes]
     if: needs.changes.outputs.ui == 'true'
     steps:
@@ -192,6 +204,8 @@ jobs:
   build-and-test-ops:
     name: Build & Test ops-tool
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: changes
     if: needs.changes.outputs.ops == 'true'
     steps:
@@ -221,6 +235,8 @@ jobs:
   docker-build-ops:
     name: Docker Build Sanity (ops-tool)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [build-and-test-ops, changes]
     if: needs.changes.outputs.ops == 'true'
     steps:

@@ -18,6 +18,7 @@ import org.glodean.constants.dto.UnitDiff;
 import org.glodean.constants.dto.UsageDetail;
 import org.glodean.constants.store.postgres.entity.ConstantDiffRow;
 import org.glodean.constants.store.postgres.entity.DiffRepository;
+import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
 import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
@@ -25,6 +26,8 @@ import org.glodean.constants.store.postgres.repository.VersionDeletionRepository
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
+import static org.glodean.constants.util.LogSanitizer.sanitize;
 
 /**
  * Computes a constant-level diff between two project versions, fully respecting the inheritance
@@ -44,6 +47,7 @@ import reactor.core.publisher.Mono;
 public class DiffService {
 
   private static final Logger logger = LogManager.getLogger(DiffService.class);
+
 
   private final ProjectVersionRepository versionRepo;
   private final UnitDescriptorRepository descriptorRepo;
@@ -107,7 +111,7 @@ public class DiffService {
 
           logger.atInfo().log(
               "Diff {}: from={} to={} | added={} removed={} changed-from={} changed-to={}",
-              project, fromVersion, toVersion,
+              sanitize(project), fromVersion, toVersion,
               purelyAdded.size(), purelyRemoved.size(),
               fromSnapshotIds.size(), toSnapshotIds.size());
 
@@ -186,7 +190,7 @@ public class DiffService {
     // Collect deletions declared at this version, then merge with those from child versions
     Mono<Set<String>> thisDeletionsMono = deletionRepo
         .findAllByProjectAndVersion(project, version)
-        .map(e -> e.unitPath())
+        .map(VersionDeletionEntity::unitPath)
         .collect(Collectors.toSet());
 
     // Load own descriptors and resolve their snapshot IDs

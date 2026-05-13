@@ -34,14 +34,15 @@ import org.springframework.stereotype.Service;
  * {@link FileSystemModelExtractor} to walk and process all contained classes without
  * disk I/O overhead. This is especially beneficial when analyzing many JARs repeatedly
  * (e.g., CI/CD pipelines).
- *
- * @param merger the analysis merger shared by all created extractors
  */
 @Service
 public class ConcreteExtractionService implements ExtractionService {
 
   private final AnalysisMerger merger;
 
+  /**
+   * @param merger the analysis merger shared by all created extractors
+   */
   @Autowired
   public ConcreteExtractionService(AnalysisMerger merger) {
     this.merger = merger;

@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static org.glodean.constants.util.LogSanitizer.sanitize;
+
 /**
  * PostgreSQL R2DBC-backed implementation of {@link UnitConstantsStore}.
  *
@@ -39,6 +41,7 @@ public class PostgresService implements UnitConstantsStore {
 
   private static final Logger logger = LogManager.getLogger(PostgresService.class);
   private static final ObjectMapper JSON = createMapper();
+
 
   private static ObjectMapper createMapper() {
     var mapper = new ObjectMapper();
@@ -86,7 +89,7 @@ public class PostgresService implements UnitConstantsStore {
 
     logger.atInfo().log(
         "Storing to PostgreSQL: {} (kind={}, size={}) project={} version={}",
-        sourcePath, sourceKind, sizeBytes, project, version);
+        sanitize(sourcePath), sourceKind, sizeBytes, project, version);
 
     return upsertDescriptor(project, version, sourceKind, sourcePath, sizeBytes, contentHash)
         .flatMap(descriptor -> upsertSnapshot(descriptor, sourcePath, unitConstantsJson))
@@ -94,7 +97,7 @@ public class PostgresService implements UnitConstantsStore {
         .flatMap(snapshot -> persistConstantsAndUsages(snapshot, constants))
         .doOnNext(snapshot -> logger.atInfo().log(
             "Saved snapshot id={} for descriptor project={} path={} v{}",
-            snapshot.id(), project, sourcePath, version))
+            snapshot.id(), project, sanitize(sourcePath), version))
         .thenReturn(constants)
         .flatMap(uc -> queueSolrOutbox(uc, project, sourcePath, version));
   }
@@ -192,14 +195,14 @@ public class PostgresService implements UnitConstantsStore {
     } catch (JsonProcessingException e) {
       logger.atWarn().withThrowable(e).log(
           "Failed to serialise Solr outbox payload for {}:{} v{} — Solr indexing skipped",
-          project, sourcePath, version);
+          sanitize(project), sanitize(sourcePath), version);
       return Mono.just(constants);
     }
     return solrOutboxRepo
         .save(SolrOutboxEntry.newEntry(project, sourcePath, version, payloadJson))
         .doOnNext(entry -> logger.atDebug().log(
             "Queued Solr outbox entry id={} for {}:{} v{}",
-            entry.id(), project, sourcePath, version))
+            entry.id(), sanitize(project), sanitize(sourcePath), version))
         .thenReturn(constants);
   }
 
@@ -264,7 +267,7 @@ public class PostgresService implements UnitConstantsStore {
     return descriptorRepo
         .findByProjectAndPathAndVersion(project, unitPath, version)
         .doFirst(() -> logger.atInfo().log(
-            "Querying descriptor project={} path={} v{}", project, unitPath, version))
+            "Querying descriptor project={} path={} v{}", sanitize(project), sanitize(unitPath), version))
         .switchIfEmpty(Mono.error(new IllegalArgumentException("Unknown unit!")))
         .flatMap(descriptor -> snapshotRepo.findByDescriptorIdAndUnitName(descriptor.id(), unitPath))
         .switchIfEmpty(Mono.error(new IllegalArgumentException("No snapshot found!")))

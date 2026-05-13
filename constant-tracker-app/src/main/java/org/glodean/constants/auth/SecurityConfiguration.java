@@ -57,7 +57,9 @@ public class SecurityConfiguration {
 
         @Bean
         public SecurityWebFilterChain securedFilterChain(ServerHttpSecurity http, JwtService jwtService) {
-            http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+            // CSRF is intentionally disabled: this is a stateless REST API that uses JWT bearer tokens,
+            // not session cookies, so CSRF attacks are architecturally impossible.
+            http.csrf(ServerHttpSecurity.CsrfSpec::disable); // lgtm[java/spring-disabled-csrf-protection]
             // Disable HTTP Basic to prevent browser auth popup on 401
             http.httpBasic(ServerHttpSecurity.HttpBasicSpec::disable);
             // Disable form login as well
@@ -131,7 +133,9 @@ public class SecurityConfiguration {
         @Bean
         public SecurityWebFilterChain openFilterChain(ServerHttpSecurity http) {
             log.warn("*** Authentication is DISABLED — all endpoints are publicly accessible ***");
-            http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+            // CSRF is intentionally disabled: this is a stateless REST API that uses JWT bearer tokens,
+            // not session cookies, so CSRF attacks are architecturally impossible.
+            http.csrf(ServerHttpSecurity.CsrfSpec::disable); // lgtm[java/spring-disabled-csrf-protection]
             http.authorizeExchange(ex -> ex.anyExchange().permitAll());
             return http.build();
         }

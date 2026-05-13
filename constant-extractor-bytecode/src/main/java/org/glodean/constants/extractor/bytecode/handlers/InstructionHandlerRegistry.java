@@ -118,10 +118,9 @@ public final class InstructionHandlerRegistry {
     InstructionHandler<?> found = instructionHandlerMap.get(runtimeClass);
     if (found == null) {
       // BFS over interfaces and superclasses (only consider types assignable to Instruction)
-      Queue<Class<?>> toCheck = new ArrayDeque<>();
-      Collections.addAll(toCheck, runtimeClass.getInterfaces());
+      Queue<Class<?>> toCheck = new ArrayDeque<>(Arrays.asList(runtimeClass.getInterfaces()));
       Class<?> sup = runtimeClass.getSuperclass();
-      if (sup != null) toCheck.offer(sup);
+      if (sup != null) toCheck.add(sup);
       Set<Class<?>> visited = new HashSet<>();
       while (!toCheck.isEmpty()) {
         Class<?> c = toCheck.poll();
@@ -130,9 +129,9 @@ public final class InstructionHandlerRegistry {
         Class<? extends Instruction> cc = (Class<? extends Instruction>) c;
         found = instructionHandlerMap.get(cc);
         if (found != null) break;
-        for (Class<?> interfaceClass : c.getInterfaces()) toCheck.offer(interfaceClass);
+        toCheck.addAll(Arrays.asList(c.getInterfaces()));
         Class<?> sc = c.getSuperclass();
-        if (sc != null) toCheck.offer(sc);
+        if (sc != null) toCheck.add(sc);
       }
     }
 

@@ -65,8 +65,22 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
      */
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (!(context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _))) {
-            // Cannot interpret without method call context
+        if (context instanceof MethodCallContext(String targetClass, String targetMethod, String methodDescriptor, _)) {
+            if (isLoggingMethod(targetClass, targetMethod)) {
+                double confidence = calculateConfidence(targetClass);
+                return new ConstantUsage(
+                        UsageType.METHOD_INVOCATION_PARAMETER,
+                        CoreSemanticType.LOG_MESSAGE,
+                        location,
+                        confidence,
+                        Map.of(
+                                "loggerClass", targetClass,
+                                "loggerMethod", targetMethod,
+                                "methodDescriptor", methodDescriptor
+                        )
+                );
+            }
+            // Not a logging call
             return new ConstantUsage(
                     UsageType.METHOD_INVOCATION_PARAMETER,
                     CoreSemanticType.UNKNOWN,
@@ -74,24 +88,7 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
                     0.0
             );
         }
-
-        if ( isLoggingMethod(targetClass, targetMethod)) {
-            double confidence = calculateConfidence(targetClass);
-
-            return new ConstantUsage(
-                    UsageType.METHOD_INVOCATION_PARAMETER,
-                    CoreSemanticType.LOG_MESSAGE,
-                    location,
-                    confidence,
-                    Map.of(
-                            "loggerClass", targetClass,
-                            "loggerMethod", targetMethod,
-                            "methodDescriptor", methodDescriptor
-                    )
-            );
-        }
-
-        // Not a logging call
+        // Cannot interpret without method call context
         return new ConstantUsage(
                 UsageType.METHOD_INVOCATION_PARAMETER,
                 CoreSemanticType.UNKNOWN,

@@ -63,6 +63,22 @@ public interface UnitConstantsStore {
   Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key);
 
   /**
+   * Stores a batch of {@link UnitConstants} for a project and automatically detects units
+   * that were present in the parent version but are absent from this batch, recording them
+   * as deletions so they are not inherited.
+   *
+   * <p>This is the preferred method for JAR uploads where the full set of units is known.
+   *
+   * @param allConstants the complete set of unit constants extracted from the upload
+   * @param project      the project identifier
+   * @return a {@link Mono} emitting the list of stored {@link UnitConstants}
+   */
+  default Mono<List<UnitConstants>> storeAll(List<UnitConstants> allConstants, String project) {
+    return Mono.error(
+        new UnsupportedOperationException("Batch store not supported by this store"));
+  }
+
+  /**
    * Full-text / fuzzy search for class snapshots whose constant values match {@code term}.
    *
    * <p>The caller supplies a plain-text search term; no Lucene syntax knowledge is required.
@@ -79,21 +95,6 @@ public interface UnitConstantsStore {
    * @param maxRows      maximum number of hits to return
    * @return {@link Mono} emitting a {@link FuzzySearchResponse}
    */
-  /**
-   * Stores a batch of {@link UnitConstants} for a project and automatically detects units
-   * that were present in the parent version but are absent from this batch, recording them
-   * as deletions so they are not inherited.
-   *
-   * <p>This is the preferred method for JAR uploads where the full set of units is known.
-   *
-   * @param allConstants the complete set of unit constants extracted from the upload
-   * @param project      the project identifier
-   * @return a {@link Mono} emitting the list of stored {@link UnitConstants}
-   */
-  default Mono<List<UnitConstants>> storeAll(List<UnitConstants> allConstants, String project) {
-    return Mono.error(
-        new UnsupportedOperationException("Batch store not supported by this store"));
-  }
 
   default Mono<FuzzySearchResponse> fuzzySearch(
       String project, String term, int editDistance, int maxRows) {

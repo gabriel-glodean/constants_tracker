@@ -30,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import static org.glodean.constants.util.LogSanitizer.sanitize;
+
 /**
  * Solr-backed implementation of {@link org.glodean.constants.store.UnitConstantsStore} that stores a simplified flat document
  * per unit snapshot: {@code id}, {@code project}, {@code unit_name}, {@code unit_version}, and
@@ -61,6 +63,7 @@ public class SolrService implements UnitConstantsStore {
         "SolrService does not manage version assignment; use CompositeUnitConstantsStore");
   }
 
+
   /**
    * Stores a simplified flat Solr document for the given class snapshot.
    *
@@ -72,12 +75,13 @@ public class SolrService implements UnitConstantsStore {
    * @param version   the version number
    * @return a {@link Mono} emitting the original {@code constants} on success
    */
+
   @Timed(value = "solr.store", description = "Time to store a unit in Solr")
   @Override
   public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
     String sourcePath = constants.source().path();
     logger.atInfo().log(
-        "Storing to Solr (direct): {} project={} version={}", sourcePath, project, version);
+        "Storing to Solr (direct): {} project={} version={}", sanitize(sourcePath), project, version);
     SolrInputDocument doc = SolrOutboxPayload.from(constants, project, version).toSolrDocument();
     return storeDocumentBatch(List.of(doc)).thenReturn(constants);
   }
@@ -129,7 +133,7 @@ public class SolrService implements UnitConstantsStore {
     String queryText = SearchQueryBuilder.build(term, editDistance);
     logger.atInfo().log(
         "Fuzzy search: project={} term={} editDistance={} rows={} query={}",
-        project, term, editDistance, maxRows, queryText);
+        project, sanitize(term), editDistance, maxRows, sanitize(queryText));
 
     QueryRequest query = getQueryRequest(project, maxRows, queryText);
     query.setPath("/select");
@@ -172,7 +176,7 @@ public class SolrService implements UnitConstantsStore {
     params.set("rows", 1);
     QueryRequest query = new QueryRequest(params);
     query.setPath("/select");
-    logger.atInfo().log("Solr search query for key={}", key);
+    logger.atInfo().log("Solr search query for key={}", sanitize(key));
     return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
         .map(SolrService::parsePairs);
   }

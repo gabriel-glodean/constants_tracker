@@ -17,7 +17,6 @@ import java.lang.classfile.instruction.LineNumber;
 import java.lang.constant.ClassDesc;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.glodean.constants.interpreter.ArithmeticOperandContext;
 import org.glodean.constants.interpreter.ConstantUsageInterpreter;
@@ -286,7 +285,7 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
             if (entity instanceof Constant<?> c) {
                 List<ConstantUsage> results = interpreters.stream()
                         .map(interp -> interp.interpret(location, context))
-                        .collect(Collectors.toList());
+                        .toList();
                 boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
                 for (var usage : results) {
                     // Drop zero-confidence fallbacks when at least one interpreter matched,
@@ -296,11 +295,11 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
                     }
                 }
             }
-            if (entity instanceof ConstantPropagation(Set<Number> values, _)) {
+            if (entity instanceof ConstantPropagation(Set<Number> values, _)) { // lgtm[java/unused-local-variable]
                 values.forEach(v -> {
                     List<ConstantUsage> results = interpreters.stream()
                             .map(interp -> interp.interpret(location, context))
-                            .collect(Collectors.toList());
+                            .toList();
                     boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
                     for (var usage : results) {
                         if (!anyMatched || usage.confidence() > 0) {
