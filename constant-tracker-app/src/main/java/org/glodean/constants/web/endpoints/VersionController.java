@@ -2,16 +2,20 @@ package org.glodean.constants.web.endpoints;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.validation.annotation.Validated;
 import reactor.core.publisher.Mono;
 
 /**
@@ -33,6 +37,7 @@ import reactor.core.publisher.Mono;
  * curl -X POST "http://localhost:8080/project/jdk/version/3/sync"
  * </pre>
  */
+@Validated
 @RestController
 @RequestMapping("/project")
 public class VersionController {
@@ -62,10 +67,10 @@ public class VersionController {
   @PreAuthorize("isAuthenticated()")
   @PostMapping("/{project}/version/{version}/finalize")
   public Mono<ResponseEntity<ProjectVersionEntity>> finalizeVersion(
-      @PathVariable("project") String project,
-      @PathVariable("version") int version) {
+      @NotBlank @ValidProjectName @PathVariable("project") String project,
+      @Positive @PathVariable("version") int version) {
     return projectVersionService
-        .finalizeVersion(project, version)
+        .finalizeVersion(project.strip(), version)
         .map(ResponseEntity::ok)
         // "Version not found" is semantically 404, not 400
         .onErrorMap(IllegalArgumentException.class,
@@ -82,10 +87,10 @@ public class VersionController {
   @PreAuthorize("isAuthenticated()")
   @GetMapping("/{project}/version/{version}")
   public Mono<ResponseEntity<ProjectVersionEntity>> getVersion(
-      @PathVariable("project") String project,
-      @PathVariable("version") int version) {
+      @NotBlank @ValidProjectName @PathVariable("project") String project,
+      @Positive @PathVariable("version") int version) {
     return projectVersionService
-        .getVersion(project, version)
+        .getVersion(project.strip(), version)
         .map(ResponseEntity::ok)
         .defaultIfEmpty(ResponseEntity.notFound().build());
   }
@@ -109,15 +114,15 @@ public class VersionController {
   @PreAuthorize("isAuthenticated()")
   @PostMapping("/{project}/version/{version}/sync")
   public Mono<ResponseEntity<List<String>>> syncRemovals(
-      @PathVariable("project") String project,
-      @PathVariable("version") int version) {
+      @NotBlank @ValidProjectName @PathVariable("project") String project,
+      @Positive @PathVariable("version") int version) {
     return descriptorRepo
-        .findAllByProjectAndVersion(project, version)
+        .findAllByProjectAndVersion(project.strip(), version)
         .map(UnitDescriptorEntity::path)
         .collect(java.util.stream.Collectors.toSet())
         .flatMap(uploadedPaths ->
             projectVersionService
-                .recordRemovals(project, version, uploadedPaths)
+                .recordRemovals(project.strip(), version, uploadedPaths)
                 .collectList())
         .map(ResponseEntity::ok);
   }

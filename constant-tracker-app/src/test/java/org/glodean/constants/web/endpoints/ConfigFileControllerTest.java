@@ -179,4 +179,46 @@ class ConfigFileControllerTest {
                 .exchange()
                 .expectStatus().is5xxServerError();
     }
+
+    // ── validation ───────────────────────────────────────────────────────────
+
+    @Test
+    void invalidProjectInPostReturns400() {
+        web.post()
+                .uri("/config?project=foo:bar")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(yamlMultipart().build()))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void blankProjectInPostReturns400() {
+        web.post()
+                .uri("/config?project=")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(yamlMultipart().build()))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void invalidProjectInPutReturns400() {
+        web.put()
+                .uri("/config?project=my+app&version=1")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(yamlMultipart().build()))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void zeroVersionInPutReturns400() {
+        web.put()
+                .uri("/config?project=demo&version=0")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(yamlMultipart().build()))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
 }

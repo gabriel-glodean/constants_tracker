@@ -158,20 +158,55 @@ class FuzzySearchControllerTest {
   // ── blank parameter validation ────────────────────────────────────────────
 
   @Test
-  void blankProjectReturns400() {
-    web.get()
-        .uri("/search?project=&term=SELECT")
-        .exchange()
-        .expectStatus()
-        .isBadRequest();
-  }
-
-  @Test
   void blankTermReturns400() {
     web.get()
         .uri("/search?project=my-app&term=")
         .exchange()
         .expectStatus()
         .isBadRequest();
+  }
+
+  @Test
+  void invalidProjectNameReturns400() {
+    web.get()
+        .uri("/search?project=my+invalid&term=SELECT")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void projectWithLuceneSpecialCharsReturns400() {
+    web.get()
+        .uri("/search?project=foo:bar&term=SELECT")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  // ── cross-project search ──────────────────────────────────────────────────
+
+  @Test
+  void omittedProjectSearchesAllProjects() {
+    when(store.fuzzySearch(eq(null), eq("SELECT"), eq(1), eq(10)))
+        .thenReturn(Mono.just(new FuzzySearchResponse(List.of(), 0L)));
+
+    web.get()
+        .uri("/search?term=SELECT")
+        .exchange()
+        .expectStatus()
+        .isOk();
+  }
+
+  @Test
+  void emptyProjectSearchesAllProjects() {
+    when(store.fuzzySearch(eq(null), eq("SELECT"), eq(1), eq(10)))
+        .thenReturn(Mono.just(new FuzzySearchResponse(List.of(), 0L)));
+
+    web.get()
+        .uri("/search?project=&term=SELECT")
+        .exchange()
+        .expectStatus()
+        .isOk();
   }
 }

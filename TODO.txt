@@ -38,18 +38,27 @@
 ## ════════════════════════════════════════════════════
 
 - ✅ Global exception handler (@RestControllerAdvice + ErrorResponse record)            P0a
-  → Handles: BadCredentials/401, WebExchangeBindException/400, ExtractionException/422,
-             IllegalStateException/409, IllegalArgumentException/400, ResponseStatusException, generic/500
+  → Handles: BadCredentials/401, WebExchangeBindException/400, ConstraintViolationException/400,
+             ExtractionException/422, IllegalStateException/409, IllegalArgumentException/400,
+             ResponseStatusException, generic/500
 
 - ✅ API documentation (OpenAPI / springdoc-openapi-starter-webflux-ui in build.gradle)  P1a
 
-- ⏳ Docker Compose health check: postgres service_healthy condition                     P0b
-  → postgres service has no healthcheck block; app depends_on postgres with service_started, not service_healthy
+- ✅ Docker Compose health check: postgres service_healthy condition                     P0b
+  → PostgresHealthIndicator (ReactiveHealthIndicator): SELECT version() → /actuator/health/postgres
+  → application.yaml: show-details: always, r2dbc auto-indicator disabled
+  → docker-compose.yml: postgres healthcheck (pg_isready) + app depends_on service_healthy
 
-- ⏳ Input validation at controller level                                                P0c
-  → @Valid is only on LoginController; @ValidProjectName, @ValidVersion (≥1), @FileSize(max=512MB)
-     custom validators are not implemented; other controllers (ClassBinariesController,
-     JarBinariesController, VersionController) lack @Valid on request params
+- ✅ Input validation at controller level                                                P0c
+  → @Validated + @NotBlank + @Positive on all controllers (ClassBinaries, JarBinaries,
+     ConfigFile, FuzzySearch, Diff, Version)
+  → @ValidProjectName: custom ConstraintValidator (letter/digit/.-_ allowed, empty = all-projects)
+  → @ValidClassName: custom ConstraintValidator (dot-separated Java names, $ for nested classes)
+  → QueryParam trimming via .strip() at each usage site
+  → FuzzySearch project now optional (null/empty → cross-project, no magic * needed)
+  → Unit tests: ProjectNameValidatorTest, ClassNameValidatorTest
+  → Controller validation tests added to all 6 controller test classes + new DiffControllerTest
+  → GitHub Actions: 17 CodeQL "unpinned action" alerts fixed (SHA-pinned all actions)
 
 - ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                          P0d
   → JAR: 5 min, class: 30s
@@ -111,9 +120,13 @@
 ##
 ##  1. ✅ Security (JWT login + port fixes)                    done
 ##  2. ✅ k3s migration Phases 1-5                             done
-##  3. P0b + P0c  (Docker health + input validation)          ~1 weekend   [May 2026]
-##       P0b: add postgres healthcheck + service_healthy       ~2 h
-##       P0c: @Valid on all controllers + custom validators    ~1.5 d
+##  3. ✅ P0b + P0c  (Docker health + input validation)        done     [May 2026]
+##       ✅ P0b: PostgresHealthIndicator + actuator show-details
+##       ✅ P0b: docker-compose.yml healthcheck block + service_healthy
+##       ✅ P0c: @Validated on all controllers, @ValidProjectName,
+##               @ValidClassName, @Positive, query-param trimming,
+##               ConstraintViolationException → 400 in GlobalExceptionHandler,
+##               validator unit tests + controller validation tests
 ##  4. P0e + P1c  (streaming + MDC — do together)             ~1 weekend   [May 2026]
 ##       P0e: replace Jimfs with DataBufferUtils.write()       ~1 d
 ##       P1c: MdcContextLifter + traceId in log4j2.xml        ~1 d
@@ -141,4 +154,4 @@
 ##       P3b: split/merge pattern analysis                     ~2 d
 ## 10. P4a  (V3 exception-flow bytecode analysis)             ~2 weekends  [Oct 2026]
 ##
-## Total remaining estimate: ~13 weekends ≈ 3–4 months (part-time)
+## Total remaining estimate: ~12 weekends ≈ 3 months (part-time)

@@ -1,9 +1,12 @@
 package org.glodean.constants.web.endpoints;
 
+import jakarta.validation.constraints.NotBlank;
 import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,10 +35,11 @@ import reactor.core.publisher.Mono;
  * # Prefix / partial – edge n-gram field kicks in for short terms
  * GET /search?project=my-app&amp;term=htt&amp;rows=20
  *
- * # Cross-project search
- * GET /search?project=*&amp;term=log4j
+ * # Cross-project search (project omitted or empty → all projects)
+ * GET /search?term=log4j
  * </pre>
  */
+@Validated
 @RestController
 @RequestMapping("/search")
 public class FuzzySearchController {
@@ -50,7 +54,7 @@ public class FuzzySearchController {
     /**
      * Performs a fuzzy / full-text search over indexed constant values.
      *
-     * @param project      restrict results to this project; pass {@code *} for all projects
+     * @param project      restrict results to this project; omit or leave empty to search all projects
      * @param term         plain-text search term – no Lucene syntax required
      * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo
      *                     (default), {@code 2} = two typos
@@ -60,24 +64,20 @@ public class FuzzySearchController {
      */
     @GetMapping
     public Mono<ResponseEntity<FuzzySearchResponse>> search(
-            @RequestParam("project") String project,
-            @RequestParam("term") String term,
+            @ValidProjectName @RequestParam(value = "project", required = false) String project,
+            @NotBlank @RequestParam("term") String term,
             @RequestParam(value = "fuzzy", defaultValue = "1") int editDistance,
             @RequestParam(value = "rows", defaultValue = "10") int rows) {
 
-        if (project == null || project.isBlank()) {
-            throw new IllegalArgumentException("'project' must not be blank");
-        }
-        if (term == null || term.isBlank()) {
-            throw new IllegalArgumentException("'term' must not be blank");
-        }
         if (editDistance < 0 || editDistance > 2) {
             throw new IllegalArgumentException("'fuzzy' must be 0, 1, or 2");
         }
 
         int cappedRows = Math.clamp(rows, 1, 100);
+        // null / empty project → no fq filter in Solr (search all projects)
+        String resolvedProject = (project == null || project.isBlank()) ? null : project.strip();
 
-        return store.fuzzySearch(project, term, editDistance, cappedRows)
+        return store.fuzzySearch(resolvedProject, term.strip(), editDistance, cappedRows)
                 .map(ResponseEntity::ok);
     }
 }

@@ -33,6 +33,10 @@ management:
     health:
       probes:
         enabled: true
+      show-details: always
+  health:
+    r2dbc:
+      enabled: false   # replaced by the named PostgresHealthIndicator
   metrics:
     tags:
       application: constant-tracker

@@ -126,4 +126,51 @@ class VersionControllerTest {
   private static java.util.Set<String> anySet() {
     return org.mockito.ArgumentMatchers.anySet();
   }
+
+  // ── validation ───────────────────────────────────────────────────────────
+
+  @Test
+  void invalidProjectInFinalizeReturns400() {
+    web.post()
+        .uri("/project/foo:bar/version/1/finalize")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void zeroVersionInFinalizeReturns400() {
+    web.post()
+        .uri("/project/demo/version/0/finalize")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void negativeVersionInFinalizeReturns400() {
+    web.post()
+        .uri("/project/demo/version/-1/finalize")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void invalidProjectInGetVersionReturns400() {
+    web.get()
+        .uri("/project/foo bar/version/1")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void zeroVersionInSyncReturns400() {
+    web.post()
+        .uri("/project/demo/version/0/sync")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
 }

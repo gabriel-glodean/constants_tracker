@@ -3,12 +3,15 @@ package org.glodean.constants.web.endpoints;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import jakarta.validation.constraints.NotBlank;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
@@ -23,6 +26,7 @@ import reactor.core.publisher.Mono;
  *
  * <p>POST /jar?project=... with application/octet-stream body uploads a JAR file for analysis.
  */
+@Validated
 @RestController
 @RequestMapping("/jar")
 public class JarBinariesController {
@@ -49,8 +53,8 @@ public class JarBinariesController {
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeJar(
             @RequestBody Mono<DataBuffer> jarFile,
-            @RequestParam("project") String project,
-            @RequestParam("jarName") String jarName) {
+            @NotBlank @ValidProjectName @RequestParam("project") String project,
+            @NotBlank @RequestParam("jarName") String jarName) {
         return jarFile
                 .map(dataBuffer -> {
                     byte[] bytes = new byte[dataBuffer.readableByteCount()];
@@ -60,7 +64,7 @@ public class JarBinariesController {
                 })
                 .flatMapMany(bytes -> {
                     var descriptor = new UnitDescriptor(
-                            BytecodeSourceKind.JAR, jarName, bytes.length, sha256(bytes));
+                            BytecodeSourceKind.JAR, jarName.strip(), bytes.length, sha256(bytes));
                     ModelExtractor modelExtractor;
                     try {
                         modelExtractor = extractionService.extractorForJarFile(bytes);
@@ -75,7 +79,7 @@ public class JarBinariesController {
                     }
                 })
                 .collectList()
-                .flatMap(allUnits -> storage.storeAll(allUnits, project))
+                .flatMap(allUnits -> storage.storeAll(allUnits, project.strip()))
                 .thenReturn(ResponseEntity.ok().build());
     }
 

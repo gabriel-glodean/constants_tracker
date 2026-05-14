@@ -1,9 +1,13 @@
 package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstants;
@@ -12,7 +16,10 @@ import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.web.validation.ValidClassName;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpStatus;
@@ -60,6 +67,7 @@ import reactor.core.publisher.Mono;
  * </pre>
  *
  */
+@Validated
 @RestController
 @RequestMapping("/class")
 public class ClassBinariesController {
@@ -95,10 +103,10 @@ public class ClassBinariesController {
     @PutMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeClass(
             @RequestBody Mono<DataBuffer> javaClass,
-            @RequestParam("project") String project,
-            @RequestParam("version") int version) {
+            @NotBlank @ValidProjectName @RequestParam(value = "project") String project,
+            @Positive @RequestParam("version") int version) {
         return modelMono(javaClass)
-                .flatMap(classConstants -> storage.store(classConstants, project, version)
+                .flatMap(classConstants -> storage.store(classConstants, project.strip(), version)
                         .thenReturn(ResponseEntity.ok().build()));
     }
 
@@ -118,9 +126,10 @@ public class ClassBinariesController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public Mono<ResponseEntity<Object>> storeClass(
-            @RequestBody Mono<DataBuffer> javaClass, @RequestParam("project") String project) {
+            @RequestBody Mono<DataBuffer> javaClass,
+            @NotBlank @ValidProjectName @RequestParam(value = "project") String project) {
         return modelMono(javaClass)
-                .flatMap(classConstants -> storage.store(classConstants, project)
+                .flatMap(classConstants -> storage.store(classConstants, project.strip())
                         .thenReturn(ResponseEntity.ok().build()));
     }
 
@@ -130,8 +139,8 @@ public class ClassBinariesController {
      *
      * @param javaClass the reactive stream carrying the raw class-file bytes
      * @return a {@link Mono} emitting the sole {@link org.glodean.constants.model.UnitConstants} from the class file;
-     *         errors with {@link org.glodean.constants.extractor.ModelExtractor.ExtractionException}
-     *         on malformed bytecode
+     * errors with {@link org.glodean.constants.extractor.ModelExtractor.ExtractionException}
+     * on malformed bytecode
      */
     private Mono<UnitConstants> modelMono(Mono<DataBuffer> javaClass) {
         return javaClass
@@ -169,20 +178,20 @@ public class ClassBinariesController {
     /**
      * Lookup constants for a class using query parameters (GET /class?project=...&className=...&version=...).
      *
-     * @param project the project identifier
+     * @param project   the project identifier
      * @param className the class internal or binary name (slash-separated, e.g., "java/lang/String")
-     * @param version the project version number
+     * @param version   the project version number
      * @return 200 OK with a {@link GetUnitConstantsReply} if the class is found,
-     *         404 Not Found if no matching snapshot exists,
-     *         500 Internal Server Error for other failures
+     * 404 Not Found if no matching snapshot exists,
+     * 500 Internal Server Error for other failures
      */
     @PreAuthorize("permitAll()")
     @GetMapping
     public Mono<ResponseEntity<GetUnitConstantsReply>> classConstants(
-            @RequestParam("project") String project,
-            @RequestParam("className") String className,
-            @RequestParam("version") int version) {
-        String key = project + ":" + className + ":" + version;
+            @NotBlank @ValidProjectName @RequestParam("project") String project,
+            @NotBlank @ValidClassName @RequestParam("className") String className,
+            @Positive @RequestParam("version") int version) {
+        String key = project.strip() + ":" + className.strip() + ":" + version;
         return storage.find(key)
                 .map(GetUnitConstantsReply::new)
                 .map(ResponseEntity::ok)
@@ -199,15 +208,15 @@ public class ClassBinariesController {
      * @param className the unit path (slash-separated, e.g., "java/lang/String")
      * @param version   the version number
      * @return 204 No Content on success, 409 Conflict if the version is finalized,
-     *         500 Internal Server Error for other failures
+     * 500 Internal Server Error for other failures
      */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping
     public Mono<ResponseEntity<Object>> deleteUnit(
-            @RequestParam("project") String project,
-            @RequestParam("className") String className,
-            @RequestParam("version") int version) {
-        return projectVersionService.deleteUnit(project, version, className)
+            @NotBlank @ValidProjectName @RequestParam("project") String project,
+            @NotBlank @ValidClassName @RequestParam("className") String className,
+            @Positive @RequestParam("version") int version) {
+        return projectVersionService.deleteUnit(project.strip(), version, className.strip())
                 .thenReturn(ResponseEntity.noContent().build());
     }
 }

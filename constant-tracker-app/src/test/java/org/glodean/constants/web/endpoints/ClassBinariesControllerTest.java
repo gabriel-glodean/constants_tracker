@@ -34,7 +34,7 @@ import reactor.core.publisher.Mono;
     })
 class ClassBinariesControllerTest {
   public static final String GET_URL =
-      "/class?project=demo&version=1&className=org/glodean/constants/samples/Greeter";
+      "/class?project=demo&version=1&className=org.glodean.constants.samples.Greeter";
   public static final String PUT_URL = "/class?project=demo&version=1";
   public static final String POST_URL = "/class?project=demo";
   public static final Path SAMPLE_PATH = Path.of("src/test/resources/samples/Greeter.class");
@@ -115,5 +115,86 @@ class ClassBinariesControllerTest {
   void classConstantsWithStorageException() {
     when(storage.find(anyString())).thenReturn(Mono.error(new RuntimeException()));
     web.get().uri(GET_URL).exchange().expectStatus().is5xxServerError();
+  }
+
+  // ── project name validation ──────────────────────────────────────────────
+
+  @Test
+  void invalidProjectNameInPostReturns400() throws IOException {
+    byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
+    web.post()
+        .uri("/class?project=my+invalid+project")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .bodyValue(clazz)
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void invalidProjectNameInPutReturns400() throws IOException {
+    byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
+    web.put()
+        .uri("/class?project=foo:bar&version=1")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .bodyValue(clazz)
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void blankProjectNameReturns400() throws IOException {
+    byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
+    web.post()
+        .uri("/class?project=")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .bodyValue(clazz)
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  // ── className validation ─────────────────────────────────────────────────
+
+  @Test
+  void invalidClassNameReturns400() {
+    web.get()
+        .uri("/class?project=demo&version=1&className=com/example/Foo")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void blankClassNameReturns400() {
+    web.get()
+        .uri("/class?project=demo&version=1&className=")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  // ── version validation ───────────────────────────────────────────────────
+
+  @Test
+  void zeroVersionInPutReturns400() throws IOException {
+    byte[] clazz = Files.readAllBytes(SAMPLE_PATH);
+    web.put()
+        .uri("/class?project=demo&version=0")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .bodyValue(clazz)
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void negativeVersionInGetReturns400() {
+    web.get()
+        .uri("/class?project=demo&version=-1&className=com.example.Foo")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
   }
 }

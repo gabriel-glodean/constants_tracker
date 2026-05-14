@@ -1,9 +1,13 @@
 package org.glodean.constants.web.endpoints;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.glodean.constants.dto.ProjectDiffResponse;
 import org.glodean.constants.services.DiffService;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +28,7 @@ import reactor.core.publisher.Mono;
  * The diff is inheritance-aware: if a unit was not re-uploaded in a version it is resolved
  * from the parent chain, and deletions are fully respected.
  */
+@Validated
 @RestController
 @RequestMapping("/project")
 public class DiffController {
@@ -36,11 +41,11 @@ public class DiffController {
 
   @GetMapping("/{project}/diff")
   public Mono<ResponseEntity<ProjectDiffResponse>> diff(
-      @PathVariable("project") String project,
-      @RequestParam("from") int from,
-      @RequestParam("to") int to) {
+      @NotBlank @ValidProjectName @PathVariable("project") String project,
+      @Positive @RequestParam("from") int from,
+      @Positive @RequestParam("to") int to) {
     return diffService
-        .diff(project, from, to)
+        .diff(project.strip(), from, to)
         .map(ResponseEntity::ok);
   }
 }

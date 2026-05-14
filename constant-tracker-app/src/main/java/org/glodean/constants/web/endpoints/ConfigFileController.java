@@ -2,11 +2,15 @@ package org.glodean.constants.web.endpoints;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.glodean.constants.extractor.configfile.PropertiesConstantsExtractor;
 import org.glodean.constants.extractor.configfile.YamlConstantsExtractor;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
@@ -35,6 +39,7 @@ import reactor.core.scheduler.Schedulers;
  * @see YamlConstantsExtractor
  * @see PropertiesConstantsExtractor
  */
+@Validated
 @RestController
 @RequestMapping("/config")
 public class ConfigFileController {
@@ -65,10 +70,10 @@ public class ConfigFileController {
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<Object>> storeConfigVersioned(
             @RequestPart("file") Mono<FilePart> filePart,
-            @RequestParam("project") String project,
-            @RequestParam("version") int version) {
+            @NotBlank @ValidProjectName @RequestParam("project") String project,
+            @Positive @RequestParam("version") int version) {
         return extractFromUpload(filePart)
-                .flatMap(unit -> storage.store(unit, project, version).thenReturn(ResponseEntity.ok().build()));
+                .flatMap(unit -> storage.store(unit, project.strip(), version).thenReturn(ResponseEntity.ok().build()));
     }
 
     /**
@@ -82,9 +87,9 @@ public class ConfigFileController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<Object>> storeConfig(
             @RequestPart("file") Mono<FilePart> filePart,
-            @RequestParam("project") String project) {
+            @NotBlank @ValidProjectName @RequestParam("project") String project) {
         return extractFromUpload(filePart)
-                .flatMap(unit -> storage.store(unit, project).thenReturn(ResponseEntity.ok().build()));
+                .flatMap(unit -> storage.store(unit, project.strip()).thenReturn(ResponseEntity.ok().build()));
     }
 
     /**

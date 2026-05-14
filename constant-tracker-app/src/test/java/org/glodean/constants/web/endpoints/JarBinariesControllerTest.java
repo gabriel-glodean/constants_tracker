@@ -101,4 +101,36 @@ class JarBinariesControllerTest {
             .exchange()
             .expectStatus().is5xxServerError();
     }
+
+    // ── validation ───────────────────────────────────────────────────────────
+
+    @Test
+    void invalidProjectNameReturns400() {
+        web.post()
+            .uri("/jar?project=foo:bar&jarName=test.jar")
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .bodyValue(new byte[]{1, 2, 3, 4})
+            .exchange()
+            .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void blankProjectNameReturns400() {
+        web.post()
+            .uri("/jar?project=&jarName=test.jar")
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .bodyValue(new byte[]{1, 2, 3, 4})
+            .exchange()
+            .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void blankJarNameReturns400() {
+        web.post()
+            .uri("/jar?project=demo&jarName=")
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .bodyValue(new byte[]{1, 2, 3, 4})
+            .exchange()
+            .expectStatus().isBadRequest();
+    }
 }

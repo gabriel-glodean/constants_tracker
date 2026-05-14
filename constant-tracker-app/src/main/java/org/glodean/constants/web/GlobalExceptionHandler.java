@@ -14,6 +14,7 @@ import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
+import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +44,23 @@ public class GlobalExceptionHandler {
         .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
         .collect(Collectors.joining("; "));
     log.atWarn().log("Validation failed: {}", details);
+    return Mono.just(ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(new ErrorResponse(400, "Bad Request", details)));
+  }
+
+  /** 400 — @RequestParam / @PathVariable constraint violated (from @Validated controllers). */
+  @ExceptionHandler(ConstraintViolationException.class)
+  public Mono<ResponseEntity<ErrorResponse>> handleConstraintViolation(ConstraintViolationException ex) {
+    String details = ex.getConstraintViolations().stream()
+        .map(cv -> {
+          String path = cv.getPropertyPath().toString();
+          // strip method name prefix: "methodName.paramName" → "paramName"
+          int dot = path.lastIndexOf('.');
+          return (dot >= 0 ? path.substring(dot + 1) : path) + ": " + cv.getMessage();
+        })
+        .collect(Collectors.joining("; "));
+    log.atWarn().log("Constraint violation: {}", details);
     return Mono.just(ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
         .body(new ErrorResponse(400, "Bad Request", details)));

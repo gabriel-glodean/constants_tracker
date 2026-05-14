@@ -9,11 +9,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.request.UpdateRequest;
+import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
@@ -148,8 +150,8 @@ public class SolrService implements UnitConstantsStore {
     params.set("defType", "edismax");
     params.set("qf", "constant_values_t^2.0 constant_values_ngram^1.0");
     params.set("pf", "constant_values_t^3.0"); // phrase boost
-    if (!"*".equals(project)) {
-      params.set("fq", "project:\"" + project + "\"");
+    if (!Strings.isNullOrEmpty(project)) {
+      params.set("fq", "project:\"" + ClientUtils.escapeQueryChars(project) + "\"");
     }
     params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t,semantic_pairs_ss");
     params.set("rows", maxRows);
@@ -171,7 +173,7 @@ public class SolrService implements UnitConstantsStore {
   @Override
   public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
     ModifiableSolrParams params = new ModifiableSolrParams();
-    params.set("q", "id:\"" + key + "\"");
+    params.set("q", "id:\"" + ClientUtils.escapeQueryChars(key) + "\"");
     params.set("fl", "constant_pairs_ss");
     params.set("rows", 1);
     QueryRequest query = new QueryRequest(params);
