@@ -156,6 +156,8 @@ Full API docs: http://localhost:8080/swagger-ui.html
 ./gradlew test                                       # all tests
 ./gradlew testReport                                 # HTML report → build/reports/allTests/
 ./gradlew :constant-extractor-bytecode:check         # tests + JaCoCo ≥85%
+./gradlew :constant-extractor-config-file:check      # tests + JaCoCo ≥85%
+./gradlew :constant-tracker-app:check                # tests + JaCoCo ≥85%
 ./gradlew :constant-tracker-app:heavyTest            # 16 GB heap; full-runtime analysis
 ./gradlew spotlessApply                              # auto-format
 

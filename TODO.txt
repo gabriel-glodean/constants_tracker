@@ -33,6 +33,21 @@
 - ✅ Auth gating via @ConditionalOnProperty (constants.auth.enabled); CONSTANTS_AUTH_ENABLED=false skips auth
 - ✅ AuthCleanupScheduler: cron-based purge of expired blacklisted + refresh tokens
 
+## ────────────────────────────────────────────────────
+## 🔒 SECURITY — Pending
+## ────────────────────────────────────────────────────
+
+- ⏳ Security posture: deny-by-default in SecurityWebFilterChain                         Ps1
+  → SecuredConfig currently uses anyExchange().permitAll() — enforcement relies entirely on
+    @PreAuthorize on each method; a new endpoint added without @PreAuthorize is silently public
+  → Decision: keeping allow-by-default to avoid duplicating endpoint paths in the permit-list;
+    discipline enforced via code review + @PreAuthorize("isAuthenticated()") convention
+
+- ⏳ BCrypt work factor: raise from 10 to 12                                              Ps2
+  → new BCryptPasswordEncoder() uses factor 10 (2010-era default)
+  → OWASP currently recommends 12; make configurable via authProperties.bcryptStrength()
+  → One-line change in SecurityConfiguration + property in AuthProperties + application.yaml
+
 ## ════════════════════════════════════════════════════
 ## V2A — Reliability & Stability
 ## ════════════════════════════════════════════════════
@@ -46,7 +61,7 @@
 
 - ✅ Docker Compose health check: postgres service_healthy condition                     P0b
   → PostgresHealthIndicator (ReactiveHealthIndicator): SELECT version() → /actuator/health/postgres
-  → application.yaml: show-details: always, r2dbc auto-indicator disabled
+  → application.yaml: show-details: always, r2dbc auto-indicator disabled, graceful shutdown 30s
   → docker-compose.yml: postgres healthcheck (pg_isready) + app depends_on service_healthy
 
 - ✅ Input validation at controller level                                                P0c
@@ -62,10 +77,15 @@
 
 - ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                          P0d
   → JAR: 5 min, class: 30s
+  → Also add explicit socket/connect timeout to HttpJdkSolrClient.Builder (currently unbounded)
 
 - ⏳ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)           P0e
   → Current: byte[]→Jimfs = 3× JAR size in RAM; Fix: DataBufferUtils.write(tmpFile) → ZipInputStream
   → ConcreteExtractionService.fromZipBytesWithJimfs() still uses Jimfs
+  → Also fixes: Jimfs FileSystem never closed after extraction → memory leak per JAR upload
+    (FileSystemModelExtractor.extract() closes the stream/executor but not the FileSystem itself)
+  → Also fixes: spring.codec.max-in-memory-size: 5MB rejects any JAR > 5MB → HTTP 413 in production
+    (real Spring Boot fat JARs are 20–100MB; until P0e, the codec limit must be raised as a stopgap)
   → Do in same sprint as P1c
 
 - ⏳ Structured logging + correlation IDs (Log4j2 ThreadContext + Reactor MDC)          P1c
@@ -81,8 +101,32 @@
 - ⏳ Performance docs + JMH benchmarks (PERFORMANCE.md)                                 P2a
 - ⏳ Integration tests: failure scenarios + concurrency (Testcontainers chaos)           P2b
 - ⏳ R2DBC connection pool config + Flyway validation documented in application.yaml     P2c
+  → spring.r2dbc.pool.* values not set; defaults may be mismatched to load
 - ⏳ Secrets hygiene (.env in .gitignore, vars documented in README)                    P2d
+  → .env in .gitignore ✅, .env.example ✅, CONSTANTS_AUTH_JWT_SECRET added to .env.example ✅
+  → README build section now lists all three :check tasks ✅
+  → Remaining: verify terraform.tfvars is git-ignored, audit k8s secrets.yml for plain-text values
 - ⏳ Monitoring: React metrics widget (poll /actuator/metrics) + Axiom OTLP traces      P2e
+
+## ════════════════════════════════════════════════════
+## V2B+ Code Quality
+## ════════════════════════════════════════════════════
+
+- ⏳ Fix @Timed placement in ConcreteExtractionService                                   P2g
+  → @Timed("extraction.jar") is on extractorForJarFile() which only constructs the extractor;
+    the actual bytecode analysis inside extract() is not measured
+  → Move / add @Timed to wrap the extract() call at the controller/service boundary
+
+- ⏳ Consistent Solr response parsing in SolrService                                    P2h
+  → parsePairs() matches response with instanceof Collection<?> (works by accident —
+    SolrDocumentList extends ArrayList), while parseFuzzyResponse() correctly uses
+    instanceof SolrDocumentList; make both consistent to avoid silent breakage on
+    future SolrJ client upgrades
+
+- ⏳ Virtual threads in FileSystemModelExtractor                                         P2i
+  → Uses Executors.newFixedThreadPool(availableProcessors()) on Java 25
+  → Replace with Executors.newVirtualThreadPerTaskExecutor() for idiomatic Java 25;
+    removes the need to tune threadCount for I/O-shaped workloads
 
 ## ════════════════════════════════════════════════════
 ## V2B+ — Diff Explainer (LLM microservice)
@@ -106,52 +150,100 @@
 
 - ⏳ Similar constant detection (string similarity + Solr MLT)                          P3a
 - ⏳ Constant split/merge analysis (detect refactoring patterns)                        P3b
+- ⏳ Fuzzy search pagination (cursor / offset beyond the 100-row cap)                   P3c
+  → GET /search?term=...&rows=20&offset=20 → Solr `start` param; return totalFound so UI can page
+  → Required before search becomes useful on large projects
+- ⏳ API versioning prefix (/v1/)                                                        P3d
+  → All endpoints are at root (/class, /jar, /search, etc.); any breaking change needs a
+    coordinated cutover with every client
+  → Add /v1/ prefix now (costs nothing) and redirect bare paths for backwards compatibility
 
 ## ════════════════════════════════════════════════════
 ## V3 — Advanced / Long-term
 ## ════════════════════════════════════════════════════
 
 - ⏳ Exception-flow bytecode analysis (catch block constant extraction)                  P4a
+- ⏳ Solr dead-letter replay admin endpoint                                              P4b
+  → SolrOutboxProcessor comment notes "future admin endpoint"; rows currently need manual SQL
+  → POST /admin/solr-outbox/replay?id=... → move dead-letter row back to live outbox
 
 ## ════════════════════════════════════════════════════
 ## Sprint order + timeline estimates
-## (assuming part-time: ~1 productive weekend / sprint)
+##
+##  Part-time = ~1 productive weekend/sprint (~2 focused days)
+##  Full-time = 5-day work week (~6 productive hrs/day after overhead)
+##
+##  Estimates assume solo developer. P2f (llama.cpp FFI) is a
+##  research-level task — treat its range as a hard minimum.
 ## ════════════════════════════════════════════════════
 ##
-##  1. ✅ Security (JWT login + port fixes)                    done
-##  2. ✅ k3s migration Phases 1-5                             done
-##  3. ✅ P0b + P0c  (Docker health + input validation)        done     [May 2026]
-##       ✅ P0b: PostgresHealthIndicator + actuator show-details
-##       ✅ P0b: docker-compose.yml healthcheck block + service_healthy
-##       ✅ P0c: @Validated on all controllers, @ValidProjectName,
-##               @ValidClassName, @Positive, query-param trimming,
-##               ConstraintViolationException → 400 in GlobalExceptionHandler,
-##               validator unit tests + controller validation tests
-##  4. P0e + P1c  (streaming + MDC — do together)             ~1 weekend   [May 2026]
-##       P0e: replace Jimfs with DataBufferUtils.write()       ~1 d
-##       P1c: MdcContextLifter + traceId in log4j2.xml        ~1 d
-##  5. P0d        (Resilience4j circuit breaker)              ~1 weekend   [Jun 2026]
-##       add dependency, time-limiter + CB around Solr calls   ~1.5 d
-##  6. P1b        (UI error boundary + SW offline cache)      ~1 weekend   [Jun 2026]
-##       React ErrorBoundary                                    ~0.5 d
-##       Service Worker + cache strategy                        ~1.5 d
-##  7. P2a + P2b + P2c + P2d + P2e  (ops)                    ~2 weekends  [Jun–Jul 2026]
-##       P2a: PERFORMANCE.md + JMH benchmarks                  ~1 d
-##       P2b: failure/concurrency integration tests            ~2 d
-##       P2c: R2DBC pool + Flyway config docs                  ~0.5 d
-##       P2d: .env hygiene + README secrets section            ~0.5 d
-##       P2e: metrics widget + Axiom OTLP traces               ~2 d
-##  8. P2f  (diff explainer — Quarkus/GraalVM/llama.cpp)     ~4 weekends  [Jul–Aug 2026]
-##       Quarkus project scaffold + build                       ~0.5 d
-##       llama.cpp JNI/Panama FFI bindings                     ~3 d
-##       GPU detection (CUDA/Metal/Vulkan) + CPU fallback      ~2 d
-##       GraalVM native-image config (reflection, resources)   ~1 d
-##       Docker Compose integration + gpu profile              ~0.5 d
-##       UI "Explain diff" button + markdown display           ~1 d
-##       Auth forwarding + unavailability fallback             ~0.5 d
-##  9. P3a + P3b  (V2C feature depth)                         ~2 weekends  [Sep 2026]
-##       P3a: similar constant detection (Solr MLT)            ~1.5 d
-##       P3b: split/merge pattern analysis                     ~2 d
-## 10. P4a  (V3 exception-flow bytecode analysis)             ~2 weekends  [Oct 2026]
+##  Sprint  Task(s)              Part-time         Full-time       Calendar (PT / FT)
+##  ──────  ──────────────────   ───────────────   ─────────────   ───────────────────
+##  1  ✅  Security              done              done
+##  2  ✅  k3s migration         done              done
+##  3  ✅  P0b + P0c             done              done            May 2026
 ##
-## Total remaining estimate: ~12 weekends ≈ 3 months (part-time)
+##       ✅ P0b: PostgresHealthIndicator, actuator show-details,
+##              graceful shutdown (server.shutdown=graceful + 30s phase timeout),
+##              docker-compose.yml healthcheck + service_healthy
+##       ✅ P0c: @Validated on all controllers, @ValidProjectName,
+##              @ValidClassName, @Positive, query-param trimming,
+##              ConstraintViolationException → 400 in GlobalExceptionHandler,
+##              validator unit tests + controller validation tests
+##
+##  4   P0e + P1c               1 weekend  (~2 d)    3 days        end May 2026  / May W3
+##       P0e: replace Jimfs with DataBufferUtils.write()            ~1 d   /  1.5 d
+##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
+##
+##  5   P0d  (Resilience4j CB + Solr timeout)
+##                               1 weekend  (~2 d)    3 days        Jun W1        / May W4
+##       HttpJdkSolrClient socket/connect timeout                    ~0.5 d /  0.5 d
+##       Resilience4j dep, time-limiter + CB around Solr calls       ~1.5 d /  2 d
+##
+##  6   P1b  (UI error boundary + SW offline)
+##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1
+##       React ErrorBoundary                                         ~0.5 d /  0.5 d
+##       Service Worker + cache strategy                             ~1.5 d /  2 d
+##
+##  7   P2a + P2b + P2c + P2d + P2e  (ops)
+##                               3 weekends (~6 d)    8 days        Jun–Jul 2026  / Jun W2–W3
+##       P2a: PERFORMANCE.md + JMH benchmarks                       ~1.5 d /  2 d
+##       P2b: failure/concurrency integration tests (Testcontainers) ~2 d   /  3 d
+##       P2c: R2DBC pool sizing + Flyway validation (set + document) ~1 d   /  1 d
+##       P2d: tfvars/k8s secrets audit + README cleanup             ~0.5 d /  0.5 d
+##       P2e: metrics widget (React) + Axiom OTLP traces            ~2 d   /  2 d
+##       Note: P2d is mostly done (≈ 0.5 d remaining)
+##
+##  8   P2f  (diff explainer — Quarkus/GraalVM/llama.cpp)
+##                               7–9 weekends         4–5 weeks     Aug–Nov 2026  / Jun–Jul 2026
+##       Quarkus project scaffold + build                            ~0.5 d /  0.5 d
+##       llama.cpp JNI / Panama FFI bindings  ← hard research work  ~5 d   /  8 d
+##       GPU detection (CUDA/Metal/Vulkan) + CPU fallback            ~3 d   /  4 d
+##       GraalVM native-image config (reflection, resources)         ~1.5 d /  2 d
+##       Docker Compose integration + gpu profile                    ~0.5 d /  0.5 d
+##       UI "Explain diff" button + markdown display                 ~1 d   /  1 d
+##       Auth forwarding + unavailability fallback                   ~0.5 d /  0.5 d
+##       Total P2f                                                   ~12 d  / ~17 d
+##       (range: add +3 d / +5 d for GraalVM/FFI surprises)
+##
+##  9   P3a + P3b + P3c  (feature depth)
+##                               2 weekends (~4 d)    5 days        Nov 2026      / Aug W1
+##       P3a: similar constant detection (Solr MLT)                 ~1.5 d /  2 d
+##       P3b: split/merge pattern analysis                          ~2 d   /  2.5 d
+##       P3c: fuzzy search pagination (Solr start param + UI)       ~0.5 d /  0.5 d
+##
+## 10   P4a + P4b  (advanced / long-term)
+##                               1–2 weekends (~3 d)  4 days        Nov–Dec 2026  / Aug W2
+##       P4a: exception-flow bytecode analysis                      ~2 d   /  3 d
+##       P4b: dead-letter replay admin endpoint                     ~0.5 d /  1 d
+##
+## ─────────────────────────────────────────────────────────────────────────────────────
+## TOTALS (sprints 4–10, excluding already-done sprints 1–3)
+##
+##   Part-time:   ~16–19 weekends  ≈  4–5 months  (May → Sep/Oct 2026, dominated by P2f)
+##   Full-time:   ~43–50 days      ≈  9–10 weeks  (May → late Jul 2026)
+##
+##   Without P2f (all other sprints only):
+##   Part-time:   ~9–10 weekends   ≈  2–2.5 months
+##   Full-time:   ~26–30 days      ≈  5–6 weeks
+## ─────────────────────────────────────────────────────────────────────────────────────

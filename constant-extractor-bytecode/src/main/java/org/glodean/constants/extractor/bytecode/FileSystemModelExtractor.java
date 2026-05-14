@@ -107,6 +107,7 @@ public final class FileSystemModelExtractor implements ModelExtractor {
     this(fileSystem, merger, null, new ExtractionNotifier.Silent());
   }
 
+
   @Override
   public Collection<UnitConstants> extract(UnitDescriptor source) throws ExtractionException {
     Queue<UnitConstants> ret = new ConcurrentLinkedQueue<>();

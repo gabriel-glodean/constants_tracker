@@ -121,7 +121,8 @@ public class SolrService implements UnitConstantsStore {
    * via {@link SearchQueryBuilder}. Special characters are escaped automatically and fuzzy
    * suffixes ({@code ~N}) are appended per-token when {@code editDistance > 0}.
    *
-   * @param project      project to restrict results to (pass {@code "*"} for cross-project search)
+   * @param project      project to restrict results to; pass {@code null} or empty string to search
+   *                     across all projects
    * @param term         plain-text search term
    * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo,
    *                     {@code 2} = two typos
