@@ -86,7 +86,8 @@
     (FileSystemModelExtractor.extract() closes the stream/executor but not the FileSystem itself)
   → Also fixes: spring.codec.max-in-memory-size: 5MB rejects any JAR > 5MB → HTTP 413 in production
     (real Spring Boot fat JARs are 20–100MB; until P0e, the codec limit must be raised as a stopgap)
-  → Do in same sprint as P1c
+  → Do in same sprint as P1c and P2j (calibration is read-only and fits the same sprint)
+  → Prerequisite for P3e (embedded JAR recursion needs streaming entry-by-entry access)
 
 - ⏳ Structured logging + correlation IDs (Log4j2 ThreadContext + Reactor MDC)          P1c
   → MdcContextLifter; [%X{traceId}] in log4j2.xml; generate traceId at controller boundary
@@ -123,40 +124,68 @@
     instanceof SolrDocumentList; make both consistent to avoid silent breakage on
     future SolrJ client upgrades
 
-- ⏳ Virtual threads in FileSystemModelExtractor                                         P2i
-  → Uses Executors.newFixedThreadPool(availableProcessors()) on Java 25
-  → Replace with Executors.newVirtualThreadPerTaskExecutor() for idiomatic Java 25;
-    removes the need to tune threadCount for I/O-shaped workloads
+- ⏳ Classifier calibration: upload real-world JARs and inspect extracted constants      P2j
+  → Goal: discover constant patterns not covered by existing 6 classifiers, especially
+    CONSTANT_Dynamic (condy) bootstrap arguments emitted by non-javac compilers
+  → Candidate JARs (all on Maven Central):
+      kotlin-stdlib.jar       — condy CONSTANT_VALUE bootstraps, lambda handles
+      groovy-all.jar          — dynamic dispatch bootstrap args (Groovy 4.x)
+      hibernate-core.jar      — SQL fragments, HQL strings, property keys (SQL classifier stress)
+      jackson-databind.jar    — JSON keys, MIME types, date formats (multi-classifier)
+      byte-buddy.jar          — JVM descriptor strings, method signature constants
+      scala-library.jar       — Scala 3 condy for match type witnesses (different from Kotlin)
+  → Expected new patterns to investigate:
+      JVM_DESCRIPTOR          — strings matching `(L...;)V` descriptor format
+      CONDY_BOOTSTRAP_ARG     — constants loaded exclusively as ConstantDynamic arguments
+      BITMASK_OPERAND         — numeric ARITHMETIC_OPERANDs that are powers of 2 or hex masks
+  → Outcome: document findings, add new CoreSemanticType entries or UsageType variants
+    for patterns found in ≥ 2 libraries; discard one-offs
 
-## ════════════════════════════════════════════════════
-## V2B+ — Diff Explainer (LLM microservice)
-## ════════════════════════════════════════════════════
-
-- ⏳ New module: `constant-diff-explainer` — Quarkus + GraalVM native microservice      P2f
-  → Embeds llama.cpp (via JNI or Panama FFI) + a quantised model (e.g. Mistral-7B-Q4_K_M)
-  → Exposes POST /explain  { diff: DiffResult } → { explanation: string }
-  → GPU acceleration: detect CUDA / Metal / Vulkan at startup; fall back to CPU if unavailable
-  → GraalVM native-image: bundle model weights as a resource or mount at runtime via
-     QUARKUS_EXPLAINER_MODEL_PATH env var (avoid baking large binary into the image)
-  → Docker Compose: add `explainer` service (image built with --features=gpu flag toggle);
-     app calls it over internal app_network only
-  → UI: "Explain diff" button in DiffViewer.tsx — calls /api/explain, shows markdown tooltip
-  → Auth: inherit Bearer token forwarded from constant-tracker-app (no separate login)
-  → Fallback: if explainer service is unreachable, button is disabled with a tooltip
+- ⏳ CONSTANT_Dynamic (condy) support in ConstantHandler                                P2k
+  → Currently: ci.constantValue() instanceof DynamicConstantDesc flows into ObjectConstant
+    and silently falls through AnalysisMerger — never emitted as a trackable usage
+  → Fix: in ConstantHandler, detect DynamicConstantDesc and attempt static resolution for
+    well-known bootstrap methods (ConstantBootstraps.getStaticFinal, .primitiveClass, .invoke,
+    Kotlin Reflection bootstrap, Groovy metaclass bootstrap)
+  → Resolved value: push NumericConstant / ObjectConstant as normal → flows into existing pipeline
+  → Unresolved BSM: push ObjectReference with BSM owner+name as the tag (intentional, not silent)
+  → Additionally: record BSM owner + name + static args as metadata on the emitted ConstantUsage
+    (ConstantUsage already has a metadata map) — this is the coupling signal for P4d
+  → Do after P2j calibration (findings inform which BSMs are worth pattern-matching)
 
 ## ════════════════════════════════════════════════════
 ## V2C — Feature Depth
 ## ════════════════════════════════════════════════════
 
-- ⏳ Similar constant detection (string similarity + Solr MLT)                          P3a
-- ⏳ Constant split/merge analysis (detect refactoring patterns)                        P3b
+
 - ⏳ Fuzzy search pagination (cursor / offset beyond the 100-row cap)                   P3c
   → GET /search?term=...&rows=20&offset=20 → Solr `start` param; return totalFound so UI can page
   → Required before search becomes useful on large projects
+
 - ⏳ API versioning prefix (/v1/)                                                        P3d
   → All endpoints are at root (/class, /jar, /search, etc.); any breaking change needs a
     coordinated cutover with every client
   → Add /v1/ prefix now (costs nothing) and redirect bare paths for backwards compatibility
+
+- ⏳ Embedded JAR extraction (nested JARs inside uploaded JARs)                         P3e
+  → Current: JarBinariesController feeds the top-level JAR entries only
+  → Target: recurse into nested JARs found at BOOT-INF/lib/*.jar (Spring Boot fat JARs),
+    WEB-INF/lib/*.jar (WAR), and root /*.jar (Maven shade / Gradle shadow uber-JARs)
+  → Each nested JAR is extracted as a separate logical unit under the same project/version,
+    using the nested JAR filename as the unit identifier
+  → Avoids re-uploading already-indexed library JARs: check by JAR content hash against
+    a new postgres table (jar_content_hashes) before extracting; skip if already present
+  → Prerequisite: P0e (streaming refactor) — Jimfs cannot efficiently handle nested ZipInputStream
+  → Enables indexing of entire application distributions in a single upload
+
+- ⏳ Config file extraction from within JARs                                            P3f
+  → JARs routinely bundle application.yml, application.properties, *.properties resource files
+  → During JAR upload (including nested JARs from P3e), detect config file entries by extension
+    and path pattern (e.g. BOOT-INF/classes/*.yml, *.properties outside .class paths)
+  → Feed detected entries to constant-extractor-config-file module (already exists as a module);
+    results stored under the same project/version with source annotated as CONFIG_FILE
+  → Means a single JAR upload produces both bytecode constants and config constants together
+  → No new API surface needed — transparent to the caller
 
 ## ════════════════════════════════════════════════════
 ## V3 — Advanced / Long-term
@@ -167,14 +196,63 @@
   → SolrOutboxProcessor comment notes "future admin endpoint"; rows currently need manual SQL
   → POST /admin/solr-outbox/replay?id=... → move dead-letter row back to live outbox
 
+- ⏳ [TENTATIVE] Replace Solr with Postgres-native search (pg_trgm + pgvector)          P4c
+  → Rationale: Solr brings no meaningful advantage for short string constants; BM25 is tuned
+    for long documents; constants benefit more from type-aware matching
+  → UnitConstantsStore SPI already isolates Solr behind an interface — swap is clean
+  → Postgres replacement: pg_trgm GIN index for fuzzy search, fuzzystrmatch levenshtein()
+    for edit-distance, value_num numeric column for type-aware numeric similarity
+  → Eliminates: SolrService, SolrOutboxProcessor, SolrOutboxPayload, solr_outbox table,
+    P0d (Resilience4j), P2h (parsePairs inconsistency), P4b (dead-letter replay),
+    Solr container in docker-compose + k8s, managed-schema.xml, SolrJ dependency
+  → Prerequisites: all planned search features (P3c) must be built first so all
+    query patterns are known before rewriting the store layer
+
+- ⏳ Cross-component constant coupling analysis                                          P4d
+  → Core value proposition: detect when the same (or near-same) constant value appears in
+    multiple independently-indexed projects/versions — a hidden coupling that code review
+    cannot reliably catch across component boundaries
+  → New query: GET /search/shared?value=...  → returns all projects+versions that contain
+    this exact constant value, ranked by frequency; string and numeric types handled separately
+  → Subsumes P3a (similar constant detection): near-same numeric range handled here via
+    Postgres value_num column or in-memory post-fetch; Solr MLT within-project approach dropped
+    as too narrow and Solr-specific
+  → Coupling strength signal: if two components share a constant AND that constant appears in
+    conditional logic (branch predicate via ARITHMETIC_OPERAND or comparison context), flag as
+    HIGH_RISK coupling — a one-sided change silently alters branching behaviour in the other
+  → Condy coupling edge (requires P2k): if two components reference the same DynamicConstantDesc
+    BSM (same owner + name + static args), record a BSM-level coupling edge — stronger than
+    value equality because it means both depend on the same code to produce the constant
+  → UI: "Shared across projects" indicator in search results; dedicated coupling graph view (future)
+  → Prerequisite: P2k (condy metadata) for BSM-level edges
+
+- ⏳ BootstrapMethods attribute scanning (condy-in-invokedynamic BSM args)              P4e
+  → Novel analysis: scan ClassModel.attributes() → BootstrapMethodsAttribute directly,
+    independent of method-body walking
+  → Each BootstrapMethodEntry.arguments() can contain DynamicConstantDesc entries —
+    condys nested as static arguments to invokedynamic call sites; these are never emitted
+    as standalone ldc instructions and are completely invisible to method-body analysis
+  → Emits new UsageType: CONDY_BOOTSTRAP_ARG — constant whose value is baked into a call
+    site recipe rather than loaded directly; especially relevant for Kotlin and Groovy
+  → For coupling analysis (P4d): two components sharing the same nested condy in their
+    bootstrap args are coupled at the call-site-recipe level — the deepest form of hidden
+    constant coupling detectable statically
+  → Prerequisite: P2k (establishes condy handling patterns); P2j (calibration identifies
+    which JVM languages actually emit this structure)
+
+- ⏳ [DEFERRED] Constant split/merge analysis (detect refactoring patterns)             P4f
+  → Detect when one constant splits into N or N merge into one across versions of the same project
+  → Pure Java diff logic over data already in Postgres — no Solr involvement
+  → Deferred: lower ROI compared to cross-component coupling (P4d); revisit after P4d ships
+    and real usage patterns are observed
+
 ## ════════════════════════════════════════════════════
 ## Sprint order + timeline estimates
 ##
 ##  Part-time = ~1 productive weekend/sprint (~2 focused days)
 ##  Full-time = 5-day work week (~6 productive hrs/day after overhead)
 ##
-##  Estimates assume solo developer. P2f (llama.cpp FFI) is a
-##  research-level task — treat its range as a hard minimum.
+##  Estimates assume solo developer.
 ## ════════════════════════════════════════════════════
 ##
 ##  Sprint  Task(s)              Part-time         Full-time       Calendar (PT / FT)
@@ -191,59 +269,64 @@
 ##              ConstraintViolationException → 400 in GlobalExceptionHandler,
 ##              validator unit tests + controller validation tests
 ##
-##  4   P0e + P1c               1 weekend  (~2 d)    3 days        end May 2026  / May W3
+##  4   P0e + P1c + P2j  (streaming refactor + logging + calibration)
+##                               1–2 weekends (~3 d)  4 days        end May 2026  / May W3–W4
 ##       P0e: replace Jimfs with DataBufferUtils.write()            ~1 d   /  1.5 d
 ##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
+##       P2j: upload kotlin-stdlib, groovy-all, hibernate-core      ~0.5 d /  0.5 d
+##            → calibration is read-only; fits end of sprint alongside the above
+##            → findings directly feed P2k BSM pattern list (next sprint)
 ##
-##  5   P0d  (Resilience4j CB + Solr timeout)
-##                               1 weekend  (~2 d)    3 days        Jun W1        / May W4
-##       HttpJdkSolrClient socket/connect timeout                    ~0.5 d /  0.5 d
-##       Resilience4j dep, time-limiter + CB around Solr calls       ~1.5 d /  2 d
+##  5   P2k + P0d  (condy support + Resilience4j)
+##                               1–2 weekends (~3 d)  4 days        Jun W1–W2     / May W4–Jun W1
+##       P2k: ConstantHandler condy + BSM metadata on ConstantUsage ~1.5 d /  2 d
+##            → informed by P2j calibration findings
+##       P0d: HttpJdkSolrClient timeout + Resilience4j CB           ~1.5 d /  2 d
 ##
 ##  6   P1b  (UI error boundary + SW offline)
 ##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1
 ##       React ErrorBoundary                                         ~0.5 d /  0.5 d
 ##       Service Worker + cache strategy                             ~1.5 d /  2 d
 ##
-##  7   P2a + P2b + P2c + P2d + P2e  (ops)
-##                               3 weekends (~6 d)    8 days        Jun–Jul 2026  / Jun W2–W3
+##  7   P2a + P2b + P2c + P2d + P2e + P2g + P2h  (ops + code quality)
+##                               3–4 weekends (~7 d)  9 days        Jun–Jul 2026  / Jun W2–W4
 ##       P2a: PERFORMANCE.md + JMH benchmarks                       ~1.5 d /  2 d
 ##       P2b: failure/concurrency integration tests (Testcontainers) ~2 d   /  3 d
-##       P2c: R2DBC pool sizing + Flyway validation (set + document) ~1 d   /  1 d
+##       P2c: R2DBC pool sizing + Flyway validation                  ~1 d   /  1 d
 ##       P2d: tfvars/k8s secrets audit + README cleanup             ~0.5 d /  0.5 d
 ##       P2e: metrics widget (React) + Axiom OTLP traces            ~2 d   /  2 d
-##       Note: P2d is mostly done (≈ 0.5 d remaining)
+##       P2g: @Timed fix in ConcreteExtractionService               ~0.5 d /  0.5 d
+##       P2h: consistent Solr response parsing                      ~0.5 d /  0.5 d
 ##
-##  8   P2f  (diff explainer — Quarkus/GraalVM/llama.cpp)
-##                               7–9 weekends         4–5 weeks     Aug–Nov 2026  / Jun–Jul 2026
-##       Quarkus project scaffold + build                            ~0.5 d /  0.5 d
-##       llama.cpp JNI / Panama FFI bindings  ← hard research work  ~5 d   /  8 d
-##       GPU detection (CUDA/Metal/Vulkan) + CPU fallback            ~3 d   /  4 d
-##       GraalVM native-image config (reflection, resources)         ~1.5 d /  2 d
-##       Docker Compose integration + gpu profile                    ~0.5 d /  0.5 d
-##       UI "Explain diff" button + markdown display                 ~1 d   /  1 d
-##       Auth forwarding + unavailability fallback                   ~0.5 d /  0.5 d
-##       Total P2f                                                   ~12 d  / ~17 d
-##       (range: add +3 d / +5 d for GraalVM/FFI surprises)
-##
-##  9   P3a + P3b + P3c  (feature depth)
-##                               2 weekends (~4 d)    5 days        Nov 2026      / Aug W1
-##       P3a: similar constant detection (Solr MLT)                 ~1.5 d /  2 d
-##       P3b: split/merge pattern analysis                          ~2 d   /  2.5 d
+##  8   P3c + P3d + P3e + P3f  (search + embedded JARs + in-JAR config)
+##                               2–3 weekends (~5 d)  6 days        Jul 2026      / Jun W4–Jul W2
 ##       P3c: fuzzy search pagination (Solr start param + UI)       ~0.5 d /  0.5 d
+##       P3d: /v1/ prefix + redirect bare paths                     ~0.5 d /  0.5 d
+##       P3e: nested JAR recursion + dedup by content hash          ~2.5 d /  3 d
+##       P3f: config file detection inside JARs → config extractor  ~1.5 d /  2 d
+##       Note: P3e requires P0e (done in sprint 4)
 ##
-## 10   P4a + P4b  (advanced / long-term)
-##                               1–2 weekends (~3 d)  4 days        Nov–Dec 2026  / Aug W2
+##  9   P4d + P4e  (coupling analysis + BootstrapMethods scan)
+##                               2–3 weekends (~5 d)  6 days        Jul–Aug 2026  / Jul W3–Aug W1
+##       P4d: GET /search/shared + coupling strength signal + UI    ~3 d   /  3.5 d
+##            → includes near-same numeric detection (subsumes P3a)
+##       P4e: BootstrapMethods attribute scanning, CONDY_BOOTSTRAP_ARG UsageType ~2 d / 2.5 d
+##       Note: P4d requires P2k (done in sprint 5) for BSM coupling edges
+##
+## 10   P4a + P4b + P4f  (advanced / deferred)
+##                               1–2 weekends (~3 d)  4 days        Aug–Sep 2026  / Aug W2–W3
 ##       P4a: exception-flow bytecode analysis                      ~2 d   /  3 d
 ##       P4b: dead-letter replay admin endpoint                     ~0.5 d /  1 d
+##       P4f: constant split/merge (deferred — revisit after P4d)   only if ROI confirmed
 ##
 ## ─────────────────────────────────────────────────────────────────────────────────────
 ## TOTALS (sprints 4–10, excluding already-done sprints 1–3)
 ##
-##   Part-time:   ~16–19 weekends  ≈  4–5 months  (May → Sep/Oct 2026, dominated by P2f)
-##   Full-time:   ~43–50 days      ≈  9–10 weeks  (May → late Jul 2026)
+##   Part-time:   ~11–13 weekends  ≈  3 months        (May → Aug 2026)
+##   Full-time:   ~29–35 days      ≈  6–7 weeks       (May → late Jun 2026)
 ##
-##   Without P2f (all other sprints only):
-##   Part-time:   ~9–10 weekends   ≈  2–2.5 months
-##   Full-time:   ~26–30 days      ≈  5–6 weeks
+##   Removed: P2f (Spring AI + Ollama) — low ROI; P3a (Solr MLT within-project similarity)
+##            — subsumed by P4d cross-project query; P3b (split/merge) — deferred to P4f
+##   Moved earlier: P2j (sprint 4) and P2k (sprint 5) — foundational for coupling direction
+##   Added: P3e (embedded JARs), P3f (in-JAR config), P4d (coupling), P4e (BSM scan)
 ## ─────────────────────────────────────────────────────────────────────────────────────
