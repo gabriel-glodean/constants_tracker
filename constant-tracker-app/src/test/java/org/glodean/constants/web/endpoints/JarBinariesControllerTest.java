@@ -48,10 +48,9 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarSuccess() {
+    void postJarSuccess() throws Exception {
         UnitConstants constants = sampleConstants();
-        ModelExtractor mockExtractor = (src) -> List.of(constants);
-        when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
+        when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
         when(storage.storeAll(any(), anyString())).thenReturn(Mono.just(List.of(constants)));
 
         web.post()
@@ -63,9 +62,9 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarExtractionExceptionReturns422() {
-            ModelExtractor mockExtractor = (src) -> { throw new ModelExtractor.ExtractionException("bad jar"); };
-        when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
+    void postJarExtractionExceptionReturns422() throws Exception {
+        when(extractionService.extractJarFile(any(), any()))
+            .thenThrow(new ModelExtractor.ExtractionException("bad jar"));
 
         web.post()
             .uri(POST_URL)
@@ -76,8 +75,9 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarIllegalArgumentReturns422() {
-        when(extractionService.extractorForJarFile(any())).thenThrow(new IllegalArgumentException("bad arg"));
+    void postJarInvalidContentReturns422() throws Exception {
+        when(extractionService.extractJarFile(any(), any()))
+            .thenThrow(new ModelExtractor.ExtractionException(new java.io.IOException("not a zip")));
 
         web.post()
             .uri(POST_URL)
@@ -88,10 +88,9 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarStorageExceptionReturns500() {
+    void postJarStorageExceptionReturns500() throws Exception {
         UnitConstants constants = sampleConstants();
-        ModelExtractor mockExtractor = (src) -> List.of(constants);
-        when(extractionService.extractorForJarFile(any())).thenReturn(mockExtractor);
+        when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
         when(storage.storeAll(any(), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
 
         web.post()

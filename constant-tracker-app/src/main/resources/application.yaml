@@ -6,8 +6,6 @@ spring:
   application.name: constant-tracker
   lifecycle:
     timeout-per-shutdown-phase: 30s
-  codec:
-    max-in-memory-size: 5MB
   output:
     ansi:
       enabled: always

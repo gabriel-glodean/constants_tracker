@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.ModelExtractor.ExtractionException;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
@@ -69,11 +68,9 @@ class ClassBinariesControllerErrorPathsTest {
   // ── ExtractionException → 422 ─────────────────────────────────────────────
 
   @Test
-  void putWithExtractionExceptionReturns422() {
-    ModelExtractor mockExtractor = (src) -> {
-      throw new ExtractionException("bad bytecode");
-    };
-    when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
+  void putWithExtractionExceptionReturns422() throws Exception {
+    when(extractionService.extractClassFile(any(), any()))
+        .thenThrow(new ExtractionException("bad bytecode"));
 
     web.put()
         .uri(PUT_URL)
@@ -85,11 +82,9 @@ class ClassBinariesControllerErrorPathsTest {
   }
 
   @Test
-  void postWithExtractionExceptionReturns422() {
-    ModelExtractor mockExtractor = (src) -> {
-      throw new ExtractionException("bad bytecode");
-    };
-    when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
+  void postWithExtractionExceptionReturns422() throws Exception {
+    when(extractionService.extractClassFile(any(), any()))
+        .thenThrow(new ExtractionException("bad bytecode"));
 
     web.post()
         .uri(POST_URL)
@@ -103,10 +98,9 @@ class ClassBinariesControllerErrorPathsTest {
   // ── Storage exception on PUT → 500 ────────────────────────────────────────
 
   @Test
-  void putWithStorageExceptionReturns500() {
+  void putWithStorageExceptionReturns500() throws Exception {
     UnitConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = (src) -> List.of(constants);
-    when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
+    when(extractionService.extractClassFile(any(), any())).thenReturn(List.of(constants));
     when(storage.store(any(UnitConstants.class), anyString(), anyInt()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
 
@@ -122,10 +116,9 @@ class ClassBinariesControllerErrorPathsTest {
   // ── Storage exception on POST → 500 ───────────────────────────────────────
 
   @Test
-  void postWithStorageExceptionReturns500() {
+  void postWithStorageExceptionReturns500() throws Exception {
     UnitConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = (src) -> List.of(constants);
-    when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
+    when(extractionService.extractClassFile(any(), any())).thenReturn(List.of(constants));
     when(storage.store(any(UnitConstants.class), anyString()))
         .thenReturn(Mono.error(new RuntimeException("DB down")));
 
@@ -141,10 +134,9 @@ class ClassBinariesControllerErrorPathsTest {
   // ── Happy-path POST with mocked extractor ─────────────────────────────────
 
   @Test
-  void postWithMockedExtractorSucceeds() {
+  void postWithMockedExtractorSucceeds() throws Exception {
     UnitConstants constants = sampleConstants();
-    ModelExtractor mockExtractor = (src) -> List.of(constants);
-    when(extractionService.extractorForClassFile(any())).thenReturn(mockExtractor);
+    when(extractionService.extractClassFile(any(), any())).thenReturn(List.of(constants));
     when(storage.store(any(UnitConstants.class), anyString()))
         .thenReturn(Mono.just(constants));
 

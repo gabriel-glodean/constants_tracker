@@ -1,30 +1,34 @@
 package org.glodean.constants.services;
 
+import java.nio.file.Path;
+import java.util.Collection;
 import org.glodean.constants.extractor.ModelExtractor;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
 
 /**
- * Service for creating {@link ModelExtractor} instances from various binary sources.
- *
- * <p>This service abstracts the creation of extractors for different input formats
- * (single class files, JAR files, etc.) allowing clients to uniformly extract constant
- * usage information regardless of the source format.
+ * Service for extracting constants from various binary sources.
  */
 public interface ExtractionService {
   /**
-   * Creates an extractor for analyzing a single compiled class file.
+   * Parses a single compiled class file and returns its extracted constants.
    *
    * @param classFileBytes the raw bytes of a .class file
-   * @return a configured {@link ModelExtractor} ready to analyze the class
-   * @throws IllegalArgumentException if the bytes don't represent a valid class file
+   * @param descriptor metadata describing this unit
+   * @return the extracted {@link UnitConstants}
+   * @throws ModelExtractor.ExtractionException if the bytes don't represent a valid class file
    */
-  ModelExtractor extractorForClassFile(byte[] classFileBytes);
+  Collection<UnitConstants> extractClassFile(byte[] classFileBytes, UnitDescriptor descriptor)
+      throws ModelExtractor.ExtractionException;
 
   /**
-   * Creates an extractor for analyzing all classes within a JAR file.
+   * Opens a JAR file and extracts constants from all contained classes.
    *
-   * @param classFileBytes the raw bytes of a .jar file
-   * @return a configured {@link ModelExtractor} that will analyze all contained classes
-   * @throws IllegalArgumentException if the bytes don't represent a valid JAR file
+   * @param jarPath path to the JAR file on disk
+   * @param descriptor metadata describing this unit
+   * @return the extracted {@link UnitConstants} for all classes in the JAR
+   * @throws ModelExtractor.ExtractionException if the path does not point to a valid JAR file
    */
-  ModelExtractor extractorForJarFile(byte[] classFileBytes);
+  Collection<UnitConstants> extractJarFile(Path jarPath, UnitDescriptor descriptor)
+      throws ModelExtractor.ExtractionException;
 }

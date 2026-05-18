@@ -4,86 +4,46 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
+import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Tests for ConcreteExtractionService focusing on the jar->Jimfs conversion and basic extractor
- * creation. Tests keep to small, concrete behavior so they don't rely on complex project internals.
+ * Tests for ConcreteExtractionService focusing on basic extraction.
  */
 class ConcreteExtractionServiceTest {
 
-  @Test
-  void fromZipBytesWithJimfs_createsDirectoriesAndFiles() throws Exception {
-    byte[] zip =
-        createZipBytes(
-            b -> {
-              try {
-                // create a directory entry and a file under it
-                ZipEntry dir = new ZipEntry("com/example/");
-                b.putNextEntry(dir);
-                b.closeEntry();
-
-                ZipEntry file = new ZipEntry("com/example/Hello.txt");
-                b.putNextEntry(file);
-                b.write("hello".getBytes());
-                b.closeEntry();
-
-                // root file
-                ZipEntry root = new ZipEntry("root.bin");
-                b.putNextEntry(root);
-                b.write(new byte[] {1, 2, 3});
-                b.closeEntry();
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            });
-
-    Method m =
-        ConcreteExtractionService.class.getDeclaredMethod("fromZipBytesWithJimfs", byte[].class);
-    m.setAccessible(true);
-    try (FileSystem fs = (FileSystem) m.invoke(null, (Object) zip)) {
-      Path hello = fs.getPath("/", "com", "example", "Hello.txt");
-      Path root = fs.getPath("/", "root.bin");
-
-      assertTrue(Files.exists(hello), "Hello.txt should exist in the Jimfs filesystem");
-      assertTrue(Files.exists(root), "root.bin should exist in the Jimfs filesystem");
-
-      byte[] helloBytes = Files.readAllBytes(hello);
-      assertArrayEquals("hello".getBytes(), helloBytes);
-
-      byte[] rootBytes = Files.readAllBytes(root);
-      assertArrayEquals(new byte[] {1, 2, 3}, rootBytes);
-    }
-  }
+  @TempDir Path tempDir;
 
   @Test
-  void extractorForJarFile_returnsNonNullExtractor() throws Exception {
-    byte[] zip =
-        createZipBytes(
-            b -> {
-              try {
-                ZipEntry file = new ZipEntry("A.class");
-                b.putNextEntry(file);
-                b.write(new byte[] {0, 1, 2});
-                b.closeEntry();
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            });
+  void extractJarFile_returnsNonNullResult() throws Exception {
+    byte[] zip = createZipBytes(b -> {
+      try {
+        ZipEntry file = new ZipEntry("A.class");
+        b.putNextEntry(file);
+        b.write(new byte[]{0, 1, 2});
+        b.closeEntry();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
 
-    // merger may be null for this basic sanity check; ensure no exceptions and non-null return
+    Path jarPath = tempDir.resolve("test.jar");
+    Files.write(jarPath, zip);
+
+    var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "test.jar");
     ConcreteExtractionService svc = new ConcreteExtractionService(null);
-    var extractor = svc.extractorForJarFile(zip);
-    assertNotNull(extractor, "extractorForJarFile should return a non-null ModelExtractor");
+    Collection<UnitConstants> result = svc.extractJarFile(jarPath, descriptor);
+    assertNotNull(result, "extractJarFile should return a non-null collection");
   }
 
-  // helper to create zip bytes with a simple writer action
   private static byte[] createZipBytes(ZipWriter writer) throws IOException {
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ZipOutputStream zos = new ZipOutputStream(baos)) {

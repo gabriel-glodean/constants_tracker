@@ -79,15 +79,15 @@
   → JAR: 5 min, class: 30s
   → Also add explicit socket/connect timeout to HttpJdkSolrClient.Builder (currently unbounded)
 
-- ⏳ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)           P0e
-  → Current: byte[]→Jimfs = 3× JAR size in RAM; Fix: DataBufferUtils.write(tmpFile) → ZipInputStream
-  → ConcreteExtractionService.fromZipBytesWithJimfs() still uses Jimfs
-  → Also fixes: Jimfs FileSystem never closed after extraction → memory leak per JAR upload
-    (FileSystemModelExtractor.extract() closes the stream/executor but not the FileSystem itself)
-  → Also fixes: spring.codec.max-in-memory-size: 5MB rejects any JAR > 5MB → HTTP 413 in production
-    (real Spring Boot fat JARs are 20–100MB; until P0e, the codec limit must be raised as a stopgap)
-  → Do in same sprint as P1c and P2j (calibration is read-only and fits the same sprint)
-  → Prerequisite for P3e (embedded JAR recursion needs streaming entry-by-entry access)
+- ✅ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)           P0e
+  → @RequestBody Flux<DataBuffer> + DataBufferUtils.write(flux, tmp): body streamed to disk,
+    each DataBuffer released as written — full JAR never in heap during extraction
+  → fromZipBytesWithJimfs() removed; replaced by FileSystems.newFileSystem(Path) (native
+    ZipFileSystem, try-with-resources — also fixes the FileSystem leak per JAR upload)
+  → spring.codec.max-in-memory-size: 250MB stopgap removed (codec limit no longer applies)
+  → ExtractionService refactored: extractorFor*(input) → extract*(input, descriptor),
+    returns Collection<UnitConstants> directly — factory + extract collapsed into one call
+  → Jimfs dependency removed from constant-tracker-app/build.gradle
 
 - ⏳ Structured logging + correlation IDs (Log4j2 ThreadContext + Reactor MDC)          P1c
   → MdcContextLifter; [%X{traceId}] in log4j2.xml; generate traceId at controller boundary
@@ -113,10 +113,11 @@
 ## V2B+ Code Quality
 ## ════════════════════════════════════════════════════
 
-- ⏳ Fix @Timed placement in ConcreteExtractionService                                   P2g
-  → @Timed("extraction.jar") is on extractorForJarFile() which only constructs the extractor;
-    the actual bytecode analysis inside extract() is not measured
-  → Move / add @Timed to wrap the extract() call at the controller/service boundary
+- ✅ Fix @Timed placement in ConcreteExtractionService                                   P2g
+  → @Timed("extraction.jar") / @Timed("extraction.class") are on the extract*() methods
+    which cover the full work (open + walk + analyze) — timing is accurate end-to-end
+  → Future consideration: add a finer-grained timer inside FileSystemModelExtractor.extract()
+    to separate "open JAR" from "walk + analyze" if profiling ever shows it matters
 
 - ⏳ Consistent Solr response parsing in SolrService                                    P2h
   → parsePairs() matches response with instanceof Collection<?> (works by accident —
@@ -271,7 +272,7 @@
 ##
 ##  4   P0e + P1c + P2j  (streaming refactor + logging + calibration)
 ##                               1–2 weekends (~3 d)  4 days        end May 2026  / May W3–W4
-##       P0e: replace Jimfs with DataBufferUtils.write()            ~1 d   /  1.5 d
+##       ✅ P0e: replace Jimfs with DataBufferUtils.write() + native ZipFileSystem  done May 2026
 ##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
 ##       P2j: upload kotlin-stdlib, groovy-all, hibernate-core      ~0.5 d /  0.5 d
 ##            → calibration is read-only; fits end of sprint alongside the above
@@ -313,7 +314,7 @@
 ##       P4e: BootstrapMethods attribute scanning, CONDY_BOOTSTRAP_ARG UsageType ~2 d / 2.5 d
 ##       Note: P4d requires P2k (done in sprint 5) for BSM coupling edges
 ##
-## 10   P4a + P4b + P4f  (advanced / deferred)
+##  10   P4a + P4b + P4f  (advanced / deferred)
 ##                               1–2 weekends (~3 d)  4 days        Aug–Sep 2026  / Aug W2–W3
 ##       P4a: exception-flow bytecode analysis                      ~2 d   /  3 d
 ##       P4b: dead-letter replay admin endpoint                     ~0.5 d /  1 d

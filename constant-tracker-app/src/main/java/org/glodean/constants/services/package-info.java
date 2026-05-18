@@ -6,8 +6,8 @@
  *
  * <ul>
  *   <li>{@link org.glodean.constants.services.ExtractionService} /
- *       {@link org.glodean.constants.services.ConcreteExtractionService} — creates
- *       {@code ModelExtractor} instances for class files and JARs (via Jimfs).</li>
+ *       {@link org.glodean.constants.services.ConcreteExtractionService} — extracts constants
+ *       from class files and JARs (streamed to a temp file, opened as a native ZipFileSystem).</li>
  *   <li>{@link org.glodean.constants.services.ExtractionServiceConfiguration} —
  *       Spring {@code @Configuration} that wires the {@code AnalysisMerger} and
  *       {@code ConstantUsageInterpreterRegistry}.</li>

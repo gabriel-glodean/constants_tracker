@@ -9,7 +9,6 @@ import java.util.HexFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.glodean.constants.dto.GetUnitConstantsReply;
-import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.model.UnitDescriptor;
@@ -144,26 +143,19 @@ public class ClassBinariesController {
      */
     private Mono<UnitConstants> modelMono(Mono<DataBuffer> javaClass) {
         return javaClass
-                .map(
-                        dataBuffer -> {
-                            byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                            dataBuffer.read(bytes);
-                            DataBufferUtils.release(dataBuffer);
-                            return bytes;
-                        })
-                .flatMap(
-                        bytes -> {
-                            var modelExtractor = extractionService.extractorForClassFile(bytes);
-                            try {
-                                var descriptor = new UnitDescriptor(
-                                        BytecodeSourceKind.CLASS_FILE, "uploaded-class",
-                                        bytes.length, sha256(bytes));
-                                return Mono.just(modelExtractor.extract(descriptor));
-                            } catch (ModelExtractor.ExtractionException e) {
-                                return Mono.error(e);
-                            }
-                        })
-                .map(Iterables::getOnlyElement);
+                .map(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    DataBufferUtils.release(dataBuffer);
+                    return bytes;
+                })
+                .flatMap(bytes -> {
+                    var descriptor = new UnitDescriptor(
+                            BytecodeSourceKind.CLASS_FILE, "uploaded-class",
+                            bytes.length, sha256(bytes));
+                    return Mono.fromCallable(() -> extractionService.extractClassFile(bytes, descriptor))
+                            .map(Iterables::getOnlyElement);
+                });
     }
 
     private static String sha256(byte[] bytes) {
