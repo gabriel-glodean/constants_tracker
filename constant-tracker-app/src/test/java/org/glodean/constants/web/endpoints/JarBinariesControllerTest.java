@@ -90,7 +90,11 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarStorageExceptionReturns500() throws Exception {
+    void postJarStorageExceptionStillReturns202() throws Exception {
+        // Storage runs in a detached background task (fire-and-forget) so that proxy
+        // timeouts cannot cancel the server-side work. A storage failure is logged but
+        // never propagated to the HTTP response — the client always receives 202 Accepted
+        // once outer extraction succeeds.
         UnitConstants constants = sampleConstants();
         when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
         when(nestedJarExtractionService.extractNestedJars(any(), anyString())).thenReturn(Mono.just(List.of()));
@@ -101,7 +105,7 @@ class JarBinariesControllerTest {
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
             .bodyValue(new byte[]{1, 2, 3, 4})
             .exchange()
-            .expectStatus().is5xxServerError();
+            .expectStatus().isAccepted();
     }
 
     // ── validation ───────────────────────────────────────────────────────────

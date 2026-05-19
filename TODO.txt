@@ -75,6 +75,29 @@
   → Controller validation tests added to all 6 controller test classes + new DiffControllerTest
   → GitHub Actions: 17 CodeQL "unpinned action" alerts fixed (SHA-pinned all actions)
 
+- ⏳ JAR extraction status endpoint + UI                                                P0f
+  → Background: POST /jar now returns 202 immediately (fire-and-forget); clients have no
+    way to know when processing finished or whether it failed (storage errors are only logged)
+  → Backend:
+      • Generate a jobId (UUID) per POST /jar request; return it in the 202 body: { "jobId": "..." }
+      • Persist job state in Redis (HASH key "jar-job:<jobId>"): status ∈ {PENDING, PROCESSING,
+        DONE, FAILED}, startedAt, finishedAt, project, jarName, errorMessage (on FAILED)
+      • TTL: 24 h per job entry (enough for any reasonable polling window)
+      • New endpoint: GET /jar/status/{jobId} → JobStatusResponse { jobId, status, project,
+        jarName, startedAt, finishedAt, errorMessage }; 404 if not found (TTL expired or unknown)
+      • Background task in JarBinariesController updates job state at each phase transition
+      • @PreAuthorize("isAuthenticated()") on the status endpoint (same auth gate as POST /jar)
+  → UI:
+      • After a successful JAR upload (202), show a "Processing…" status badge next to the
+        uploaded JAR name in the VersionManager / upload panel
+      • Poll GET /jar/status/{jobId} every 3 s until status is DONE or FAILED (max 10 min)
+      • DONE → green "Indexed" badge; FAILED → red "Failed" badge + collapsed error detail
+      • Cancel polling if the user navigates away (useEffect cleanup)
+  → Tests:
+      • JarBinariesControllerTest: assert 202 body contains jobId; assert GET /jar/status/{id}
+        returns correct state transitions (PENDING → DONE, PENDING → FAILED)
+      • UI: Jest tests for the polling hook (mock fetch, advance timers, assert badge states)
+
 - ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                          P0d
   → JAR: 5 min, class: 30s
   → Also add explicit socket/connect timeout to HttpJdkSolrClient.Builder (currently unbounded)
@@ -285,9 +308,11 @@
 ##              added FatJarMixedExtractionTest covering all four source types
 ##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
 ##
-##  5   P0d  (Solr timeout + circuit breaker)
-##                               1 weekend  (~2 d)    2 days        Jun W1        / May W4
+##  5   P0d + P0f  (Solr timeout + JAR status endpoint)
+##                               1–2 weekends (~3 d)  3 days        Jun W1        / May W4
 ##       P0d: HttpJdkSolrClient timeout + Resilience4j CB           ~1.5 d /  2 d
+##       P0f: jobId in 202, Redis job state, GET /jar/status/{id},  ~1.5 d /  1 d
+##            status badge + polling in UI, controller + Jest tests
 ##
 ##  6   P1b  (UI error boundary + SW offline)
 ##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1
@@ -338,7 +363,8 @@
 ##
 ##   Removed: P2f (Spring AI + Ollama) — low ROI; P3a (Solr MLT within-project similarity)
 ##            — subsumed by P4d cross-project query; P3b (split/merge) — deferred to P4f
-##   Added: P3e (embedded JARs), P3f (in-JAR config), P4d (coupling), P4e (BSM scan)
+##   Added: P0f (JAR extraction status endpoint + UI), P3e (embedded JARs), P3f (in-JAR config),
+##          P4d (coupling), P4e (BSM scan)
 ##   Done early: P3e + P3f completed in sprint 4 (May 2026) — ~4 d saved from sprint 9
 ##   Reordered: P2j + P2k pulled into sprint 7 (immediately after all P1 tasks);
 ##              P0d decoupled into sprint 5; ops bundle (P2a–P2h) pushed to sprint 8

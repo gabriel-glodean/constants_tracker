@@ -17,12 +17,20 @@ spec:
             labels:
                 app: ui
         spec:
+            volumes:
+                - name: nginx-config
+                  configMap:
+                      name: nginx-config
             containers:
                 - name: ui
                   image: ghcr.io/gabriel-glodean/constant-tracker-ui:latest
                   imagePullPolicy: Always
                   ports:
                       - containerPort: 80
+                  volumeMounts:
+                      - name: nginx-config
+                        mountPath: /etc/nginx/nginx.conf
+                        subPath: nginx.conf
                   readinessProbe:
                       httpGet:
                           path: /

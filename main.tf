@@ -137,6 +137,7 @@ resource "null_resource" "deploy" {
     inline = [
       "mkdir -p /opt/constant-tracker/k8s",
       "mkdir -p /opt/constant-tracker/solr",
+      "mkdir -p /opt/constant-tracker/nginx",
       "mkdir -p /opt/constant-tracker/demo-crud-server/build/libs",
       "mkdir -p /opt/constant-tracker/demo-crud-server-v2/build/libs",
     ]
@@ -152,6 +153,12 @@ resource "null_resource" "deploy" {
   provisioner "file" {
     source      = "${path.module}/constant-tracker-app/solr/"
     destination = "/opt/constant-tracker/solr"
+  }
+
+  # 3b. Copy nginx config (used for nginx-config ConfigMap)
+  provisioner "file" {
+    source      = "${path.module}/search-ui/nginx.conf"
+    destination = "/opt/constant-tracker/nginx/nginx.conf"
   }
 
   # 4. Copy demo JAR v1
@@ -173,6 +180,7 @@ resource "null_resource" "deploy" {
       "kubectl apply -f /opt/constant-tracker/k8s/namespace.yml",
       "kubectl apply -f /opt/constant-tracker/k8s/configs.yml",
       "kubectl create configmap solr-init-config --namespace=constant-tracker --from-file=managed-schema.xml=/opt/constant-tracker/solr/managed-schema.xml --from-file=solrconfig.xml=/opt/constant-tracker/solr/solrconfig.xml --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create configmap nginx-config --namespace=constant-tracker --from-file=nginx.conf=/opt/constant-tracker/nginx/nginx.conf --dry-run=client -o yaml | kubectl apply -f -",
       "kubectl apply -f /opt/constant-tracker/k8s/redis.yml",
       "kubectl apply -f /opt/constant-tracker/k8s/postgres.yml",
       "kubectl apply -f /opt/constant-tracker/k8s/solr.yml",
