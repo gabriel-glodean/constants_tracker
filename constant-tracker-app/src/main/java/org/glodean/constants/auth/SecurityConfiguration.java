@@ -50,10 +50,12 @@ public class SecurityConfiguration {
 
         /**
          * BCrypt encoder used by {@link JwtService} for credential verification. Always available.
+         * The work factor is configurable via {@code constants.auth.bcrypt-strength}
+         * (env: {@code CONSTANTS_AUTH_BCRYPT_STRENGTH}); defaults to 12 per OWASP recommendation.
          */
         @Bean
-        public PasswordEncoder passwordEncoder() {
-            return new BCryptPasswordEncoder();
+        public PasswordEncoder passwordEncoder(AuthProperties authProperties) {
+            return new BCryptPasswordEncoder(authProperties.bcryptStrength());
         }
 
         @Bean

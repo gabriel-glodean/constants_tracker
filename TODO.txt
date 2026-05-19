@@ -37,16 +37,16 @@
 ## 🔒 SECURITY — Pending
 ## ────────────────────────────────────────────────────
 
-- ⏳ Security posture: deny-by-default in SecurityWebFilterChain                         Ps1
-  → SecuredConfig currently uses anyExchange().permitAll() — enforcement relies entirely on
-    @PreAuthorize on each method; a new endpoint added without @PreAuthorize is silently public
-  → Decision: keeping allow-by-default to avoid duplicating endpoint paths in the permit-list;
-    discipline enforced via code review + @PreAuthorize("isAuthenticated()") convention
+- ✅ Security posture: deny-by-default in SecurityWebFilterChain                         Ps1
+  → Decision accepted: keeping allow-by-default (anyExchange().permitAll()) to avoid
+    duplicating all endpoint paths in the permit-list; enforcement relies on
+    @PreAuthorize("isAuthenticated()") on every controller method
+  → Convention documented; code review gate ensures no new endpoint ships without it
 
-- ⏳ BCrypt work factor: raise from 10 to 12                                              Ps2
-  → new BCryptPasswordEncoder() uses factor 10 (2010-era default)
-  → OWASP currently recommends 12; make configurable via authProperties.bcryptStrength()
-  → One-line change in SecurityConfiguration + property in AuthProperties + application.yaml
+- ✅ BCrypt work factor: raised from 10 to 12                                             Ps2
+  → BCryptPasswordEncoder(authProperties.bcryptStrength()) in SecurityConfiguration
+  → constants.auth.bcrypt-strength: ${CONSTANTS_AUTH_BCRYPT_STRENGTH:12} in application.yaml
+  → AuthProperties record gained bcryptStrength field; tests use strength 4 for speed
 
 ## ════════════════════════════════════════════════════
 ## V2A — Reliability & Stability
@@ -168,25 +168,30 @@
     coordinated cutover with every client
   → Add /v1/ prefix now (costs nothing) and redirect bare paths for backwards compatibility
 
-- ⏳ Embedded JAR extraction (nested JARs inside uploaded JARs)                         P3e
-  → Current: JarBinariesController feeds the top-level JAR entries only
-  → Target: recurse into nested JARs found at BOOT-INF/lib/*.jar (Spring Boot fat JARs),
-    WEB-INF/lib/*.jar (WAR), and root /*.jar (Maven shade / Gradle shadow uber-JARs)
-  → Each nested JAR is extracted as a separate logical unit under the same project/version,
-    using the nested JAR filename as the unit identifier
-  → Avoids re-uploading already-indexed library JARs: check by JAR content hash against
-    a new postgres table (jar_content_hashes) before extracting; skip if already present
-  → Prerequisite: P0e (streaming refactor) — Jimfs cannot efficiently handle nested ZipInputStream
-  → Enables indexing of entire application distributions in a single upload
+- ✅ Embedded JAR extraction (nested JARs inside uploaded JARs)                         P3e
+  → NestedJarExtractionService walks outer JAR via ZipFileSystem; detects nested JARs at
+    BOOT-INF/lib/*.jar (Spring Boot), WEB-INF/lib/*.jar (WAR), and root /*.jar (Shade/Shadow)
+  → Each nested JAR extracted as a separate UnitDescriptor under the same project/version
+  → Content-hash dedup via unit_descriptors: already-indexed nested JARs are skipped
+  → Reactive pipeline (Flux.using + filterWhen + boundedElastic); bad nested JARs skipped gracefully
+  → Also fixed a silent bug: ExtractionServiceConfiguration was registering .class via
+    register(BytecodeSourceKind.CLASS_FILE, …) whose predicate matched "CLASS_FILE" (enum name),
+    not ".class" filenames — so extractJarFile and extractZipStream silently skipped all
+    class entries; fixed to name -> name.endsWith(".class") throughout
+  → Removed ModelExtractorSupplierRepository.resolve(SourceKind, byte[]) and
+    Builder.register(SourceKind, factory) convenience overloads — all resolution is now
+    uniformly filename-based (consistent across extractClassFile, fileSystemFeeder, zipStreamFeeder)
+  → Test: NestedJarExtractionServiceTest (unit, mocked extractor)
 
-- ⏳ Config file extraction from within JARs                                            P3f
-  → JARs routinely bundle application.yml, application.properties, *.properties resource files
-  → During JAR upload (including nested JARs from P3e), detect config file entries by extension
-    and path pattern (e.g. BOOT-INF/classes/*.yml, *.properties outside .class paths)
-  → Feed detected entries to constant-extractor-config-file module (already exists as a module);
-    results stored under the same project/version with source annotated as CONFIG_FILE
-  → Means a single JAR upload produces both bytecode constants and config constants together
-  → No new API surface needed — transparent to the caller
+- ✅ Config file extraction from within JARs                                            P3f
+  → ModelExtractorSupplierRepository registered with extension predicates for .yml/.yaml
+    (YamlConstantsExtractor) and .properties (PropertiesConstantsExtractor)
+  → Both fileSystemFeeder (extractJarFile) and zipStreamFeeder (extractZipStream / nested JARs)
+    dispatch via the same repository — config files inside any JAR or nested JAR are extracted
+    automatically alongside class files, with no new API surface
+  → Test: FatJarMixedExtractionTest — end-to-end unit test (real extractors, mocked store)
+    builds a fat JAR with Greeter.class + application.yml at top level, and a nested JAR
+    containing Greeter.class + nested.properties; asserts constants from all four sources
 
 ## ════════════════════════════════════════════════════
 ## V3 — Advanced / Long-term
@@ -270,18 +275,18 @@
 ##              ConstraintViolationException → 400 in GlobalExceptionHandler,
 ##              validator unit tests + controller validation tests
 ##
-##  4   P0e + P1c + P2j  (streaming refactor + logging + calibration)
-##                               1–2 weekends (~3 d)  4 days        end May 2026  / May W3–W4
+##  4   ✅P0e + P1c  (streaming refactor + logging)
+##                               ~1 d remaining    1.5 days      end May 2026  / May W3–W4
 ##       ✅ P0e: replace Jimfs with DataBufferUtils.write() + native ZipFileSystem  done May 2026
+##       ✅ P3e: NestedJarExtractionService (nested JAR recursion + dedup)          done May 2026
+##       ✅ P3f: config file extraction inside JARs (YAML + .properties)            done May 2026
+##            → also fixed silent .class-skip bug in ExtractionServiceConfiguration;
+##              removed source-kind resolve overload from ModelExtractorSupplierRepository;
+##              added FatJarMixedExtractionTest covering all four source types
 ##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
-##       P2j: upload kotlin-stdlib, groovy-all, hibernate-core      ~0.5 d /  0.5 d
-##            → calibration is read-only; fits end of sprint alongside the above
-##            → findings directly feed P2k BSM pattern list (next sprint)
 ##
-##  5   P2k + P0d  (condy support + Resilience4j)
-##                               1–2 weekends (~3 d)  4 days        Jun W1–W2     / May W4–Jun W1
-##       P2k: ConstantHandler condy + BSM metadata on ConstantUsage ~1.5 d /  2 d
-##            → informed by P2j calibration findings
+##  5   P0d  (Solr timeout + circuit breaker)
+##                               1 weekend  (~2 d)    2 days        Jun W1        / May W4
 ##       P0d: HttpJdkSolrClient timeout + Resilience4j CB           ~1.5 d /  2 d
 ##
 ##  6   P1b  (UI error boundary + SW offline)
@@ -289,32 +294,37 @@
 ##       React ErrorBoundary                                         ~0.5 d /  0.5 d
 ##       Service Worker + cache strategy                             ~1.5 d /  2 d
 ##
-##  7   P2a + P2b + P2c + P2d + P2e + P2g + P2h  (ops + code quality)
-##                               3–4 weekends (~7 d)  9 days        Jun–Jul 2026  / Jun W2–W4
+##  7   P2j + P2k  (calibration + condy support)  ← immediately after all P1 tasks done
+##                               1–2 weekends (~3 d)  3 days        Jun W3        / Jun W2
+##       P2j: upload kotlin-stdlib, groovy-all, hibernate-core      ~0.5 d /  0.5 d
+##            → calibration is read-only; findings directly feed P2k BSM pattern list
+##       P2k: ConstantHandler condy + BSM metadata on ConstantUsage ~1.5 d /  2 d
+##            → informed by P2j calibration findings
+##
+##  8   P2a + P2b + P2c + P2d + P2e + P2g + P2h  (ops + code quality)
+##                               3–4 weekends (~7 d)  9 days        Jun–Jul 2026  / Jun W3–Jul W1
 ##       P2a: PERFORMANCE.md + JMH benchmarks                       ~1.5 d /  2 d
 ##       P2b: failure/concurrency integration tests (Testcontainers) ~2 d   /  3 d
 ##       P2c: R2DBC pool sizing + Flyway validation                  ~1 d   /  1 d
 ##       P2d: tfvars/k8s secrets audit + README cleanup             ~0.5 d /  0.5 d
 ##       P2e: metrics widget (React) + Axiom OTLP traces            ~2 d   /  2 d
-##       P2g: @Timed fix in ConcreteExtractionService               ~0.5 d /  0.5 d
+##       P2g: ✅ @Timed fix in ConcreteExtractionService               done
 ##       P2h: consistent Solr response parsing                      ~0.5 d /  0.5 d
 ##
-##  8   P3c + P3d + P3e + P3f  (search + embedded JARs + in-JAR config)
-##                               2–3 weekends (~5 d)  6 days        Jul 2026      / Jun W4–Jul W2
+##  9   P3c + P3d  (search + API versioning)
+##                               1 weekend  (~2 d)    2 days        Jul 2026      / Jul W2
 ##       P3c: fuzzy search pagination (Solr start param + UI)       ~0.5 d /  0.5 d
 ##       P3d: /v1/ prefix + redirect bare paths                     ~0.5 d /  0.5 d
-##       P3e: nested JAR recursion + dedup by content hash          ~2.5 d /  3 d
-##       P3f: config file detection inside JARs → config extractor  ~1.5 d /  2 d
-##       Note: P3e requires P0e (done in sprint 4)
+##       Note: P3e + P3f completed in sprint 4 (May 2026)
 ##
-##  9   P4d + P4e  (coupling analysis + BootstrapMethods scan)
+##  10   P4d + P4e  (coupling analysis + BootstrapMethods scan)
 ##                               2–3 weekends (~5 d)  6 days        Jul–Aug 2026  / Jul W3–Aug W1
 ##       P4d: GET /search/shared + coupling strength signal + UI    ~3 d   /  3.5 d
 ##            → includes near-same numeric detection (subsumes P3a)
 ##       P4e: BootstrapMethods attribute scanning, CONDY_BOOTSTRAP_ARG UsageType ~2 d / 2.5 d
-##       Note: P4d requires P2k (done in sprint 5) for BSM coupling edges
+##       Note: P4d requires P2k (done in sprint 7) for BSM coupling edges
 ##
-##  10   P4a + P4b + P4f  (advanced / deferred)
+##  11   P4a + P4b + P4f  (advanced / deferred)
 ##                               1–2 weekends (~3 d)  4 days        Aug–Sep 2026  / Aug W2–W3
 ##       P4a: exception-flow bytecode analysis                      ~2 d   /  3 d
 ##       P4b: dead-letter replay admin endpoint                     ~0.5 d /  1 d
@@ -323,11 +333,13 @@
 ## ─────────────────────────────────────────────────────────────────────────────────────
 ## TOTALS (sprints 4–10, excluding already-done sprints 1–3)
 ##
-##   Part-time:   ~11–13 weekends  ≈  3 months        (May → Aug 2026)
-##   Full-time:   ~29–35 days      ≈  6–7 weeks       (May → late Jun 2026)
+##   Part-time:   ~9–11 weekends   ≈  2.5 months      (May → Aug 2026)
+##   Full-time:   ~23–27 days      ≈  5–6 weeks        (May → late Jun 2026)
 ##
 ##   Removed: P2f (Spring AI + Ollama) — low ROI; P3a (Solr MLT within-project similarity)
 ##            — subsumed by P4d cross-project query; P3b (split/merge) — deferred to P4f
-##   Moved earlier: P2j (sprint 4) and P2k (sprint 5) — foundational for coupling direction
 ##   Added: P3e (embedded JARs), P3f (in-JAR config), P4d (coupling), P4e (BSM scan)
+##   Done early: P3e + P3f completed in sprint 4 (May 2026) — ~4 d saved from sprint 9
+##   Reordered: P2j + P2k pulled into sprint 7 (immediately after all P1 tasks);
+##              P0d decoupled into sprint 5; ops bundle (P2a–P2h) pushed to sprint 8
 ## ─────────────────────────────────────────────────────────────────────────────────────

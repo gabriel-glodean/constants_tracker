@@ -12,14 +12,22 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  */
 class SecurityConfigurationTest {
   private final SecurityConfiguration.SecuredConfig config = new SecurityConfiguration.SecuredConfig();
+
+  /** Minimal AuthProperties with strength 4 — low work factor keeps unit tests fast. */
+  private static AuthProperties propsWithStrength(int strength) {
+    return new AuthProperties(true, strength,
+        new AuthProperties.Jwt("test-secret", 3600000L),
+        new AuthProperties.RefreshToken(604800000L));
+  }
+
   @Test
   void passwordEncoder_isBCrypt() {
-    PasswordEncoder encoder = config.passwordEncoder();
+    PasswordEncoder encoder = config.passwordEncoder(propsWithStrength(4));
     assertThat(encoder).isInstanceOf(BCryptPasswordEncoder.class);
   }
   @Test
   void passwordEncoder_encodesAndVerifies() {
-    PasswordEncoder encoder = config.passwordEncoder();
+    PasswordEncoder encoder = config.passwordEncoder(propsWithStrength(4));
     String raw = "my-secret-password";
     String encoded = encoder.encode(raw);
     assertThat(encoder.matches(raw, encoded)).isTrue();
@@ -27,7 +35,7 @@ class SecurityConfigurationTest {
   }
   @Test
   void passwordEncoder_differentEncodingsOfSamePassword_bothValid() {
-    PasswordEncoder encoder = config.passwordEncoder();
+    PasswordEncoder encoder = config.passwordEncoder(propsWithStrength(4));
     String raw = "shared-password";
     // BCrypt produces different hashes each time (random salt)
     String hash1 = encoder.encode(raw);

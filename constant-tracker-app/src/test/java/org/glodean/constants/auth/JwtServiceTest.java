@@ -48,9 +48,10 @@ class JwtServiceTest {
 
   @BeforeEach
   void setUp() {
-    passwordEncoder = new BCryptPasswordEncoder();
+    passwordEncoder = new BCryptPasswordEncoder(4); // low strength for test speed
     var authProperties = new AuthProperties(
         true,
+        4, // bcryptStrength — low for test speed
         new AuthProperties.Jwt(SECRET, EXPIRATION_MS),
         new AuthProperties.RefreshToken(REFRESH_TTL_MS));
     jwtService =
