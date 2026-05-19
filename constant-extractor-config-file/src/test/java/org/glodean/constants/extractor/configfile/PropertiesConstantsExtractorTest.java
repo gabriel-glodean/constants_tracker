@@ -2,29 +2,33 @@ package org.glodean.constants.extractor.configfile;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
+import java.util.Collection;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
+import org.glodean.constants.model.UnitDescriptor;
 import org.junit.jupiter.api.Test;
 
 class PropertiesConstantsExtractorTest {
 
-    private final PropertiesConstantsExtractor extractor = new PropertiesConstantsExtractor();
+    private static final Path PROPERTIES_FILE =
+            Path.of("src/test/resources/samples/application.properties");
+    private static final Path YAML_FILE =
+            Path.of("src/test/resources/samples/application.yml");
 
-    private Path samplePath(String name) {
-        return Path.of("src/test/resources/samples/" + name);
+    private PropertiesConstantsExtractor extractorFor(Path path) throws Exception {
+        return new PropertiesConstantsExtractor(Files.readAllBytes(path));
     }
 
-    @Test
-    void supportsPropertiesExtension() {
-        assertTrue(extractor.supports(samplePath("application.properties")));
-        assertFalse(extractor.supports(samplePath("application.yml")));
+    private UnitDescriptor descriptorFor(Path path) {
+        return new UnitDescriptor(ConfigFileSourceKind.PROPERTIES, path.getFileName().toString());
     }
 
     @Test
     void extractsConstantsFromProperties() throws Exception {
-        Set<UnitConstants> result = extractor.extract(samplePath("application.properties"));
+        Collection<UnitConstants> result =
+                extractorFor(PROPERTIES_FILE).extract(descriptorFor(PROPERTIES_FILE));
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -33,42 +37,34 @@ class PropertiesConstantsExtractorTest {
         assertEquals(ConfigFileSourceKind.PROPERTIES, unit.source().sourceKind());
         assertFalse(unit.constants().isEmpty());
 
-        // Verify known value
         boolean foundPort = unit.constants().stream()
                 .anyMatch(c -> "8080".equals(c.value()));
         assertTrue(foundPort, "Should find server.port value");
 
-        // Verify URL classification
         boolean foundUrl = unit.constants().stream()
                 .anyMatch(c -> "https://db.example.com/mydb".equals(c.value())
                         && c.usages().stream()
-                                .anyMatch(u ->
-                                        u.semanticType()
-                                                == UnitConstant.CoreSemanticType.URL_RESOURCE));
+                                .anyMatch(u -> u.semanticType() == UnitConstant.CoreSemanticType.URL_RESOURCE));
         assertTrue(foundUrl, "Should classify datasource URL as URL_RESOURCE");
     }
 
     @Test
     void classifiesPathProperties() throws Exception {
-        Set<UnitConstants> result = extractor.extract(samplePath("application.properties"));
+        Collection<UnitConstants> result =
+                extractorFor(PROPERTIES_FILE).extract(descriptorFor(PROPERTIES_FILE));
         UnitConstants unit = result.iterator().next();
 
         boolean foundPath = unit.constants().stream()
                 .anyMatch(c -> c.usages().stream()
-                        .anyMatch(u ->
-                                u.semanticType() == UnitConstant.CoreSemanticType.FILE_PATH));
+                        .anyMatch(u -> u.semanticType() == UnitConstant.CoreSemanticType.FILE_PATH));
         assertTrue(foundPath, "Should classify path properties as FILE_PATH");
     }
 
     @Test
-    void returnsEmptyForUnsupportedFile() throws Exception {
-        Set<UnitConstants> result = extractor.extract(samplePath("application.yml"));
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void nullPathThrows() {
-        assertThrows(NullPointerException.class, () -> extractor.supports(null));
-        assertThrows(NullPointerException.class, () -> extractor.extract(null));
+    void descriptorIsReusedAsSource() throws Exception {
+        UnitDescriptor descriptor = descriptorFor(PROPERTIES_FILE);
+        Collection<UnitConstants> result =
+                extractorFor(PROPERTIES_FILE).extract(descriptor);
+        assertEquals(descriptor, result.iterator().next().source());
     }
 }

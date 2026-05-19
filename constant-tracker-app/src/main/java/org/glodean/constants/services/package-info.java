@@ -8,12 +8,12 @@
  *   <li>{@link org.glodean.constants.services.ExtractionService} /
  *       {@link org.glodean.constants.services.ConcreteExtractionService} — extracts constants
  *       from class files and JARs (streamed to a temp file, opened as a native ZipFileSystem).</li>
- *   <li>{@link org.glodean.constants.services.ExtractionServiceConfiguration} —
- *       Spring {@code @Configuration} that wires the {@code AnalysisMerger} and
- *       {@code ConstantUsageInterpreterRegistry}.</li>
- *   <li>{@link org.glodean.constants.services.ConfigFileExtractionConfiguration} —
- *       wires extractors for YAML / properties config files.</li>
- *   <li>{@link org.glodean.constants.services.ProjectVersionService} — manages
+  *   <li>{@link org.glodean.constants.services.ExtractionServiceConfiguration} —
+ *       Spring {@code @Configuration} that wires the {@code AnalysisMerger},
+ *       {@code ConstantUsageInterpreterRegistry}, and the unified
+ *       {@link org.glodean.constants.extractor.ModelExtractorSupplierRepository} covering
+ *       class files, YAML, and properties.</li>
+ *   <li>{@link org.glodean.constants.services.ProjectVersionService}
  *       project version lifecycle (creation, finalisation, removal sync).</li>
  *   <li>{@link org.glodean.constants.services.DiffService} — computes constant diffs
  *       between two versions of a project.</li>

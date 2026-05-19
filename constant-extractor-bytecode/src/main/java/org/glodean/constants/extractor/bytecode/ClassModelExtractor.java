@@ -2,12 +2,14 @@ package org.glodean.constants.extractor.bytecode;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeModel;
 import java.lang.classfile.MethodModel;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstant;
@@ -22,7 +24,7 @@ import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
  * Extracts {@link UnitConstants} from a {@link java.lang.classfile.ClassModel} by analyzing each
  * method's bytecode and merging discovered constants.
  *
- * <p>This extractor performs per-method bytecode analysis using {@link ByteCodeMethodAnalyzer}
+ * <p>This extractor performs per-method bytecode analysis using {@link BytecodeMethodAnalyzer}
  * to compute abstract states (constant propagation, points-to information), then uses
  * {@link AnalysisMerger} to extract constant usage patterns from those states.
  *
@@ -39,6 +41,23 @@ import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
  */
 public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
     implements ModelExtractor {
+
+  /**
+   * Returns a supplier that parses raw class-file bytes and creates a
+   * {@link ClassModelExtractor} for the given {@link AnalysisMerger}.
+   *
+   * <p>Register this in a {@link org.glodean.constants.extractor.ModelExtractorSupplierRepository}
+   * to avoid embedding the construction logic in configuration classes:
+   * <pre>{@code
+   * .register(name -> name.endsWith(".class"), BytecodeSourceKind.CLASS_FILE, ClassModelExtractor.supplier(merger))
+   * }</pre>
+   *
+   * @param merger the shared merger instance to capture in the supplier
+   * @return a {@code Function<byte[], ModelExtractor>} suitable for repository registration
+   */
+  public static Function<byte[], ModelExtractor> supplier(AnalysisMerger merger) {
+    return bytes -> new ClassModelExtractor(ClassFile.of().parse(bytes), merger);
+  }
 
 
   @Override
@@ -62,7 +81,7 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
       if (mm.elementStream().noneMatch(e -> e instanceof CodeModel)) {
         continue;
       }
-      var analysis = new ByteCodeMethodAnalyzer(model, mm);
+      var analysis = new BytecodeMethodAnalyzer(model, mm);
       analysis.run();
       joinedMap.putAll(merger.merge(
           javaClassName,

@@ -5,11 +5,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Set;
-import org.glodean.constants.extractor.ModelExtractor;
+import java.util.Set;import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ExtractionService;
+import org.glodean.constants.services.NestedJarExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +33,7 @@ class JarBinariesControllerTest {
 
     @MockitoBean UnitConstantsStore storage;
     @MockitoBean ExtractionService extractionService;
+    @MockitoBean NestedJarExtractionService nestedJarExtractionService;
 
     static final String POST_URL = "/jar?project=demo&jarName=test.jar";
 
@@ -51,6 +52,7 @@ class JarBinariesControllerTest {
     void postJarSuccess() throws Exception {
         UnitConstants constants = sampleConstants();
         when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
+        when(nestedJarExtractionService.extractNestedJars(any(), anyString())).thenReturn(Mono.just(List.of()));
         when(storage.storeAll(any(), anyString())).thenReturn(Mono.just(List.of(constants)));
 
         web.post()
@@ -91,6 +93,7 @@ class JarBinariesControllerTest {
     void postJarStorageExceptionReturns500() throws Exception {
         UnitConstants constants = sampleConstants();
         when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
+        when(nestedJarExtractionService.extractNestedJars(any(), anyString())).thenReturn(Mono.just(List.of()));
         when(storage.storeAll(any(), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
 
         web.post()

@@ -24,7 +24,7 @@ import org.glodean.constants.extractor.bytecode.types.State;
  * The resulting {@code in} and {@code out} lists are public fields used by the merger to extract
  * constant usage information.
  */
-final class ByteCodeMethodAnalyzer {
+final class BytecodeMethodAnalyzer {
   final ClassModel cm;
   final MethodModel methodModel;
   final String methodTag;
@@ -43,7 +43,7 @@ final class ByteCodeMethodAnalyzer {
    * @param cm the class model containing the method
    * @param mm the method to analyze
    */
-  ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
+  BytecodeMethodAnalyzer(ClassModel cm, MethodModel mm) {
     this(cm, mm, DefaultRegistrySource.defaultRegistry());
   }
 
@@ -54,7 +54,7 @@ final class ByteCodeMethodAnalyzer {
    * @param mm       the method to analyze
    * @param registry the instruction handler registry to use during transfer
    */
-  ByteCodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
+  BytecodeMethodAnalyzer(ClassModel cm, MethodModel mm, InstructionHandlerRegistry registry) {
     this.cm = cm;
     this.methodModel = mm;
     this.instructionHandlerRegistry = registry;

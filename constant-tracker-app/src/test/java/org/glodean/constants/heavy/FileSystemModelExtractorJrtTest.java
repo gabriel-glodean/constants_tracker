@@ -8,8 +8,8 @@ import java.nio.file.FileSystems;
 import java.util.Collection;
 import org.glodean.constants.extractor.ModelExtractor.ExtractionException;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
+import org.glodean.constants.extractor.bytecode.BytecodeModelExtractor;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
-import org.glodean.constants.extractor.bytecode.FileSystemModelExtractor;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 /**
- * Smoke-test that runs {@link FileSystemModelExtractor} against the current JDK runtime image
+ * Smoke-test that runs {@link BytecodeModelExtractor} against the current JDK runtime image
  * ({@code jrt:/} filesystem). This verifies the extractor can handle every {@code .class} file
  * shipped with the running Java version without throwing.
  */
@@ -31,9 +31,8 @@ class FileSystemModelExtractorJrtTest {
     FileSystem jrtFs = FileSystems.getFileSystem(URI.create("jrt:/"));
 
     AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
-    FileSystemModelExtractor extractor =
-        new FileSystemModelExtractor(
-            jrtFs, merger, "/modules/jdk.localedata/", new LoggingExtractionNotifier());
+    var extractor = BytecodeModelExtractor.forFileSystem(
+        jrtFs, merger, "/modules/jdk.localedata/", new LoggingExtractionNotifier());
 
     Collection<UnitConstants> results = extractor.extract(
         new UnitDescriptor(BytecodeSourceKind.JAR, "jrt:/"));

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.util.Set;
+import org.glodean.constants.extractor.ModelExtractorSupplierRepository;
 import org.glodean.constants.extractor.configfile.ConfigFileSourceKind;
 import org.glodean.constants.extractor.configfile.PropertiesConstantsExtractor;
 import org.glodean.constants.extractor.configfile.YamlConstantsExtractor;
@@ -20,6 +21,7 @@ import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
@@ -32,7 +34,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
 
 @WebFluxTest(controllers = ConfigFileController.class)
-@Import({InMemoryCacheTestConfig.class, ConfigFileControllerTest.ConfigFileExtractorConfig.class})
+@Import({InMemoryCacheTestConfig.class, ConfigFileControllerTest.SupplierConfig.class})
 @TestPropertySource(properties = {
     "management.endpoints.enabled-by-default=false",
     "management.endpoint.health.enabled=false",
@@ -44,17 +46,21 @@ class ConfigFileControllerTest {
 
     @MockitoBean UnitConstantsStore storage;
 
-    /** Provides real extractor beans for the controller. */
-    @org.springframework.boot.test.context.TestConfiguration
-    static class ConfigFileExtractorConfig {
+    /** Lightweight supplier registry — only config-file types; no AnalysisMerger needed. */
+    @TestConfiguration
+    static class SupplierConfig {
         @Bean
-        YamlConstantsExtractor yamlConstantsExtractor() {
-            return new YamlConstantsExtractor();
-        }
-
-        @Bean
-        PropertiesConstantsExtractor propertiesConstantsExtractor() {
-            return new PropertiesConstantsExtractor();
+        ModelExtractorSupplierRepository modelExtractorSupplierRepository() {
+            return ModelExtractorSupplierRepository.builder()
+                    .register(
+                            n -> n.endsWith(".yml") || n.endsWith(".yaml"),
+                            ConfigFileSourceKind.YAML,
+                            YamlConstantsExtractor::new)
+                    .register(
+                            n -> n.endsWith(".properties"),
+                            ConfigFileSourceKind.PROPERTIES,
+                            PropertiesConstantsExtractor::new)
+                    .build();
         }
     }
 

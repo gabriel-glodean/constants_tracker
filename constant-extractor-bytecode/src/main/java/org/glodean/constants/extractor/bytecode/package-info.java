@@ -7,7 +7,7 @@
  * <ol>
  *   <li><b>Control-flow graph construction:</b> {@link org.glodean.constants.extractor.bytecode.SuccessorBuilder}
  *       builds a conservative CFG with exception handlers</li>
- *   <li><b>Dataflow analysis:</b> {@link org.glodean.constants.extractor.bytecode.ByteCodeMethodAnalyzer}
+ *   <li><b>Dataflow analysis:</b> {@link org.glodean.constants.extractor.bytecode.BytecodeMethodAnalyzer}
  *       computes abstract states (IN/OUT) using a worklist algorithm</li>
  *   <li><b>Usage extraction:</b> {@link org.glodean.constants.extractor.bytecode.AnalysisMerger}
  *       converts abstract states into constant-to-usage mappings</li>
@@ -16,7 +16,7 @@
  * <p><b>Key components:</b>
  * <ul>
  *   <li>{@link org.glodean.constants.extractor.bytecode.ClassModelExtractor}: Per-class analysis</li>
- *   <li>{@link org.glodean.constants.extractor.bytecode.FileSystemModelExtractor}: Bulk JAR/directory analysis</li>
+ *   <li>{@link org.glodean.constants.extractor.bytecode.BytecodeModelExtractor}: Bulk JAR/directory or ZipInputStream analysis</li>
  *   <li>{@link org.glodean.constants.extractor.bytecode.handlers}: Instruction handler registry</li>
  *   <li>{@link org.glodean.constants.extractor.bytecode.types}: Abstract value type system</li>
  * </ul>
@@ -41,12 +41,12 @@
  *
  * <p><b>Example: Analyzing a JAR file</b>
  * <pre>{@code
- * FileSystem jarFS = FileSystems.newFileSystem(jarPath, (ClassLoader)null);
- * AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
- * FileSystemModelExtractor extractor = new FileSystemModelExtractor(
- *     jarFS, merger, "META-INF/", notifier);
- * Collection<UnitConstants> results = extractor.extract(
- *     new UnitDescriptor(BytecodeSourceKind.JAR, jarPath.toString()));
+ * try (FileSystem jarFS = FileSystems.newFileSystem(jarPath, (ClassLoader)null)) {
+ *     AnalysisMerger merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
+ *     var extractor = BytecodeModelExtractor.forFileSystem(jarFS, merger, "META-INF/", notifier);
+ *     Collection<UnitConstants> results = extractor.extract(
+ *         new UnitDescriptor(BytecodeSourceKind.JAR, jarPath.toString()));
+ * }
  * }</pre>
  *
  * @see org.glodean.constants.extractor.ModelExtractor

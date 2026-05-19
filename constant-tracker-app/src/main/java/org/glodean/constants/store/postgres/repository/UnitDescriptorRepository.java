@@ -21,4 +21,12 @@ public interface UnitDescriptorRepository
    * Finds all descriptors for a given project and version (useful for diff).
    */
   Flux<UnitDescriptorEntity> findAllByProjectAndVersion(String project, int version);
+
+  /**
+   * Checks whether a descriptor with the given content hash already exists for the
+   * project/version combination. Used by nested JAR extraction to skip re-extraction
+   * of library JARs that were already indexed in a previous upload of the same fat JAR.
+   */
+  Mono<UnitDescriptorEntity> findByProjectAndVersionAndContentHash(
+      String project, int version, String contentHash);
 }

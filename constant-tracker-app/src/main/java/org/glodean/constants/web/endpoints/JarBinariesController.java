@@ -2,17 +2,16 @@ package org.glodean.constants.web.endpoints;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
+import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
+import org.glodean.constants.services.NestedJarExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,12 +26,18 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import static org.glodean.constants.util.DigestUtils.sha256Hex;
+
 /**
  * REST endpoint for uploading JAR files and extracting all contained unit constants.
  *
  * <p>POST /jar?project=... with application/octet-stream body uploads a JAR file for analysis.
  * The request body is streamed to a temporary file and each buffer is released as it is written,
  * so the full JAR bytes are never held in heap memory during extraction.
+ *
+ * <p>In addition to extracting class-file constants from the top-level JAR, nested JARs found
+ * in {@code /BOOT-INF/lib/}, {@code /WEB-INF/lib/}, or at the root (Maven Shade / Gradle Shadow)
+ * are also extracted as separate units. Only one level of nesting is supported.
  */
 @Validated
 @RestController
@@ -40,15 +45,20 @@ import reactor.core.scheduler.Schedulers;
 public class JarBinariesController {
     private final UnitConstantsStore storage;
     private final ExtractionService extractionService;
+    private final NestedJarExtractionService nestedJarExtractionService;
 
     @Autowired
-    public JarBinariesController(UnitConstantsStore storage, ExtractionService extractionService) {
+    public JarBinariesController(
+            UnitConstantsStore storage,
+            ExtractionService extractionService,
+            NestedJarExtractionService nestedJarExtractionService) {
         this.storage = storage;
         this.extractionService = extractionService;
+        this.nestedJarExtractionService = nestedJarExtractionService;
     }
 
     /**
-     * Upload a JAR file, extract all classes, and store them for the given project.
+     * Upload a JAR file, extract all classes and nested JARs, and store them for the given project.
      *
      * @param jarFile the raw bytes of a .jar file (as reactive stream of buffers)
      * @param project the project identifier
@@ -68,41 +78,40 @@ public class JarBinariesController {
                 .flatMap(tmp ->
                         // Step 1: stream body to disk — each DataBuffer is released after writing
                         DataBufferUtils.write(jarFile, tmp)
-                                // Step 2: compute descriptor, extract via ZipFileSystem, clean up
+                                // Step 2: compute descriptor and extract top-level class files.
+                                // tmp is NOT deleted here — it is kept alive for nested JAR extraction.
                                 .then(Mono.fromCallable(() -> {
-                                    try {
-                                        long size = Files.size(tmp);
-                                        String hash = sha256(tmp);
-                                        var descriptor = new UnitDescriptor(
-                                                BytecodeSourceKind.JAR, jarName.strip(), size, hash);
-                                        return extractionService.extractJarFile(tmp, descriptor);
-                                    } finally {
-                                        Files.deleteIfExists(tmp);
-                                    }
+                                    long size = Files.size(tmp);
+                                    String hash = sha256(tmp);
+                                    var descriptor = new UnitDescriptor(
+                                            BytecodeSourceKind.JAR, jarName.strip(), size, hash);
+                                    return extractionService.extractJarFile(tmp, descriptor);
                                 }))
-                                .onErrorResume(e -> {
-                                    try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
-                                    return Mono.error(e);
+                                // Step 3: extract nested JARs found inside the same tmp file.
+                                .flatMap(outerUnits ->
+                                        nestedJarExtractionService
+                                                .extractNestedJars(tmp, project.strip())
+                                                .map(nestedUnits -> {
+                                                    List<UnitConstants> all = new ArrayList<>(outerUnits);
+                                                    all.addAll(nestedUnits);
+                                                    return all;
+                                                })
+                                )
+                                // Step 4: delete tmp regardless of outcome (success / error / cancel).
+                                .doFinally(_ -> {
+                                    try {
+                                        Files.deleteIfExists(tmp);
+                                    } catch (IOException ignored) {}
                                 })
                 )
                 .subscribeOn(Schedulers.boundedElastic())
-                .flatMapMany(Flux::fromIterable)
-                .collectList()
                 .flatMap(allUnits -> storage.storeAll(allUnits, project.strip()))
                 .thenReturn(ResponseEntity.ok().build());
     }
 
-    private static String sha256(Path path) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (InputStream in = new DigestInputStream(Files.newInputStream(path), digest)) {
-                in.transferTo(OutputStream.nullOutputStream());
-            }
-            return HexFormat.of().formatHex(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read JAR for hashing", e);
+    private static String sha256(Path path) throws IOException {
+        try (InputStream in = Files.newInputStream(path)) {
+            return sha256Hex(in);
         }
     }
 }

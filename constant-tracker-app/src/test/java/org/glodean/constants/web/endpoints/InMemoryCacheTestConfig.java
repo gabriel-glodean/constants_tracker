@@ -2,8 +2,8 @@ package org.glodean.constants.web.endpoints;
 
 import static org.glodean.constants.store.Constants.DATA_LOCATION;
 
-import org.glodean.constants.extractor.bytecode.AnalysisMerger;
-import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
+import org.glodean.constants.extractor.ModelExtractorSupplierRepository;
+import org.glodean.constants.extractor.bytecode.*;
 import org.glodean.constants.services.ConcreteExtractionService;
 import org.glodean.constants.services.ExtractionService;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -23,8 +23,13 @@ public class InMemoryCacheTestConfig {
 
   @Bean
   ExtractionService extractionService() {
+    var merger = new AnalysisMerger(new InternalStringConcatPatternSplitter());
+    var repo = ModelExtractorSupplierRepository.builder()
+            .register(name -> name.endsWith(".class"), BytecodeSourceKind.CLASS_FILE,
+                ClassModelExtractor.supplier(merger))
+            .build();
     return new ConcreteExtractionService(
-        new AnalysisMerger(new InternalStringConcatPatternSplitter()));
+       merger, null, repo);
   }
 
   /** Disable security for controller slice tests — no auth headers required. */

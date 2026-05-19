@@ -41,7 +41,6 @@
  * boolean changed = merged.unionWith(in2);  // Merges both branches
  * }</pre>
  *
- * @see org.glodean.constants.extractor.bytecode.ByteCodeMethodAnalyzer
  * @see org.glodean.constants.extractor.bytecode.handlers.InstructionHandler
  */
 package org.glodean.constants.extractor.bytecode.types;

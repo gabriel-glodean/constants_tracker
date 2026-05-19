@@ -14,7 +14,7 @@ import org.glodean.constants.samples.Greeter;
 import org.glodean.constants.samples.SimpleIfElse;
 import org.junit.jupiter.api.Test;
 
-class ByteCodeMethodAnalyzerTest {
+class BytecodeMethodAnalyzerTest {
 
   @Test
   void testBuildSuccessors_simpleIfElse() throws IOException {
@@ -24,7 +24,7 @@ class ByteCodeMethodAnalyzerTest {
             .filter(m -> m.methodName().stringValue().equals("numberIfElse"))
             .findFirst()
             .orElseThrow();
-    var analyzer = new ByteCodeMethodAnalyzer(cm, mm);
+    var analyzer = new BytecodeMethodAnalyzer(cm, mm);
 
     List<CodeElement> code = analyzer.code;
 
@@ -81,7 +81,7 @@ class ByteCodeMethodAnalyzerTest {
             .filter(m -> m.methodName().stringValue().equals("greet"))
             .findFirst()
             .orElseThrow();
-    var analyzer = new ByteCodeMethodAnalyzer(cm, mm);
+    var analyzer = new BytecodeMethodAnalyzer(cm, mm);
     analyzer.run();
 
     // There should be at least one recorded invoke (e.g. String.formatted or String.length)

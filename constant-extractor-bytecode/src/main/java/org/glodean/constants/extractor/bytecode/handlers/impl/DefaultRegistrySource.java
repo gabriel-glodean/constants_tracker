@@ -5,7 +5,7 @@ import org.glodean.constants.extractor.bytecode.handlers.InstructionHandlerRegis
 
 /**
  * Factory that assembles the default {@link InstructionHandlerRegistry} used by
- * {@link org.glodean.constants.extractor.bytecode.ByteCodeMethodAnalyzer}.
+ * {@link org.glodean.constants.extractor.bytecode.BytecodeMethodAnalyzer}.
  *
  * <p>Registers one handler per JVM instruction type. All handler instances are
  * stateless and can therefore be shared across analyses.

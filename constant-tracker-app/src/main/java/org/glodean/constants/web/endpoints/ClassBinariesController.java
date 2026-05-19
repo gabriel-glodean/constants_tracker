@@ -2,9 +2,8 @@ package org.glodean.constants.web.endpoints;
 
 import com.google.common.collect.Iterables;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -15,6 +14,7 @@ import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.util.DigestUtils;
 import org.glodean.constants.web.validation.ValidClassName;
 import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -150,22 +150,18 @@ public class ClassBinariesController {
                     return bytes;
                 })
                 .flatMap(bytes -> {
-                    var descriptor = new UnitDescriptor(
-                            BytecodeSourceKind.CLASS_FILE, "uploaded-class",
-                            bytes.length, sha256(bytes));
-                    return Mono.fromCallable(() -> extractionService.extractClassFile(bytes, descriptor))
-                            .map(Iterables::getOnlyElement);
+                    try {
+                        UnitDescriptor descriptor = new UnitDescriptor(
+                                BytecodeSourceKind.CLASS_FILE, "uploaded.class",
+                                bytes.length, DigestUtils.sha256Hex(new ByteArrayInputStream(bytes)));
+                        return Mono.fromCallable(() -> extractionService.extractClassFile(bytes, descriptor))
+                                .map(Iterables::getOnlyElement);
+                    } catch (IOException e) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Failed to read class bytes", e));
+                    }
                 });
     }
 
-    private static String sha256(byte[] bytes) {
-        try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
-    }
 
     /**
      * Lookup constants for a class using query parameters (GET /class?project=...&className=...&version=...).

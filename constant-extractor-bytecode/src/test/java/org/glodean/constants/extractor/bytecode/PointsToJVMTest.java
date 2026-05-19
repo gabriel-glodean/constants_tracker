@@ -109,7 +109,7 @@ class PointsToJVMTest {
             .orElseGet(() -> null);
 
     Assertions.assertNotNull(method);
-    var analysis = new ByteCodeMethodAnalyzer(model, method);
+    var analysis = new BytecodeMethodAnalyzer(model, method);
     analysis.run();
     if (log) {
       IO.println(analysis.report());

@@ -1,7 +1,17 @@
 package org.glodean.constants.services;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.glodean.constants.extractor.ModelExtractorSupplierRepository;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
+import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
+import org.glodean.constants.extractor.bytecode.ClassModelExtractor;
 import org.glodean.constants.extractor.bytecode.ConstantUsageInterpreterRegistry;
+import org.glodean.constants.extractor.configfile.ConfigFileSourceKind;
+import org.glodean.constants.extractor.configfile.PropertiesConstantsExtractor;
+import org.glodean.constants.extractor.configfile.YamlConstantsExtractor;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.glodean.constants.extractor.bytecode.StringConcatPatternSplitter;
 import org.glodean.constants.extractor.bytecode.interpreters.AnnotationConstantUsageInterpreter;
@@ -14,6 +24,7 @@ import org.glodean.constants.model.UnitConstant.UsageType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import jakarta.annotation.PreDestroy;
 
 /**
  * Spring {@link Configuration} that wires the bytecode extraction infrastructure.
@@ -32,6 +43,31 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class ExtractionServiceConfiguration {
+
+  private static final Logger logger = LogManager.getLogger(ExtractionServiceConfiguration.class);
+
+  private ExecutorService bytecodeAnalysisExecutor;
+
+  /**
+   * Shared fixed-thread-pool used by all bytecode extractions.
+   * Sized to {@link Runtime#availableProcessors()} — CPU-bound workload.
+   * Shut down on application context close via {@link #shutdownBytecodeExecutor()}.
+   */
+  @Bean
+  ExecutorService bytecodeAnalysisExecutor() {
+    int threads = Runtime.getRuntime().availableProcessors();
+    logger.atInfo().log("Creating shared bytecode analysis executor with {} threads", threads);
+    this.bytecodeAnalysisExecutor = Executors.newFixedThreadPool(threads);
+    return this.bytecodeAnalysisExecutor;
+  }
+
+  @PreDestroy
+  void shutdownBytecodeExecutor() {
+    if (bytecodeAnalysisExecutor != null) {
+      logger.atInfo().log("Shutting down bytecode analysis executor");
+      bytecodeAnalysisExecutor.close();
+    }
+  }
 
   /**
    * Creates the {@link StringConcatPatternSplitter} that extracts literal parts from
@@ -63,6 +99,38 @@ public class ExtractionServiceConfiguration {
         .register(UsageType.METHOD_INVOCATION_PARAMETER, new FilePathConstantUsageInterpreter())
         .register(UsageType.METHOD_INVOCATION_PARAMETER, new UrlResourceConstantUsageInterpreter())
         .register(UsageType.ANNOTATION_VALUE, new AnnotationConstantUsageInterpreter())
+        .build();
+  }
+
+  /**
+   * Unified {@link ModelExtractorSupplierRepository} covering all supported source kinds:
+   * <ul>
+   *   <li>{@link BytecodeSourceKind#CLASS_FILE} — via {@link ClassModelExtractor#supplier}</li>
+   *   <li>{@link ConfigFileSourceKind#YAML} — via {@link YamlConstantsExtractor}</li>
+   *   <li>{@link ConfigFileSourceKind#PROPERTIES} — via {@link PropertiesConstantsExtractor}</li>
+   * </ul>
+   *
+   * <p>To add a new source kind, add a {@code .register(...)} call here.
+   * No changes to controllers or services are required.
+   *
+   * @param merger the shared {@link AnalysisMerger} bean
+   * @return a single immutable repository used by all extraction entry points
+   */
+  @Bean
+  ModelExtractorSupplierRepository modelExtractorSupplierRepository(AnalysisMerger merger) {
+    return ModelExtractorSupplierRepository.builder()
+        .register(
+            name -> name.endsWith(".class"),
+            BytecodeSourceKind.CLASS_FILE,
+            ClassModelExtractor.supplier(merger))
+        .register(
+            n -> n.endsWith(".yml") || n.endsWith(".yaml"),
+            ConfigFileSourceKind.YAML,
+            YamlConstantsExtractor::new)
+        .register(
+            n -> n.endsWith(".properties"),
+            ConfigFileSourceKind.PROPERTIES,
+            PropertiesConstantsExtractor::new)
         .build();
   }
 

@@ -26,7 +26,7 @@ import org.glodean.constants.model.UnitConstant.UsageType;
  * <p>The Java compiler emits a {@code ConstantValue} attribute (rather than {@code <clinit>}
  * bytecode) for {@code static final} fields whose initializer is a compile-time constant — a
  * {@code String} literal or a primitive value. These values would otherwise be invisible to the
- * method-level bytecode analysis performed by {@link ByteCodeMethodAnalyzer}.
+ * method-level bytecode analysis performed by {@link BytecodeMethodAnalyzer}.
  *
  * <p>Each discovered value is dispatched to the {@link ConstantUsageInterpreterRegistry}
  * under {@link UsageType#STATIC_FIELD_STORE}. The {@link FieldStoreContext} carries the field

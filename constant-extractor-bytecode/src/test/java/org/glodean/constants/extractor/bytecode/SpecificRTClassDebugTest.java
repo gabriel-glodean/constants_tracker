@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  * stepping through the analysis of a specific method in detail, which can be helpful for diagnosing
  * stack underflows or other analysis issues.
  *
- * <p>Set a breakpoint inside {@link ByteCodeMethodAnalyzer#run()} and run in debug mode to step
+ * <p>Set a breakpoint inside {@link BytecodeMethodAnalyzer#run()} and run in debug mode to step
  * through the analysis instruction by instruction.
  */
 class SpecificRTClassDebugTest {
@@ -56,7 +56,7 @@ class SpecificRTClassDebugTest {
             + METHOD_DESCRIPTOR);
 
     // --- Place a breakpoint on the next line to debug the analysis ---
-    var analyzer = new ByteCodeMethodAnalyzer(classModel, target);
+    var analyzer = new BytecodeMethodAnalyzer(classModel, target);
     analyzer.run();
 
     System.out.println("Analysis completed successfully.");
