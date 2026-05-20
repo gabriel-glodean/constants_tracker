@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import { Lock, X, LogIn } from 'lucide-react'
 
 interface LoginModalProps {
@@ -13,7 +13,7 @@ export function LoginModal({ onSuccess, onClose, signIn }: LoginModalProps) {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setIsLoading(true)

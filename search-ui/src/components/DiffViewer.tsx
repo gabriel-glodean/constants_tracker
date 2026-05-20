@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import {
   getDiff,
   type ProjectDiffResponse,
@@ -140,7 +140,7 @@ export function DiffViewer() {
   const [error, setError] = useState<string | null>(null)
   const [diff, setDiff] = useState<ProjectDiffResponse | null>(null)
   const [filter, setFilter] = useState<'all' | 'added' | 'removed' | 'changed'>('all')
-  async function handleDiff(e: React.FormEvent) {
+  async function handleDiff(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!project.trim() || !fromV || !toV) return
     setLoading(true)

@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, type EventHandler, type SyntheticEvent } from 'react'
 import { getClassConstants } from '@/api/classApi'
 import { Search, AlertCircle } from 'lucide-react'
 
 export function ClassLookupForm() {
+  const projectInputId = 'class-lookup-project'
+  const classOrFileInputId = 'class-lookup-class-or-file'
+  const versionInputId = 'class-lookup-version'
+
   const [project, setProject] = useState('')
   const [className, setClassName] = useState('')
   const [version, setVersion] = useState('')
@@ -10,7 +14,7 @@ export function ClassLookupForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit: EventHandler<SyntheticEvent<HTMLFormElement>> = async e => {
     e.preventDefault()
     setError('')
     setResult(null)
@@ -35,30 +39,30 @@ export function ClassLookupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-[0.9fr_2fr_6.5rem] gap-3 items-end">
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor={projectInputId} className="text-xs font-medium text-muted-foreground">
             Project <span className="text-destructive">*</span>
           </label>
-          <input type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e=>setProject(e.target.value)}
+          <input id={projectInputId} name="project" type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e=>setProject(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <label htmlFor={classOrFileInputId} className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             Class or file <span className="text-destructive">*</span>
             <span
               title="Java class name (com.example.MyClass), property file (application.properties), or path (/BOOT-INF/classes/application.yaml)"
               className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
             >ⓘ</span>
           </label>
-          <input type="text" placeholder="com.example.MyClass or /BOOT-INF/classes/application.yaml" value={className} onChange={e=>setClassName(e.target.value)}
+          <input id={classOrFileInputId} name="className" type="text" placeholder="com.example.MyClass or /BOOT-INF/classes/application.yaml" value={className} onChange={e=>setClassName(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor={versionInputId} className="text-xs font-medium text-muted-foreground">
             Version <span className="text-destructive">*</span>
           </label>
-          <input type="number" placeholder="e.g. 1" value={version} onChange={e=>setVersion(e.target.value)}
+          <input id={versionInputId} name="version" type="number" placeholder="e.g. 1" value={version} onChange={e=>setVersion(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
         </div>
       </div>

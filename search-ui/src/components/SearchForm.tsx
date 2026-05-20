@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import type { SearchParams } from '@/api/searchApi'
 
@@ -20,7 +20,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   const [rows, setRows] = useState(25)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!term.trim()) return
     onSearch({ project: project.trim() || '*', term: term.trim(), fuzzy, rows })

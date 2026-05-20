@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import {
   getVersion,
   finalizeVersion,
@@ -44,7 +44,7 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
     setSyncResult(null)
   }
 
-  async function handleLookup(e: React.FormEvent) {
+  async function handleLookup(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!project.trim() || !versionNum) return
     clearStatus()
@@ -102,7 +102,7 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
     }
   }
 
-  async function handleDelete(e: React.FormEvent) {
+  async function handleDelete(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!versionData || !deleteClass.trim()) return
     clearStatus()

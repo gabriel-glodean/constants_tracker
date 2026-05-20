@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ChangeEvent, type DragEvent, type SyntheticEvent } from 'react'
 import { uploadClass, uploadJar, uploadConfig } from '@/api/uploadApi'
 import { Upload, FileArchive, FileCode2, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
 
@@ -15,7 +15,7 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
   const [message, setMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  async function handleUpload(e: React.FormEvent) {
+  async function handleUpload(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!file || !project.trim()) return
     setStatus('loading')
@@ -43,11 +43,11 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     setFile(e.target.files?.[0] || null)
   }
 
-  function handleDrop(e: React.DragEvent) {
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
     if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0])
   }
