@@ -98,6 +98,18 @@ variable "auth_jwt_secret" {
   description = "Base64-encoded HS256 secret used to sign JWTs (min 32 chars before encoding)"
 }
 
+variable "auth_jwt_expiration_ms" {
+  type        = number
+  default     = 3600000
+  description = "Access-token (JWT) lifetime in milliseconds (default: 1 hour = 3600000)"
+}
+
+variable "auth_refresh_token_ttl_ms" {
+  type        = number
+  default     = 604800000
+  description = "Refresh-token lifetime in milliseconds (default: 7 days = 604800000)"
+}
+
 variable "demo_username" {
   type        = string
   default     = "demo"
@@ -213,7 +225,7 @@ resource "null_resource" "deploy" {
   # 8. Patch app-config with runtime values BEFORE rollout.
   provisioner "remote-exec" {
     inline = [
-      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CONSTANTS_CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS='${var.solr_outbox_drain_interval_ms}' --from-literal=CONSTANTS_SOLR_OUTBOX_BATCH_SIZE='${var.solr_outbox_batch_size}' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --from-literal=JAVA_OPTS='-Xmx1500m' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CONSTANTS_CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS='${var.solr_outbox_drain_interval_ms}' --from-literal=CONSTANTS_SOLR_OUTBOX_BATCH_SIZE='${var.solr_outbox_batch_size}' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --from-literal=CONSTANTS_AUTH_JWT_EXPIRATION_MS='${var.auth_jwt_expiration_ms}' --from-literal=CONSTANTS_AUTH_REFRESH_TOKEN_TTL_MS='${var.auth_refresh_token_ttl_ms}' --from-literal=JAVA_OPTS='-Xmx1500m' --dry-run=client -o yaml | kubectl apply -f -",
     ]
   }
 

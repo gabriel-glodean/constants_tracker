@@ -34,6 +34,14 @@ auth_jwt_secret = "change-me-use-openssl-rand-base64-48"
 # Whether JWT authentication is enforced (set to false for local dev only)
 auth_enabled = true
 
+# Access-token (JWT) lifetime — default 1 hour. Set lower for stricter sessions.
+# auth_jwt_expiration_ms = 3600000
+
+# Refresh-token lifetime — default 7 days. This controls how long a session
+# can be silently restored on page load without re-entering credentials.
+# Lower this to force more frequent re-logins (e.g. 86400000 = 1 day).
+# auth_refresh_token_ttl_ms = 604800000
+
 # Demo account seeded into auth_users on every deploy (idempotent)
 demo_username = "demo"
 demo_password = "change-me"

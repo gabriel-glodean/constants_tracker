@@ -46,11 +46,13 @@ spec:
                                 name: app-config
                                 key: CONSTANTS_SOLR_URL
                       - name: CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS
+                        value: null
                         valueFrom:
                             configMapKeyRef:
                                 name: app-config
                                 key: CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS
                       - name: CONSTANTS_SOLR_OUTBOX_BATCH_SIZE
+                        value: null
                         valueFrom:
                             configMapKeyRef:
                                 name: app-config
