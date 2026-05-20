@@ -7,6 +7,14 @@ interface UploadFormProps {
 }
 
 export function UploadForm({ authFetch }: UploadFormProps = {}) {
+  const MAX_UPLOAD_BYTES = 100 * 1024 * 1024 // Keep in sync with backend/gateway limits.
+
+  const ACCEPTED_EXTENSIONS: Record<'class' | 'jar' | 'config', string[]> = {
+    class: ['.class'],
+    jar: ['.jar', '.zip'],
+    config: ['.yml', '.yaml', '.properties'],
+  }
+
   const [file, setFile] = useState<File | null>(null)
   const [project, setProject] = useState('')
   const [version, setVersion] = useState('')
@@ -43,13 +51,57 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
     }
   }
 
+  function validateFile(candidate: File): string | null {
+    const loweredName = candidate.name.toLowerCase()
+    const allowed = ACCEPTED_EXTENSIONS[type]
+    const isAllowed = allowed.some(ext => loweredName.endsWith(ext))
+    if (!isAllowed) {
+      return `Invalid file type for ${type}. Expected: ${allowed.join(', ')}`
+    }
+
+    if (candidate.size > MAX_UPLOAD_BYTES) {
+      return `File is too large (${Math.ceil(candidate.size / (1024 * 1024))} MB). Maximum allowed is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))} MB.`
+    }
+
+    return null
+  }
+
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    setFile(e.target.files?.[0] || null)
+    const selected = e.target.files?.[0] || null
+    if (!selected) {
+      setFile(null)
+      return
+    }
+
+    const validationError = validateFile(selected)
+    if (validationError) {
+      setStatus('error')
+      setMessage(validationError)
+      setFile(null)
+      return
+    }
+
+    setStatus('idle')
+    setMessage('')
+    setFile(selected)
   }
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
-    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0])
+    if (!e.dataTransfer.files.length) return
+
+    const droppedFile = e.dataTransfer.files[0]
+    const validationError = validateFile(droppedFile)
+    if (validationError) {
+      setStatus('error')
+      setMessage(validationError)
+      setFile(null)
+      return
+    }
+
+    setStatus('idle')
+    setMessage('')
+    setFile(droppedFile)
   }
 
   return (
@@ -65,10 +117,10 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
             <FileCode2 className="inline mr-1 w-4 h-4"/> .class file
           </button>
           <button type="button"
-            title="Upload a JAR archive — every class inside will be indexed"
+            title="Upload a JAR or ZIP archive — every class inside will be indexed"
             className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${type==='jar'?'bg-primary text-primary-foreground':'bg-secondary text-foreground'}`}
             onClick={()=>setType('jar')}>
-            <FileArchive className="inline mr-1 w-4 h-4"/> JAR archive
+            <FileArchive className="inline mr-1 w-4 h-4"/> JAR/ZIP archive
           </button>
           <button type="button"
             title="Upload a .yml, .yaml, or .properties config file"
@@ -87,8 +139,8 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
         onDragOver={e=>e.preventDefault()}
       >
         <Upload className="mx-auto mb-2 w-7 h-7 text-primary"/>
-        <div className="text-sm mb-1">Drag & drop or click to select a {type === 'class' ? '.class' : type === 'jar' ? '.jar' : '.yml / .yaml / .properties'} file</div>
-        <input ref={inputRef} type="file" accept={type==='class'?'.class':type==='jar'?'.jar':'.yml,.yaml,.properties'} className="hidden" onChange={handleFileChange}/>
+        <div className="text-sm mb-1">Drag & drop or click to select a {type === 'class' ? '.class' : type === 'jar' ? '.jar / .zip' : '.yml / .yaml / .properties'} file</div>
+        <input ref={inputRef} type="file" accept={type==='class'?'.class':type==='jar'?'.jar,.zip':'.yml,.yaml,.properties'} className="hidden" onChange={handleFileChange}/>
         {file && <div className="mt-2 text-xs text-foreground font-medium">{file.name}</div>}
       </div>
 

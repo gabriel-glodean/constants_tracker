@@ -292,22 +292,13 @@ describe('Content sections — responsive padding', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. Footer — stacks vertically on mobile
+// 4. Footer — minimal container
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Footer — mobile layout', () => {
-  it('footer inner container has flex-col for mobile stacking', () => {
+  it('renders footer landmark', () => {
     render(<App />)
-    const footer = screen.getByRole('contentinfo')
-    const inner = footer.firstElementChild
-    expect(inner?.className).toContain('flex-col')
-  })
-
-  it('footer switches to row layout on desktop (sm:flex-row)', () => {
-    render(<App />)
-    const footer = screen.getByRole('contentinfo')
-    const inner = footer.firstElementChild
-    expect(inner?.className).toContain('sm:flex-row')
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
   })
 
   it('footer has responsive horizontal padding', () => {
@@ -318,10 +309,10 @@ describe('Footer — mobile layout', () => {
     expect(inner?.className).toContain('sm:px-6')
   })
 
-  it('both footer texts are always visible', () => {
+  it('footer does not render version/powered-by text', () => {
     render(<App />)
-    expect(screen.getByText(/Constant Tracker v/i)).toBeInTheDocument()
-    expect(screen.getByText(/Solr \+ Spring WebFlux/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Constant Tracker v/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Powered by/i)).not.toBeInTheDocument()
   })
 })
 

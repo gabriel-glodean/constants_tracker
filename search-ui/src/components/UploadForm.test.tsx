@@ -18,7 +18,7 @@ describe('UploadForm', () => {
   it('renders file type buttons, drop zone, and project input', () => {
     render(<UploadForm />)
     expect(screen.getByTitle(/single compiled .class/i)).toBeInTheDocument()
-    expect(screen.getByTitle(/jar archive/i)).toBeInTheDocument()
+    expect(screen.getByTitle(/jar.*archive/i)).toBeInTheDocument()
     expect(screen.getByTitle(/config file/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/e\.g\. demo-crud-server/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /upload/i })).toBeDisabled()
@@ -46,6 +46,16 @@ describe('UploadForm', () => {
       dataTransfer: { files: [makeFile('Dropped.class')] },
     })
     expect(screen.getByText('Dropped.class')).toBeInTheDocument()
+  })
+
+  it('rejects dropped file with wrong extension for current type', () => {
+    render(<UploadForm />)
+    const dropZone = screen.getByText(/drag & drop/i).closest('div')!
+    fireEvent.drop(dropZone, {
+      dataTransfer: { files: [makeFile('oops.jar')] },
+    })
+    expect(screen.getByText(/invalid file type for class/i)).toBeInTheDocument()
+    expect(screen.queryByText('oops.jar')).not.toBeInTheDocument()
   })
 
   it('calls uploadClass and shows success', async () => {
@@ -76,7 +86,7 @@ describe('UploadForm', () => {
     const user = userEvent.setup()
     mockedUploadJar.mockResolvedValue({ status: 'success', message: 'JAR uploaded successfully.' })
     render(<UploadForm />)
-    await user.click(screen.getByTitle(/jar archive/i))
+    await user.click(screen.getByTitle(/jar.*archive/i))
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     await user.upload(input, makeFile('app.jar'))
     await user.type(screen.getByPlaceholderText(/e\.g\. demo-crud-server/i), 'proj')
@@ -85,6 +95,18 @@ describe('UploadForm', () => {
     await user.click(screen.getByRole('button', { name: /upload/i }))
     await waitFor(() => expect(mockedUploadJar).toHaveBeenCalled())
     expect(screen.getByText('JAR uploaded successfully.')).toBeInTheDocument()
+  })
+
+  it('accepts .zip file in JAR mode and calls uploadJar', async () => {
+    const user = userEvent.setup()
+    mockedUploadJar.mockResolvedValue({ status: 'success', message: 'JAR uploaded successfully.' })
+    render(<UploadForm />)
+    await user.click(screen.getByTitle(/jar or zip archive/i))
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await user.upload(input, makeFile('bundle.zip', 'application/zip'))
+    await user.type(screen.getByPlaceholderText(/e\.g\. demo-crud-server/i), 'proj')
+    await user.click(screen.getByRole('button', { name: /upload/i }))
+    await waitFor(() => expect(mockedUploadJar).toHaveBeenCalled())
   })
 
   it('switches to config type and calls uploadConfig', async () => {

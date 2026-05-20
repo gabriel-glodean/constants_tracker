@@ -235,10 +235,7 @@ function App() {
 
       {/* Footer */}
       <footer className="border-t border-border py-6">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>Constant Tracker v0.1.0</span>
-          <span>Powered by Solr + Spring WebFlux</span>
-        </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6" />
       </footer>
     </div>
   )
