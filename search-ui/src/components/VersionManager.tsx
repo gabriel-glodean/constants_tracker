@@ -239,14 +239,14 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   Delete unit
                   <span
-                    title="Marks a class/unit as deleted in this version. Use the JVM internal path format (slashes, no .class suffix)."
+                    title="Marks a class/file as deleted. Use Java class notation (com.example.Foo), config file name (application.properties), or path (/BOOT-INF/classes/application.yaml)."
                     className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
                   >ⓘ</span>
                 </label>
                 <form onSubmit={handleDelete} className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="com/example/Foo"
+                    placeholder="com.example.Foo or /BOOT-INF/classes/app.yaml"
                     value={deleteClass}
                     onChange={e => setDeleteClass(e.target.value)}
                     className="flex-1 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"

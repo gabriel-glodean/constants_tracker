@@ -164,12 +164,12 @@ public class ClassBinariesController {
 
 
     /**
-     * Lookup constants for a class using query parameters (GET /class?project=...&className=...&version=...).
+     * Lookup constants for a class or config file using query parameters (GET /class?project=...&className=...&version=...).
      *
      * @param project   the project identifier
-     * @param className the class internal or binary name (slash-separated, e.g., "java/lang/String")
+     * @param className the class name (Java notation, e.g., "com.example.MyClass") or config file name (e.g., "application.properties", "app-prod.yml")
      * @param version   the project version number
-     * @return 200 OK with a {@link GetUnitConstantsReply} if the class is found,
+     * @return 200 OK with a {@link GetUnitConstantsReply} if the unit is found,
      * 404 Not Found if no matching snapshot exists,
      * 500 Internal Server Error for other failures
      */
@@ -193,7 +193,7 @@ public class ClassBinariesController {
      * from a parent version.
      *
      * @param project   the project identifier
-     * @param className the unit path (slash-separated, e.g., "java/lang/String")
+     * @param className the unit path (dot-separated, e.g., "java.lang.String")
      * @param version   the version number
      * @return 204 No Content on success, 409 Conflict if the version is finalized,
      * 500 Internal Server Error for other failures

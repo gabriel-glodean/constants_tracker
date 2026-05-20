@@ -160,7 +160,7 @@ class ClassBinariesControllerTest {
   @Test
   void invalidClassNameReturns400() {
     web.get()
-        .uri("/class?project=demo&version=1&className=com/example/Foo")
+        .uri("/class?project=demo&version=1&className=com example.Foo")
         .exchange()
         .expectStatus()
         .isBadRequest();

@@ -29,7 +29,14 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
         : await uploadConfig({ file, project: project.trim(), version: version ? Number(version) : undefined, fetcher })
       setStatus(res.status)
       setMessage(res.message)
-      if (res.status === 'success') setFile(null)
+      if (res.status === 'success') {
+        setFile(null)
+        // Reset form after 2 seconds to allow another upload
+        setTimeout(() => {
+          setStatus('idle')
+          setMessage('')
+        }, 2000)
+      }
     } catch (err) {
       setStatus('error')
       setMessage(err instanceof Error ? err.message : 'Upload failed')

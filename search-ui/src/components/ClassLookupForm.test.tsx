@@ -6,10 +6,10 @@ import * as classApi from '@/api/classApi'
 jest.mock('@/api/classApi')
 const mockedGet = classApi.getClassConstants as jest.MockedFunction<typeof classApi.getClassConstants>
 
-async function fillAndSubmit(project = 'proj', className = 'com/Foo', version = '1') {
+async function fillAndSubmit(project = 'proj', className = 'com.Foo', version = '1') {
   const user = userEvent.setup()
   await user.type(screen.getByPlaceholderText(/e\.g\. demo-crud-server/i), project)
-  await user.type(screen.getByPlaceholderText('com/example/MyClass'), className)
+  await user.type(screen.getByPlaceholderText(/com\.example\.MyClass/i), className)
   await user.type(screen.getByPlaceholderText(/e\.g\. 1/i), version)
   await user.click(screen.getByRole('button', { name: /lookup/i }))
 }
@@ -20,7 +20,7 @@ describe('ClassLookupForm', () => {
   it('renders all inputs and the submit button', () => {
     render(<ClassLookupForm />)
     expect(screen.getByPlaceholderText(/e\.g\. demo-crud-server/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('com/example/MyClass')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/BOOT-INF/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/e\.g\. 1/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /lookup/i })).toBeInTheDocument()
   })

@@ -23,7 +23,10 @@ class ClassNameValidatorTest {
         "com.example.Foo$1",       // anonymous class
         "a",
         "A",
-        "com.example.FooBar"
+        "com.example.FooBar",
+        "com/example/Foo",         // JVM internal path format also accepted
+        "/BOOT-INF/classes/application.yaml", // JAR internal paths
+        "META-INF/maven/org/pom.properties"   // nested paths with slashes
     })
     void validClassNames(String name) {
         assertThat(validator.isValid(name, null)).isTrue();
@@ -35,10 +38,10 @@ class ClassNameValidatorTest {
         ".Foo",             // leading dot
         "Foo.",             // trailing dot
         "foo..Bar",         // consecutive dots
+        "/foo//bar",        // consecutive slashes
         "123Bad",           // starts with digit
         "com.123.Foo",      // segment starts with digit
         "com.example.Foo Bar", // space
-        "com/example/Foo",  // slash (JVM internal format not accepted)
         "com.example.Foo+",
         "com.example.Foo!"
     })

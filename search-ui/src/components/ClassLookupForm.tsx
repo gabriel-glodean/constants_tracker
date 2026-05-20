@@ -35,7 +35,7 @@ export function ClassLookupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">
             Project <span className="text-destructive">*</span>
@@ -45,13 +45,13 @@ export function ClassLookupForm() {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            Class name <span className="text-destructive">*</span>
+            Class or file <span className="text-destructive">*</span>
             <span
-              title="Use JVM internal format with slashes, e.g. com/example/MyClass"
+              title="Java class name (com.example.MyClass), property file (application.properties), or path (/BOOT-INF/classes/application.yaml)"
               className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
             >ⓘ</span>
           </label>
-          <input type="text" placeholder="com/example/MyClass" value={className} onChange={e=>setClassName(e.target.value)}
+          <input type="text" placeholder="com.example.MyClass or /BOOT-INF/classes/application.yaml" value={className} onChange={e=>setClassName(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
         </div>
         <div className="space-y-1">
