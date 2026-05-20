@@ -1,7 +1,6 @@
 package org.glodean.constants.store;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.UnitConstant;

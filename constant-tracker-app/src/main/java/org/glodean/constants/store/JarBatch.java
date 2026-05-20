@@ -21,4 +21,3 @@ public record JarBatch(
     UnitDescriptor containerDescriptor,
     List<UnitConstants> units,
     boolean firstBatch) {}
-

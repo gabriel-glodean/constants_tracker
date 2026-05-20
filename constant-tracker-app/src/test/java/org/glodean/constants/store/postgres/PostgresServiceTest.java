@@ -3,8 +3,17 @@ package org.glodean.constants.store.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.glodean.constants.model.UnitConstant;
@@ -210,5 +219,154 @@ class PostgresServiceTest {
     UnitConstants result = service.store(constants, "proj", 1).block();
     assertThat(result).isNotNull();
     assertThat(result.source().path()).isEqualTo("com/example/Client");
+  }
+
+  // ── storeBatch — new JAR-hierarchy path ────────────────────────────────────
+
+  static org.glodean.constants.model.UnitDescriptor jarContainer() {
+    return new org.glodean.constants.model.UnitDescriptor(
+        org.glodean.constants.extractor.bytecode.BytecodeSourceKind.JAR,
+        "spring-core.jar", 2048L, "abc123");
+  }
+
+  private void stubStoreBatchCommon(long descriptorId, long snapshotId) {
+    var savedDescriptor = new UnitDescriptorEntity(
+        descriptorId, "proj", 1, "JAR", "spring-core.jar", 2048L, "abc123");
+    var savedSnapshot = new UnitSnapshotEntity(snapshotId, descriptorId, "com/example/Greeter", "{}");
+    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "spring-core.jar", 1))
+        .thenReturn(Mono.empty());
+    when(descriptorRepo.save(any())).thenReturn(Mono.just(savedDescriptor));
+    when(snapshotRepo.upsert(eq(descriptorId), eq("com/example/Greeter"), anyString()))
+        .thenReturn(Mono.just(savedSnapshot));
+    when(constantRepo.saveAll(anyList())).thenReturn(Flux.just(
+        new UnitConstantEntity(1L, snapshotId, "Hello", "String")));
+    when(usageRepo.saveAll(anyList())).thenReturn(Flux.just(new ConstantUsageEntity(
+        1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
+    when(solrOutboxRepo.save(any())).thenReturn(
+        Mono.just(savedOutboxEntry("proj", "com/example/Greeter", 1)));
+  }
+
+  @Test
+  void storeBatchFirstBatch_deletesExistingSnapshotsAndInsertsNew() {
+    stubStoreBatchCommon(42L, 100L);
+    when(snapshotRepo.deleteAllByDescriptorId(42L)).thenReturn(Mono.empty());
+
+    List<UnitConstants> result =
+        service.storeBatch(jarContainer(), List.of(sampleCoreType()), true, "proj", 1).block();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).source().path()).isEqualTo("com/example/Greeter");
+    verify(snapshotRepo).deleteAllByDescriptorId(42L);
+    verify(snapshotRepo, times(1)).upsert(eq(42L), eq("com/example/Greeter"), anyString());
+  }
+
+  @Test
+  void storeBatchNonFirstBatch_skipsDeleteAndInserts() {
+    stubStoreBatchCommon(42L, 100L);
+
+    List<UnitConstants> result =
+        service.storeBatch(jarContainer(), List.of(sampleCoreType()), false, "proj", 1).block();
+
+    assertThat(result).hasSize(1);
+    verify(snapshotRepo, never()).deleteAllByDescriptorId(anyLong());
+    verify(snapshotRepo, times(1)).upsert(eq(42L), eq("com/example/Greeter"), anyString());
+  }
+
+  @Test
+  void storeBatchEmpty_returnsEmptyListImmediately() {
+    List<UnitConstants> result =
+        service.storeBatch(jarContainer(), List.of(), true, "proj", 1).block();
+
+    assertThat(result).isEmpty();
+    verify(snapshotRepo, never()).upsert(anyLong(), anyString(), anyString());
+  }
+
+  @Test
+  void storeBatchDeduplicates_duplicateUnitNamesInSameBatch() {
+    stubStoreBatchCommon(42L, 100L);
+    when(snapshotRepo.deleteAllByDescriptorId(42L)).thenReturn(Mono.empty());
+
+    // Two UnitConstants with the same source path — first occurrence wins, one upsert expected
+    List<UnitConstants> result =
+        service.storeBatch(jarContainer(), List.of(sampleCoreType(), sampleCoreType()),
+            true, "proj", 1).block();
+
+    assertThat(result).hasSize(2);
+    verify(snapshotRepo, times(1)).upsert(eq(42L), eq("com/example/Greeter"), anyString());
+  }
+
+  @Test
+  void storeBatchExistingDescriptor_reusesDescriptorId() {
+    var existing = new UnitDescriptorEntity(99L, "proj", 1, "JAR", "spring-core.jar", 2048L, "abc123");
+    var savedSnapshot = new UnitSnapshotEntity(200L, 99L, "com/example/Greeter", "{}");
+    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "spring-core.jar", 1))
+        .thenReturn(Mono.just(existing));
+    when(descriptorRepo.save(any())).thenReturn(Mono.just(existing));
+    when(snapshotRepo.upsert(eq(99L), eq("com/example/Greeter"), anyString()))
+        .thenReturn(Mono.just(savedSnapshot));
+    when(constantRepo.saveAll(anyList())).thenReturn(Flux.just(
+        new UnitConstantEntity(1L, 200L, "Hello", "String")));
+    when(usageRepo.saveAll(anyList())).thenReturn(Flux.just(new ConstantUsageEntity(
+        1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
+    when(solrOutboxRepo.save(any())).thenReturn(
+        Mono.just(savedOutboxEntry("proj", "com/example/Greeter", 1)));
+
+    List<UnitConstants> result =
+        service.storeBatch(jarContainer(), List.of(sampleCoreType()), false, "proj", 1).block();
+
+    assertThat(result).hasSize(1);
+    verify(snapshotRepo).upsert(eq(99L), anyString(), anyString());
+  }
+
+  // ── find(String) — success path ────────────────────────────────────────────
+
+  @Test
+  void findWithExistingUnit_returnsConstantUsageMap() {
+    var snapshot = new UnitSnapshotEntity(100L, 42L, "com/example/Greeter", "{}");
+    when(snapshotRepo.findByProjectAndVersionAndUnitName("proj", 1, "com/example/Greeter"))
+        .thenReturn(Mono.just(snapshot));
+    when(constantRepo.findAllBySnapshotId(100L)).thenReturn(Flux.just(
+        new UnitConstantEntity(1L, 100L, "Hello", "String"),
+        new UnitConstantEntity(2L, 100L, "World", "String")));
+    when(usageRepo.findAllByConstantId(1L)).thenReturn(Flux.just(new ConstantUsageEntity(
+        1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
+    when(usageRepo.findAllByConstantId(2L)).thenReturn(Flux.just(new ConstantUsageEntity(
+        2L, 2L, "FIELD_STORE", "CORE", "CONFIGURATION_VALUE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.8, "{}")));
+
+    Map<Object, Collection<UnitConstant.UsageType>> result =
+        service.find("proj:com/example/Greeter:1").block();
+
+    assertThat(result).containsKey("Hello");
+    assertThat(result.get("Hello")).contains(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER);
+    assertThat(result).containsKey("World");
+    assertThat(result.get("World")).contains(UnitConstant.UsageType.FIELD_STORE);
+  }
+
+  @Test
+  void findWithDuplicateConstantValue_mergesUsageTypes() {
+    var snapshot = new UnitSnapshotEntity(100L, 42L, "com/example/Greeter", "{}");
+    when(snapshotRepo.findByProjectAndVersionAndUnitName("proj", 1, "com/example/Greeter"))
+        .thenReturn(Mono.just(snapshot));
+    when(constantRepo.findAllBySnapshotId(100L)).thenReturn(Flux.just(
+        new UnitConstantEntity(1L, 100L, "Hello", "String"),
+        new UnitConstantEntity(2L, 100L, "Hello", "String")));
+    when(usageRepo.findAllByConstantId(1L)).thenReturn(Flux.just(new ConstantUsageEntity(
+        1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
+        "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
+    when(usageRepo.findAllByConstantId(2L)).thenReturn(Flux.just(new ConstantUsageEntity(
+        2L, 2L, "FIELD_STORE", "CORE", "CONFIGURATION_VALUE", null, null,
+        "com/example/Greeter", "field", "Ljava/lang/String;", 0, null, 0.8, "{}")));
+
+    Map<Object, Collection<UnitConstant.UsageType>> result =
+        service.find("proj:com/example/Greeter:1").block();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get("Hello"))
+        .contains(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER,
+            UnitConstant.UsageType.FIELD_STORE);
   }
 }
