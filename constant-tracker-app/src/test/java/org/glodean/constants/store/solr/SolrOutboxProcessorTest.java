@@ -36,7 +36,7 @@ class SolrOutboxProcessorTest {
   @BeforeEach
   @SuppressWarnings("unchecked")
   void setUp() {
-    processor = new SolrOutboxProcessor(outboxRepository, solrService, transactionalOperator);
+    processor = new SolrOutboxProcessor(outboxRepository, solrService, transactionalOperator, 50);
     // Make transactional(Mono) a transparent pass-through so the reactive pipeline
     // executes synchronously with in-memory mocks during tests
     lenient().when(transactionalOperator.transactional(any(Mono.class)))

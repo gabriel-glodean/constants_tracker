@@ -2,10 +2,12 @@ package org.glodean.constants.services;
 
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.zip.ZipInputStream;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
+import reactor.core.publisher.Flux;
 
 /**
  * Service for extracting constants from various binary sources.
@@ -32,6 +34,24 @@ public interface ExtractionService {
    */
   Collection<UnitConstants> extractJarFile(Path jarPath, UnitDescriptor descriptor)
       throws ModelExtractor.ExtractionException;
+
+  /**
+   * Truly lazy, streaming extraction of a JAR file. Opens the JAR's {@link java.nio.file.FileSystem},
+   * walks all regular entries, partitions them into chunks of {@code batchSize} paths, and emits
+   * one {@link List} per non-empty chunk via {@code concatMap} — so the JVM can GC each chunk's
+   * raw bytes, {@link java.util.concurrent.Future}s, and {@link UnitConstants} objects before the
+   * next chunk's bytes are even read from disk.
+   *
+   * <p>The {@link java.nio.file.FileSystem} stays open for the lifetime of the returned
+   * {@link Flux} and is closed automatically on completion, error, or cancellation.
+   *
+   * @param jarPath    path to the JAR file on disk
+   * @param descriptor metadata describing the JAR unit
+   * @param batchSize  maximum number of file-system entries (paths) per emitted chunk
+   * @return a cold {@link Flux} that emits one {@code List<UnitConstants>} per non-empty chunk
+   */
+  Flux<List<UnitConstants>> extractJarFileStreaming(
+      Path jarPath, UnitDescriptor descriptor, int batchSize);
 
   /**
    * Walks a {@link ZipInputStream} and extracts constants from all {@code .class} entries.

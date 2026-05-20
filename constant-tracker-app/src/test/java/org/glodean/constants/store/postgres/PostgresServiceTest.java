@@ -118,7 +118,7 @@ class PostgresServiceTest {
 
   @Test
   void findWithUnknownUnitReturnsIllegalArgumentError() {
-    when(descriptorRepo.findByProjectAndPathAndVersion("proj", "com/example/Greeter", 1))
+    when(snapshotRepo.findByProjectAndVersionAndUnitName("proj", 1, "com/example/Greeter"))
         .thenReturn(Mono.empty());
 
     assertThatThrownBy(() -> service.find("proj:com/example/Greeter:1").block())
@@ -142,7 +142,7 @@ class PostgresServiceTest {
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
     when(constantRepo.findAllBySnapshotId(100L)).thenReturn(Flux.empty());
     when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(1L, 100L, "Hello", "String")));
-    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+    when(usageRepo.saveAll(any(Iterable.class))).thenReturn(Flux.just(new ConstantUsageEntity(
         1L, 1L, "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", null, null,
         "com/example/Greeter", "greet", "()V", 0, null, 0.9, "{}")));
     when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/Greeter", 1)));
@@ -166,7 +166,7 @@ class PostgresServiceTest {
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
     when(constantRepo.findAllBySnapshotId(101L)).thenReturn(Flux.empty());
     when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(2L, 101L, "arn:aws:s3:::bucket", "String")));
-    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+    when(usageRepo.saveAll(any(Iterable.class))).thenReturn(Flux.just(new ConstantUsageEntity(
         2L, 2L, "FIELD_STORE", "CUSTOM", "aws", "AWS ARN", "Amazon Resource Name",
         "com/example/Greeter", "greet", "()V", 0, null, 0.85, "{}")));
     when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/AwsClient", 2)));
@@ -202,7 +202,7 @@ class PostgresServiceTest {
     when(snapshotRepo.save(any())).thenReturn(Mono.just(savedSnapshot));
     when(constantRepo.findAllBySnapshotId(102L)).thenReturn(Flux.empty());
     when(constantRepo.save(any())).thenReturn(Mono.just(new UnitConstantEntity(3L, 102L, "https://api.example.com", "String")));
-    when(usageRepo.save(any())).thenReturn(Mono.just(new ConstantUsageEntity(
+    when(usageRepo.saveAll(any(Iterable.class))).thenReturn(Flux.just(new ConstantUsageEntity(
         3L, 3L, "STRING_CONCATENATION_MEMBER", "CORE", "URL_RESOURCE", null, null,
         "com/example/Client", "send", "()V", 0, null, 0.75, "{\"key\":\"value\",\"retries\":3}")));
     when(solrOutboxRepo.save(any())).thenReturn(Mono.just(savedOutboxEntry("proj", "com/example/Client", 1)));

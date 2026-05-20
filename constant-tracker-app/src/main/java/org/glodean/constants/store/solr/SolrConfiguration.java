@@ -18,6 +18,6 @@ public class SolrConfiguration {
    */
   @Bean
   public HttpSolrClientBase solrClient(@Value("${constants.solr.url}") String url) {
-    return new HttpJdkSolrClient.Builder(url).build();
+    return new HttpJdkSolrClient.Builder(url).useHttp1_1(true).build();
   }
 }

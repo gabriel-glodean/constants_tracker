@@ -3,8 +3,11 @@ package org.glodean.constants.services;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.zip.ZipInputStream;
 import org.glodean.constants.extractor.ModelExtractor;
@@ -17,6 +20,9 @@ import io.micrometer.core.annotation.Timed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Concrete service implementation that extracts constants from class files and JAR files.
@@ -81,6 +87,40 @@ public class ConcreteExtractionService implements ExtractionService {
     } catch (IOException e) {
       throw new ModelExtractor.ExtractionException(e);
     }
+  }
+
+  /**
+   * Truly lazy streaming extraction. The {@link FileSystem} is opened once and kept alive via
+   * {@link Flux#using}. All regular-file paths are listed upfront (cheap — no bytes read),
+   * then {@link Flux#buffer(int)} partitions them into chunks. {@code concatMap} processes one
+   * chunk at a time: reads bytes for those paths, runs {@link BytecodeModelExtractor#extractPathChunk},
+   * and emits the results — so bytes and futures from chunk N are GC-eligible before chunk N+1
+   * bytes are read.
+   */
+  @Override
+  public Flux<List<UnitConstants>> extractJarFileStreaming(
+      Path jarPath, UnitDescriptor descriptor, int batchSize) {
+    return Flux.using(
+        () -> FileSystems.newFileSystem(jarPath, (ClassLoader) null),
+        fs -> Mono.fromCallable(() -> {
+                    try (var walk = Files.walk(fs.getPath("/"))) {
+                      return walk.filter(Files::isRegularFile).toList();
+                    }
+                  })
+                  .subscribeOn(Schedulers.boundedElastic())
+                  .flatMapMany(allPaths -> Flux.fromIterable(allPaths).buffer(batchSize))
+                  .concatMap(pathChunk ->
+                      Mono.fromCallable(() ->
+                              BytecodeModelExtractor.extractPathChunk(
+                                  bytecodeAnalysisExecutor, pathChunk,
+                                  new LoggingExtractionNotifier(),
+                                  bytecodeExtractorRepository))
+                          .subscribeOn(Schedulers.boundedElastic())
+                          .map(ArrayList::new)
+                          .filter(list -> !list.isEmpty())),
+        fs -> {
+          try { fs.close(); } catch (IOException ignored) {}
+        });
   }
 
   @Timed(value = "extraction.zip_stream", description = "Time to extract a JAR via ZipInputStream")

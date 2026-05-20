@@ -3,7 +3,9 @@ package org.glodean.constants.store;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.mockito.ArgumentCaptor;
 import org.glodean.constants.dto.FuzzySearchHit;
 import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.UnitConstant;
@@ -205,52 +208,6 @@ class CompositeUnitConstantsStoreTest {
         .hasMessageContaining("finalized");
   }
 
-  // ── storeAll ──────────────────────────────────────────────────────────────
-
-  @Test
-  void storeAllCallsPostgresForEachUnitAndRecordsRemovals() {
-    UnitConstants s = sample();
-    var openVersion = new ProjectVersionEntity(1L, "proj", 3, null, "OPEN", null, null);
-    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
-    when(postgresService.store(any(), eq("proj"), eq(3))).thenReturn(Mono.just(s));
-    when(projectVersionService.recordRemovals(eq("proj"), eq(3), anySet()))
-        .thenReturn(Flux.empty());
-
-    List<UnitConstants> result = store.storeAll(List.of(s), "proj").block();
-
-    assertThat(result).hasSize(1);
-    verify(postgresService).store(any(), eq("proj"), eq(3));
-    verify(projectVersionService).recordRemovals(eq("proj"), eq(3), anySet());
-  }
-
-  @Test
-  void storeAllWithEmptyListRecordsRemovalsForAllOldUnits() {
-    var openVersion = new ProjectVersionEntity(1L, "proj", 4, null, "OPEN", null, null);
-    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
-    when(projectVersionService.recordRemovals(eq("proj"), eq(4), anySet()))
-        .thenReturn(Flux.empty());
-
-    List<UnitConstants> result = store.storeAll(List.of(), "proj").block();
-
-    assertThat(result).isEmpty();
-    verify(projectVersionService).recordRemovals(eq("proj"), eq(4), anySet());
-    verify(postgresService, never()).store(any(), anyString(), anyInt());
-  }
-
-  // ── UnitConstantsStore interface default methods ───────────────────────────
-
-  @Test
-  void defaultStoreAllThrowsUnsupportedOperationForBaseImplementation() {
-    UnitConstantsStore minimal = new UnitConstantsStore() {
-      @Override public Mono<UnitConstants> store(UnitConstants c, String p, int v) { return null; }
-      @Override public Mono<UnitConstants> store(UnitConstants c, String p) { return null; }
-      @Override public Mono<java.util.Map<Object, Collection<UnitConstant.UsageType>>> find(String k) { return null; }
-    };
-
-    assertThatThrownBy(() -> minimal.storeAll(List.of(), "proj").block())
-        .isInstanceOf(UnsupportedOperationException.class);
-  }
-
   @Test
   void defaultFuzzySearchThrowsUnsupportedOperationForBaseImplementation() {
     UnitConstantsStore minimal = new UnitConstantsStore() {
@@ -262,4 +219,143 @@ class CompositeUnitConstantsStoreTest {
     assertThatThrownBy(() -> minimal.fuzzySearch("proj", "term", 0, 10).block())
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  // ── storeAllStreaming ─────────────────────────────────────────────────────
+
+  static JarBatch sampleBatch() {
+    var desc = new org.glodean.constants.model.UnitDescriptor(
+        org.glodean.constants.extractor.bytecode.BytecodeSourceKind.JAR,
+        "sample.jar", 1024L, "abc123");
+    return new JarBatch(desc, List.of(sample()), true);
+  }
+
+  @Test
+  void storeAllStreaming_storesEachBatchAndRecordsRemovals() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 5, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
+    when(postgresService.storeBatch(any(), anyList(), anyBoolean(), eq("proj"), eq(5)))
+        .thenReturn(Mono.just(List.of(sample())));
+    when(projectVersionService.recordRemovals(eq("proj"), eq(5), anySet())).thenReturn(Flux.empty());
+
+    Flux<JarBatch> stream = Flux.just(sampleBatch());
+
+    store.storeAllStreaming(stream, "proj").block();
+
+    verify(postgresService).storeBatch(any(), anyList(), anyBoolean(), eq("proj"), eq(5));
+    verify(projectVersionService).recordRemovals(eq("proj"), eq(5), anySet());
+  }
+
+  @Test
+  void storeAllStreaming_emptyStreamStillCallsRecordRemovals() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 5, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
+    when(projectVersionService.recordRemovals(eq("proj"), eq(5), anySet())).thenReturn(Flux.empty());
+
+    store.storeAllStreaming(Flux.empty(), "proj").block();
+
+    verify(postgresService, never()).store(any(), anyString(), anyInt());
+    verify(postgresService, never()).storeBatch(any(), anyList(), anyBoolean(), anyString(), anyInt());
+    verify(projectVersionService).recordRemovals(eq("proj"), eq(5), eq(Set.of()));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void storeAllStreaming_multipleBatchesMergePathsForRecordRemovals() {
+    var openVersion = new ProjectVersionEntity(1L, "proj", 3, null, "OPEN", null, null);
+    when(projectVersionService.getOrCreateOpenVersion("proj")).thenReturn(Mono.just(openVersion));
+    when(postgresService.storeBatch(any(), anyList(), anyBoolean(), eq("proj"), eq(3)))
+        .thenReturn(Mono.just(List.of(sample())));
+    when(projectVersionService.recordRemovals(eq("proj"), eq(3), anySet())).thenReturn(Flux.empty());
+
+    // Two batches, same unit — paths should be deduplicated in the merged set
+    Flux<JarBatch> stream = Flux.just(sampleBatch(), sampleBatch());
+
+    store.storeAllStreaming(stream, "proj").block();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Set<String>> pathsCaptor = ArgumentCaptor.forClass(Set.class);
+    verify(projectVersionService).recordRemovals(eq("proj"), eq(3), pathsCaptor.capture());
+    assertThat(pathsCaptor.getValue()).contains("com/example/Greeter");
+  }
+
+  // ── findWithInheritance branches ──────────────────────────────────────────
+
+  @Test
+  void find_fallsBackToParentVersionWhenUnitMissing() {
+    // First call → unit not found; second call (parent version) → found
+    Map<Object, Collection<UnitConstant.UsageType>> expected =
+        Map.of("Hello", Set.of(UsageType.METHOD_INVOCATION_PARAMETER));
+    var versionWithParent = new ProjectVersionEntity(1L, "proj", 2, 1, "OPEN", null, null);
+
+    when(postgresService.find("proj:com/example/Greeter:2"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+    when(postgresService.find("proj:com/example/Greeter:1"))
+        .thenReturn(Mono.just(expected));
+    when(projectVersionService.getVersion("proj", 2)).thenReturn(Mono.just(versionWithParent));
+    when(projectVersionService.isUnitDeleted("proj", 2, "com/example/Greeter"))
+        .thenReturn(Mono.just(false));
+
+    Map<Object, Collection<UnitConstant.UsageType>> result =
+        store.find("proj:com/example/Greeter:2").block();
+
+    assertThat(result).isSameAs(expected);
+  }
+
+  @Test
+  void find_returnsErrorWhenUnitDeletedInParentVersion() {
+    var versionWithParent = new ProjectVersionEntity(1L, "proj", 2, 1, "OPEN", null, null);
+
+    when(postgresService.find("proj:com/example/Greeter:2"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+    when(projectVersionService.getVersion("proj", 2)).thenReturn(Mono.just(versionWithParent));
+    when(projectVersionService.isUnitDeleted("proj", 2, "com/example/Greeter"))
+        .thenReturn(Mono.just(true));
+
+    assertThatThrownBy(() -> store.find("proj:com/example/Greeter:2").block())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unknown unit");
+  }
+
+  @Test
+  void find_returnsErrorWhenParentVersionIsNull() {
+    var versionNoParent = new ProjectVersionEntity(1L, "proj", 1, null, "OPEN", null, null);
+
+    when(postgresService.find("proj:com/example/Greeter:1"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+    when(projectVersionService.getVersion("proj", 1)).thenReturn(Mono.just(versionNoParent));
+
+    assertThatThrownBy(() -> store.find("proj:com/example/Greeter:1").block())
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void find_returnsErrorForInvalidKeyFormat() {
+    when(postgresService.find("invalid-key"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+
+    assertThatThrownBy(() -> store.find("invalid-key").block())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid key format");
+  }
+
+  @Test
+  void find_returnsErrorForNonNumericVersion() {
+    when(postgresService.find("proj:com/example/Greeter:notanumber"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+
+    assertThatThrownBy(() -> store.find("proj:com/example/Greeter:notanumber").block())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid version");
+  }
+
+  @Test
+  void find_returnsErrorWhenVersionEntityNotFound() {
+    when(postgresService.find("proj:com/example/Greeter:5"))
+        .thenReturn(Mono.error(new IllegalArgumentException("not found")));
+    when(projectVersionService.getVersion("proj", 5)).thenReturn(Mono.empty());
+
+    assertThatThrownBy(() -> store.find("proj:com/example/Greeter:5").block())
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
 }

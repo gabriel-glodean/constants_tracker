@@ -17,9 +17,11 @@ import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
+import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.util.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -28,31 +30,16 @@ import reactor.core.scheduler.Schedulers;
 /**
  * Extracts constants from nested JARs found inside an uploaded fat JAR.
  *
- * <p>Supports one level of nesting only. The following entry locations are recognized:
- * <ul>
- *   <li>{@code /BOOT-INF/lib/*.jar} — Spring Boot executable JAR</li>
- *   <li>{@code /WEB-INF/lib/*.jar}  — WAR archive</li>
- *   <li>{@code /*.jar}              — root-level JARs (Maven Shade / Gradle Shadow)</li>
- * </ul>
+ * <p>Each nested JAR (and the outer JAR itself) is represented as a single
+ * {@link UnitDescriptor} with {@code source_kind = JAR}.  The class files
+ * extracted from that JAR become {@link org.glodean.constants.store.postgres.entity.UnitSnapshotEntity}
+ * rows under that descriptor, producing a proper M:1 hierarchy instead of the
+ * old 1:1 redundancy.
  *
- * <p>Each nested JAR is extracted as a separate {@link UnitDescriptor} (keyed by filename)
- * and stored as its own unit under the same project/version as the outer JAR.
- *
- * <p>The pipeline is fully reactive:
- * <ol>
- *   <li>The outer ZipFileSystem is managed by {@link Flux#using} — it stays open for the
- *       duration of processing and is closed automatically on completion, error, or cancel.</li>
- *   <li>Reading bytes and computing the SHA-256 hash happen synchronously on
- *       {@link reactor.core.scheduler.Schedulers#boundedElastic()}.</li>
- *   <li>The dedup check against {@code unit_descriptors} is performed reactively via
- *       {@code filterWhen} — no {@code .block()} call required.</li>
- *   <li>Class extraction from each nested JAR also runs on
- *       {@link reactor.core.scheduler.Schedulers#boundedElastic()}.</li>
- * </ol>
- *
- * <p>Re-extraction is skipped when a row already exists in {@code unit_descriptors} with
- * the same {@code (project, version, content_hash)}. The existing index on
- * {@code content_hash} makes this lookup efficient.
+ * <p>The pipeline emits {@link JarBatch} elements.  Each batch carries the JAR
+ * descriptor plus a chunk of at most {@code batchSize} class/config files.
+ * {@code firstBatch = true} on the first chunk for a given container so the
+ * storage layer knows when to clear stale snapshots.
  */
 @Service
 public class NestedJarExtractionService {
@@ -64,97 +51,146 @@ public class NestedJarExtractionService {
     long size() { return bytes.length; }
   }
 
+  /** Pairs the JAR-level descriptor with the class files extracted from it. */
+  private record ExtractionResult(UnitDescriptor descriptor, Collection<UnitConstants> units) {}
+
   private final ExtractionService extractionService;
   private final UnitDescriptorRepository descriptorRepository;
   private final ProjectVersionService projectVersionService;
+  private final int batchSize;
 
   @Autowired
   public NestedJarExtractionService(
       ExtractionService extractionService,
       UnitDescriptorRepository descriptorRepository,
-      ProjectVersionService projectVersionService) {
+      ProjectVersionService projectVersionService,
+      @Value("${constants.jar.batch-size:500}") int batchSize) {
     this.extractionService = extractionService;
     this.descriptorRepository = descriptorRepository;
     this.projectVersionService = projectVersionService;
+    this.batchSize = batchSize;
   }
 
   /**
-   * Opens {@code outerJarPath} as a ZipFileSystem, finds all nested JAR entries matching
-   * known fat-JAR layout patterns, and extracts constants from each new one.
+   * Full fat-JAR extraction.
    *
-   * @param outerJarPath path to the outer JAR file on disk (must still exist)
-   * @param project      project identifier
-   * @return a {@link Mono} of all extracted {@link UnitConstants} across all nested JARs
+   * <p>The outer JAR's class files and config files form the first batch(es) under
+   * {@code outerDescriptor}; each embedded JAR produces its own batch(es) under its
+   * own JAR descriptor.  The version is resolved once so all batches land in the same
+   * project version.
+   *
+   * <p>Each emitted {@link JarBatch} should be stored atomically in its own transaction
+   * by the caller (e.g. via
+   * {@link org.glodean.constants.store.CompositeUnitConstantsStore#storeAllStreaming}).
+   *
+   * @param outerJarPath    path to the fat JAR file on disk
+   * @param outerDescriptor descriptor for the fat JAR as a whole (name, size, hash)
+   * @param project         project identifier
+   * @return a {@link Flux} where early elements are the outer JAR's chunks and later
+   *         elements are chunks from each embedded JAR
    */
-  public Mono<List<UnitConstants>> extractNestedJars(Path outerJarPath, String project) {
+  public Flux<JarBatch> extractFatJar(
+      Path outerJarPath, UnitDescriptor outerDescriptor, String project) {
     return projectVersionService
         .getOrCreateOpenVersion(project)
-        .flatMap(versionEntity -> {
+        .flatMapMany(versionEntity -> {
           int version = versionEntity.version();
 
-          return Flux.using(
-                  // Open the outer ZipFS once; Flux.using closes it when the Flux terminates.
-                  () -> FileSystems.newFileSystem(outerJarPath, (ClassLoader) null),
-                  outerFs ->
-                      // List nested JAR entry paths synchronously (fast metadata walk).
-                      Mono.fromCallable(() -> listNestedJarEntries(outerFs))
-                          .subscribeOn(Schedulers.boundedElastic())
-                          .doOnNext(paths -> {
-                            if (paths.isEmpty())
-                              logger.atDebug().log("No nested JARs found in {}",
-                                  outerJarPath.getFileName());
-                            else
-                              logger.atInfo().log(
-                                  "Found {} nested JAR(s) in {} — extracting for project={} v{}",
-                                  paths.size(), outerJarPath.getFileName(), project, version);
-                          })
-                          .flatMapMany(Flux::fromIterable)
-                          // Process one nested JAR at a time (ZipFS reads are safe but sequential
-                          // is simpler and the bottleneck is bytecode analysis, not I/O).
-                          .concatMap(entryPath ->
-                              // Step 1: read bytes + compute hash (sync, boundedElastic).
-                              Mono.fromCallable(() -> readCandidate(outerFs, entryPath))
-                                  .subscribeOn(Schedulers.boundedElastic())
-                                  // Step 2: dedup check — reactive, no .block().
-                                  .filterWhen(candidate ->
-                                      descriptorRepository
-                                          .findByProjectAndVersionAndContentHash(
-                                              project, version, candidate.hash())
-                                          .hasElement()
-                                          .map(exists -> {
-                                            if (exists) logger.atInfo().log(
-                                                "Skipping already-indexed nested JAR '{}' (hash={})",
-                                                candidate.jarName(), candidate.hash());
-                                            return !exists;
-                                          })
-                                  )
-                                  // Step 3: extract classes (sync, boundedElastic).
-                                  .flatMap(candidate ->
-                                      Mono.fromCallable(() -> extractFromCandidate(candidate))
-                                          .subscribeOn(Schedulers.boundedElastic())
-                                  )
-                                  // A bad nested JAR must not abort the rest of the upload.
-                                  .onErrorResume(e -> {
-                                    logger.atWarn().withThrowable(e)
-                                        .log("Failed to process nested JAR '{}' — skipping",
-                                            entryPath);
-                                    return Mono.empty();
-                                  })
-                          ),
-                  outerFs -> {
-                    try { outerFs.close(); } catch (IOException ignored) {}
-                  }
-              )
-              .flatMap(Flux::fromIterable)
-              .collectList();
+          // Outer JAR: streaming by chunk; first chunk sets firstBatch=true.
+          Flux<JarBatch> outerBatches =
+              extractionService.extractJarFileStreaming(outerJarPath, outerDescriptor, batchSize)
+                  .index()
+                  .map(t -> new JarBatch(outerDescriptor, t.getT2(), t.getT1() == 0))
+                  .doOnComplete(() -> logger.atInfo().log(
+                      "Finished streaming outer JAR {} for project={} v{}",
+                      outerJarPath.getFileName(), project, version));
+
+          // Nested JARs: each JAR produces one or more JarBatch elements.
+          Flux<JarBatch> nestedBatches =
+              extractNestedJarsWithVersion(outerJarPath, project, version);
+
+          return Flux.concat(outerBatches, nestedBatches);
         });
+  }
+
+  /**
+   * Opens {@code outerJarPath} as a ZipFileSystem and extracts constants from each new
+   * nested JAR, emitting {@link JarBatch} elements.
+   *
+   * @param outerJarPath path to the outer JAR file on disk
+   * @param project      project identifier
+   * @return a {@link Flux} emitting one or more {@link JarBatch}es per nested JAR
+   */
+  public Flux<JarBatch> extractNestedJars(Path outerJarPath, String project) {
+    return projectVersionService
+        .getOrCreateOpenVersion(project)
+        .flatMapMany(versionEntity ->
+            extractNestedJarsWithVersion(outerJarPath, project, versionEntity.version()));
+  }
+
+  /**
+   * Core nested-JAR extraction logic, given an already-resolved {@code version}.
+   */
+  private Flux<JarBatch> extractNestedJarsWithVersion(
+      Path outerJarPath, String project, int version) {
+    return Flux.using(
+        () -> FileSystems.newFileSystem(outerJarPath, (ClassLoader) null),
+        outerFs ->
+            Mono.fromCallable(() -> listNestedJarEntries(outerFs))
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnNext(paths -> {
+                  if (paths.isEmpty())
+                    logger.atDebug().log("No nested JARs found in {}",
+                        outerJarPath.getFileName());
+                  else
+                    logger.atInfo().log(
+                        "Found {} nested JAR(s) in {} — extracting for project={} v{}",
+                        paths.size(), outerJarPath.getFileName(), project, version);
+                })
+                .flatMapMany(Flux::fromIterable)
+                .concatMap(entryPath ->
+                    Mono.fromCallable(() -> readCandidate(outerFs, entryPath))
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .filterWhen(candidate ->
+                            descriptorRepository
+                                .findByProjectAndVersionAndContentHash(
+                                    project, version, candidate.hash())
+                                .hasElement()
+                                .map(exists -> {
+                                  if (exists) logger.atInfo().log(
+                                      "Skipping already-indexed nested JAR '{}' (hash={})",
+                                      candidate.jarName(), candidate.hash());
+                                  return !exists;
+                                })
+                        )
+                        .flatMapMany(candidate ->
+                            Mono.fromCallable(() -> extractFromCandidate(candidate))
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .flatMapMany(result ->
+                                    // Split into batchSize chunks; tag first chunk.
+                                    Flux.fromIterable(new ArrayList<>(result.units()))
+                                        .buffer(batchSize)
+                                        .index()
+                                        .map(t -> new JarBatch(
+                                            result.descriptor(), t.getT2(), t.getT1() == 0))
+                                )
+                        )
+                        .onErrorResume(e -> {
+                          logger.atWarn().withThrowable(e)
+                              .log("Failed to process nested JAR '{}' — skipping", entryPath);
+                          return Flux.empty();
+                        })
+                ),
+        outerFs -> {
+          try { outerFs.close(); } catch (IOException ignored) {}
+        }
+    );
   }
 
   // -------------------------------------------------------------------------
   // Synchronous helpers (all run on boundedElastic)
   // -------------------------------------------------------------------------
 
-  /** Returns the path strings of all nested JAR entries matching known fat-JAR layouts. */
   private List<String> listNestedJarEntries(FileSystem outerFs) throws IOException {
     List<String> result = new ArrayList<>();
     try (var walk = Files.walk(outerFs.getPath("/"))) {
@@ -165,7 +201,6 @@ public class NestedJarExtractionService {
     return result;
   }
 
-  /** Reads a nested JAR entry into memory and computes its SHA-256 in one pass. */
   private NestedJarCandidate readCandidate(FileSystem outerFs, String entryPath) throws IOException {
     MessageDigest digest = DigestUtils.newSha256();
     Path nestedPath = outerFs.getPath(entryPath);
@@ -178,18 +213,13 @@ public class NestedJarExtractionService {
     return new NestedJarCandidate(jarName, bytes, hash);
   }
 
-  /**
-   * Wraps the candidate's bytes in a {@link ZipInputStream} and delegates to
-   * {@link ExtractionService#extractZipStream}.
-   */
-  private Collection<UnitConstants> extractFromCandidate(NestedJarCandidate candidate)
-      throws IOException {
+  private ExtractionResult extractFromCandidate(NestedJarCandidate candidate) throws IOException {
     var descriptor = new UnitDescriptor(
         BytecodeSourceKind.JAR, candidate.jarName(), candidate.size(), candidate.hash());
     try (var zis = new ZipInputStream(new ByteArrayInputStream(candidate.bytes()))) {
       Collection<UnitConstants> result = extractionService.extractZipStream(zis, descriptor);
       logger.atInfo().log("Extracted '{}': {} class unit(s)", candidate.jarName(), result.size());
-      return result;
+      return new ExtractionResult(descriptor, result);
     }
   }
 
@@ -197,14 +227,10 @@ public class NestedJarExtractionService {
   // Path classification
   // -------------------------------------------------------------------------
 
-  /**
-   * Returns {@code true} for {@code .jar} paths matching recognized fat-JAR layouts.
-   * Only one level of nesting is supported.
-   */
   private boolean isNestedJarPath(String s) {
     if (!s.endsWith(".jar")) return false;
     return s.startsWith("/BOOT-INF/lib/")
         || s.startsWith("/WEB-INF/lib/")
-        || s.matches("/[^/]+\\.jar"); // root-level only
+        || s.matches("/[^/]+\\.jar");
   }
 }

@@ -6,6 +6,7 @@ import java.util.Map;
 import org.glodean.constants.dto.FuzzySearchResponse;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -63,20 +64,23 @@ public interface UnitConstantsStore {
   Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key);
 
   /**
-   * Stores a batch of {@link UnitConstants} for a project and automatically detects units
-   * that were present in the parent version but are absent from this batch, recording them
-   * as deletions so they are not inherited.
+   * Stores a streaming sequence of {@link JarBatch}es for a project. Each element carries
+   * one chunk of class/config files together with the descriptor of their containing JAR.
+   * The storage layer persists each chunk in a single transaction, clearing old snapshots
+   * for the container on the first batch and inserting fresh ones.
    *
-   * <p>This is the preferred method for JAR uploads where the full set of units is known.
+   * <p>After the stream completes, automatically records deletions for any class-file paths
+   * present in the parent version but absent from this upload.
    *
-   * @param allConstants the complete set of unit constants extracted from the upload
-   * @param project      the project identifier
-   * @return a {@link Mono} emitting the list of stored {@link UnitConstants}
+   * @param stream  a {@link Flux} of {@link JarBatch}es, one per chunk of a JAR
+   * @param project the project identifier
+   * @return a {@link Mono} that completes when all units are stored and removals are recorded
    */
-  default Mono<List<UnitConstants>> storeAll(List<UnitConstants> allConstants, String project) {
+  default Mono<Void> storeAllStreaming(Flux<JarBatch> stream, String project) {
     return Mono.error(
-        new UnsupportedOperationException("Batch store not supported by this store"));
+        new UnsupportedOperationException("Streaming store not supported by this store"));
   }
+
 
   /**
    * Full-text / fuzzy search for class snapshots whose constant values match {@code term}.

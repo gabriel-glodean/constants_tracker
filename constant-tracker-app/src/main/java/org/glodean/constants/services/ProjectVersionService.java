@@ -9,6 +9,8 @@ import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
 import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
+import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
 import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,16 +37,19 @@ public class ProjectVersionService {
   private final ProjectVersionRepository versionRepo;
   private final VersionDeletionRepository deletionRepo;
   private final UnitDescriptorRepository descriptorRepo;
+  private final UnitSnapshotRepository snapshotRepo;
   private final VersionIncrementer versionIncrementer;
 
   public ProjectVersionService(
       @Autowired ProjectVersionRepository versionRepo,
       @Autowired VersionDeletionRepository deletionRepo,
       @Autowired UnitDescriptorRepository descriptorRepo,
+      @Autowired UnitSnapshotRepository snapshotRepo,
       @Autowired VersionIncrementer versionIncrementer) {
     this.versionRepo = versionRepo;
     this.deletionRepo = deletionRepo;
     this.descriptorRepo = descriptorRepo;
+    this.snapshotRepo = snapshotRepo;
     this.versionIncrementer = versionIncrementer;
   }
   /**
@@ -205,13 +210,15 @@ public class ProjectVersionService {
   }
 
   /**
-   * Collects all effective unit paths for a version by combining its own descriptors
-   * with those inherited from the parent chain (excluding deleted ones).
+   * Collects all effective class-file paths for a version by joining
+   * {@code unit_snapshots.unit_name} values through {@code unit_descriptors}
+   * (replacing the old descriptor-path enumeration that returned JAR paths).
    */
   private Flux<String> collectInheritedPaths(String project, int version) {
-    Flux<String> ownPaths = descriptorRepo
+    // Class-file paths live in unit_snapshots.unit_name in the JAR-hierarchy model.
+    Flux<String> ownPaths = snapshotRepo
         .findAllByProjectAndVersion(project, version)
-        .map(UnitDescriptorEntity::path);
+        .map(UnitSnapshotEntity::unitName);
 
     return versionRepo
         .findByProjectAndVersion(project, version)

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -29,6 +30,7 @@ import org.glodean.constants.model.SourceKind;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
+import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +40,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 /**
  * Integration-style test verifying that constants are extracted from every source present in a
@@ -147,7 +148,7 @@ class FatJarMixedExtractionTest {
         .thenReturn(Mono.empty());
 
     nestedJarExtractionService = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService);
+        extractionService, descriptorRepository, projectVersionService, 500);
   }
 
   // ── Test ──────────────────────────────────────────────────────────────────
@@ -202,38 +203,41 @@ class FatJarMixedExtractionTest {
         .containsAnyOf("8080", "localhost", "admin");
 
     // ── Step 2: extract nested JARs found inside the fat JAR ──────────────────
-    StepVerifier.create(nestedJarExtractionService.extractNestedJars(fatJar, PROJECT))
-        .assertNext(fromNested -> {
-          assertThat(fromNested)
-              .as("nested JAR extraction must not be empty")
-              .isNotEmpty();
+    // Each nested JAR emits one List<UnitConstants> — flatten before asserting.
+    List<UnitConstants> fromNested = nestedJarExtractionService
+        .extractNestedJars(fatJar, PROJECT)
+        .flatMapIterable(JarBatch::units)
+        .collectList()
+        .block();
 
-          Set<SourceKind> nestedKinds = fromNested.stream()
-              .map(u -> u.source().sourceKind())
-              .collect(Collectors.toSet());
+    assertThat(fromNested)
+        .as("nested JAR extraction must not be empty")
+        .isNotEmpty();
 
-          assertThat(nestedKinds)
-              .as("nested-lib.jar must produce CLASS_FILE constants (Greeter.class)")
-              .contains(BytecodeSourceKind.CLASS_FILE);
+    Set<SourceKind> nestedKinds = fromNested.stream()
+        .map(u -> u.source().sourceKind())
+        .collect(Collectors.toSet());
 
-          assertThat(nestedKinds)
-              .as("nested-lib.jar must produce PROPERTIES constants (nested.properties)")
-              .contains(ConfigFileSourceKind.PROPERTIES);
+    assertThat(nestedKinds)
+        .as("nested-lib.jar must produce CLASS_FILE constants (Greeter.class)")
+        .contains(BytecodeSourceKind.CLASS_FILE);
 
-          // Spot-check: the known property value must be present.
-          Set<String> nestedPropValues = fatJar_stringValues(fromNested, ConfigFileSourceKind.PROPERTIES);
-          assertThat(nestedPropValues)
-              .as("properties constants from nested JAR must include known values")
-              .containsAnyOf("nested-value", "30");
+    assertThat(nestedKinds)
+        .as("nested-lib.jar must produce PROPERTIES constants (nested.properties)")
+        .contains(ConfigFileSourceKind.PROPERTIES);
 
-          // The embedded JAR must NOT have been double-counted in the fat JAR result.
-          assertThat(fromFatJar.stream()
-              .map(u -> u.source().sourceKind())
-              .collect(Collectors.toSet()))
-              .as("fat JAR extraction must not include PROPERTIES (belongs to nested JAR)")
-              .doesNotContain(ConfigFileSourceKind.PROPERTIES);
-        })
-        .verifyComplete();
+    // Spot-check: the known property value must be present.
+    Set<String> nestedPropValues = fatJar_stringValues(fromNested, ConfigFileSourceKind.PROPERTIES);
+    assertThat(nestedPropValues)
+        .as("properties constants from nested JAR must include known values")
+        .containsAnyOf("nested-value", "30");
+
+    // The embedded JAR must NOT have been double-counted in the fat JAR result.
+    assertThat(fromFatJar.stream()
+        .map(u -> u.source().sourceKind())
+        .collect(Collectors.toSet()))
+        .as("fat JAR extraction must not include PROPERTIES (belongs to nested JAR)")
+        .doesNotContain(ConfigFileSourceKind.PROPERTIES);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

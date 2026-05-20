@@ -5,10 +5,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Set;import org.glodean.constants.extractor.ModelExtractor;
+import java.util.Set;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
-import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.services.NestedJarExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @WebFluxTest(controllers = JarBinariesController.class)
@@ -32,7 +32,6 @@ class JarBinariesControllerTest {
     @Autowired WebTestClient web;
 
     @MockitoBean UnitConstantsStore storage;
-    @MockitoBean ExtractionService extractionService;
     @MockitoBean NestedJarExtractionService nestedJarExtractionService;
 
     static final String POST_URL = "/jar?project=demo&jarName=test.jar";
@@ -51,9 +50,9 @@ class JarBinariesControllerTest {
     @Test
     void postJarSuccess() throws Exception {
         UnitConstants constants = sampleConstants();
-        when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
-        when(nestedJarExtractionService.extractNestedJars(any(), anyString())).thenReturn(Mono.just(List.of()));
-        when(storage.storeAll(any(), anyString())).thenReturn(Mono.just(List.of(constants)));
+        when(nestedJarExtractionService.extractFatJar(any(), any(), anyString()))
+            .thenReturn(Flux.just(new org.glodean.constants.store.JarBatch(constants.source(), List.of(constants), true)));
+        when(storage.storeAllStreaming(any(), anyString())).thenReturn(Mono.empty());
 
         web.post()
             .uri(POST_URL)
@@ -64,41 +63,12 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarExtractionExceptionReturns422() throws Exception {
-        when(extractionService.extractJarFile(any(), any()))
-            .thenThrow(new ModelExtractor.ExtractionException("bad jar"));
-
-        web.post()
-            .uri(POST_URL)
-            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-            .bodyValue(new byte[]{1, 2, 3, 4})
-            .exchange()
-            .expectStatus().isEqualTo(422);
-    }
-
-    @Test
-    void postJarInvalidContentReturns422() throws Exception {
-        when(extractionService.extractJarFile(any(), any()))
-            .thenThrow(new ModelExtractor.ExtractionException(new java.io.IOException("not a zip")));
-
-        web.post()
-            .uri(POST_URL)
-            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-            .bodyValue(new byte[]{1, 2, 3, 4})
-            .exchange()
-            .expectStatus().isEqualTo(422);
-    }
-
-    @Test
     void postJarStorageExceptionStillReturns202() throws Exception {
-        // Storage runs in a detached background task (fire-and-forget) so that proxy
-        // timeouts cannot cancel the server-side work. A storage failure is logged but
-        // never propagated to the HTTP response — the client always receives 202 Accepted
-        // once outer extraction succeeds.
         UnitConstants constants = sampleConstants();
-        when(extractionService.extractJarFile(any(), any())).thenReturn(List.of(constants));
-        when(nestedJarExtractionService.extractNestedJars(any(), anyString())).thenReturn(Mono.just(List.of()));
-        when(storage.storeAll(any(), anyString())).thenReturn(Mono.error(new RuntimeException("DB down")));
+        when(nestedJarExtractionService.extractFatJar(any(), any(), anyString()))
+            .thenReturn(Flux.just(new org.glodean.constants.store.JarBatch(constants.source(), List.of(constants), true)));
+        when(storage.storeAllStreaming(any(), anyString()))
+            .thenReturn(Mono.error(new RuntimeException("DB down")));
 
         web.post()
             .uri(POST_URL)

@@ -10,6 +10,7 @@ import org.apache.solr.common.SolrInputDocument;
 import org.glodean.constants.store.postgres.entity.SolrOutboxEntry;
 import org.glodean.constants.store.postgres.repository.SolrOutboxRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.reactive.TransactionalOperator;
@@ -21,7 +22,7 @@ import reactor.core.publisher.Mono;
  *
  * <h2>Drain cycle (every {@code constants.solr.outbox.drain-interval-ms}, default 5 s)</h2>
  * <ol>
- *   <li>Claims up to {@value #BATCH_SIZE} ready rows using {@code FOR UPDATE SKIP LOCKED} inside
+ *   <li>Claims up to {@code constants.solr.outbox.batch-size} (default 50) ready rows using {@code FOR UPDATE SKIP LOCKED} inside
  *       a reactive transaction so concurrent app instances never pick the same rows.</li>
  *   <li>Separates corrupt (un-parseable payload) rows from valid ones. Corrupt rows are
  *       immediately maxed out ({@code attempts = MAX_ATTEMPTS}) so the nightly compaction
@@ -41,7 +42,7 @@ import reactor.core.publisher.Mono;
 public class SolrOutboxProcessor {
 
   private static final Logger logger = LogManager.getLogger(SolrOutboxProcessor.class);
-  private static final int BATCH_SIZE = 50;
+  private final int batchSize;
   static final int MAX_ATTEMPTS = 10;
 
   /** Plain mapper — {@link SolrOutboxPayload} only contains basic types; no mixins needed. */
@@ -54,10 +55,12 @@ public class SolrOutboxProcessor {
   public SolrOutboxProcessor(
       @Autowired SolrOutboxRepository outboxRepository,
       @Autowired SolrService solrService,
-      @Autowired TransactionalOperator transactionalOperator) {
+      @Autowired TransactionalOperator transactionalOperator,
+      @Value("${constants.solr.outbox.batch-size:50}") int batchSize) {
     this.outboxRepository = outboxRepository;
     this.solrService = solrService;
     this.transactionalOperator = transactionalOperator;
+    this.batchSize = batchSize;
   }
 
   // -------------------------------------------------------------------------
@@ -72,7 +75,7 @@ public class SolrOutboxProcessor {
   public void drain() {
     Mono<Integer> work =
         outboxRepository
-            .claimBatch(OffsetDateTime.now(), MAX_ATTEMPTS, BATCH_SIZE)
+            .claimBatch(OffsetDateTime.now(), MAX_ATTEMPTS, batchSize)
             .collectList()
             .flatMap(this::processBatch);
 

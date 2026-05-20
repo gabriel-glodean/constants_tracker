@@ -19,6 +19,11 @@ spring:
     url: ${SPRING_R2DBC_URL:r2dbc:postgresql://localhost:5432/constant_tracker}
     username: ${SPRING_R2DBC_USERNAME:postgres}
     password: ${SPRING_R2DBC_PASSWORD:}
+    pool:
+      # Each concurrent class-file store needs its own connection (R2DBC is serial per
+      # connection). Pool sized to 20 so up to 20 class stores run truly in parallel.
+      max-size: 20
+      initial-size: 5
   # Flyway – JDBC-based schema migrations (separate from R2DBC)
   flyway:
     url: ${SPRING_FLYWAY_URL:jdbc:postgresql://localhost:5432/constant_tracker}

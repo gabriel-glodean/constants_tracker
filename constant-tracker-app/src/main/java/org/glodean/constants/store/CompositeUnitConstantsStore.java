@@ -1,7 +1,7 @@
 package org.glodean.constants.store;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -88,33 +88,47 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
   }
 
   /**
-   * Stores a complete batch of units for a project, assigns a single version, and
-   * automatically records deletions for any units that existed in the parent version
-   * but are absent from this batch.
+   * Stores each {@link JarBatch} in one {@code @Transactional} call via
+   * {@link PostgresService#storeBatch}, then records removals once the stream completes.
    *
-   * <p>This is the preferred method for JAR uploads where the full set of units is known.
+   * <p>The {@code firstBatch} flag on each element tells the Postgres layer whether to
+   * purge old snapshots for that container before inserting, so large JARs that span
+   * multiple batches don't accidentally wipe their own earlier inserts.
+   *
+   * <p>Removal tracking compares the set of class-file paths uploaded in this run
+   * against paths inherited from the parent version, auto-deleting any that disappeared.
    */
   @Override
-  public Mono<List<UnitConstants>> storeAll(List<UnitConstants> allConstants, String project) {
+  public Mono<Void> storeAllStreaming(Flux<JarBatch> stream, String project) {
     return projectVersionService
         .getOrCreateOpenVersion(project)
         .flatMap(versionEntity -> {
           int version = versionEntity.version();
-          return Flux.fromIterable(allConstants)
-              .flatMap(uc -> doStore(uc, project, version))
-              .collectList()
-              .flatMap(stored -> {
-                Set<String> uploadedPaths = allConstants.stream()
+          return stream
+              .concatMap(batch -> {
+                // Collect class-file paths for removal tracking (not JAR paths).
+                Set<String> classFilePaths = batch.units().stream()
                     .map(uc -> uc.source().path())
                     .collect(Collectors.toSet());
-                return projectVersionService
-                    .recordRemovals(project, version, uploadedPaths)
-                    .doOnNext(removedPath -> logger.atInfo().log(
-                        "Recorded removal of {} in v{} of {}", sanitize(removedPath), version, sanitize(project)))
-                    .then(Mono.just(stored));
-              });
+                return postgresService
+                    .storeBatch(batch.containerDescriptor(), batch.units(),
+                        batch.firstBatch(), project, version)
+                    .then(Mono.just(classFilePaths));
+              })
+              // Merge all class-file path sets for a complete picture of what was uploaded.
+              .reduce((a, b) -> { Set<String> m = new HashSet<>(a); m.addAll(b); return m; })
+              .map(s -> (Set<String>) s)
+              .defaultIfEmpty(Set.of())
+              .flatMap(uploadedPaths ->
+                  projectVersionService
+                      .recordRemovals(project, version, uploadedPaths)
+                      .doOnNext(removedPath -> logger.atInfo().log(
+                          "Recorded removal of {} in v{} of {}",
+                          sanitize(removedPath), version, sanitize(project)))
+                      .then());
         });
   }
+
 
   /**
    * Reads from PostgreSQL with version inheritance. If the unit is not found in the requested

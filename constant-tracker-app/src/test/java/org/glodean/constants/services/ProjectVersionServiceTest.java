@@ -15,9 +15,10 @@ import java.util.Set;
 import org.glodean.constants.store.VersionIncrementer;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
+import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
 import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
+import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ class ProjectVersionServiceTest {
   @Mock ProjectVersionRepository versionRepo;
   @Mock VersionDeletionRepository deletionRepo;
   @Mock UnitDescriptorRepository descriptorRepo;
+  @Mock UnitSnapshotRepository snapshotRepo;
   @Mock VersionIncrementer versionIncrementer;
 
   ProjectVersionService service;
@@ -40,7 +42,7 @@ class ProjectVersionServiceTest {
   @BeforeEach
   void setUp() {
     service =
-        new ProjectVersionService(versionRepo, deletionRepo, descriptorRepo, versionIncrementer);
+        new ProjectVersionService(versionRepo, deletionRepo, descriptorRepo, snapshotRepo, versionIncrementer);
   }
 
   static ProjectVersionEntity openVersion(String project, int version, Integer parent) {
@@ -233,13 +235,12 @@ class ProjectVersionServiceTest {
 
     var v1 = openVersion("proj", 1, null);
     when(versionRepo.findByProjectAndVersion("proj", 1)).thenReturn(Mono.just(v1));
-    when(descriptorRepo.findAllByProjectAndVersion("proj", 1))
+    when(snapshotRepo.findAllByProjectAndVersion("proj", 1))
         .thenReturn(
             Flux.just(
-                new UnitDescriptorEntity(1L, "proj", 1, "CLASS_FILE", "com/ClassA", 100, null),
-                new UnitDescriptorEntity(2L, "proj", 1, "CLASS_FILE", "com/ClassB", 100, null),
-                new UnitDescriptorEntity(
-                    3L, "proj", 1, "CLASS_FILE", "com/ClassC", 100, null)));
+                new UnitSnapshotEntity(1L, 10L, "com/ClassA", null),
+                new UnitSnapshotEntity(2L, 20L, "com/ClassB", null),
+                new UnitSnapshotEntity(3L, 30L, "com/ClassC", null)));
 
     when(deletionRepo.existsByProjectAndVersionAndUnitPath(anyString(), anyInt(), anyString()))
         .thenReturn(Mono.just(false));

@@ -4,16 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
-import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
-import org.glodean.constants.services.ExtractionService;
 import org.glodean.constants.services.NestedJarExtractionService;
+import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +38,11 @@ import static org.glodean.constants.util.DigestUtils.sha256Hex;
  * <p>In addition to extracting class-file constants from the top-level JAR, nested JARs found
  * in {@code /BOOT-INF/lib/}, {@code /WEB-INF/lib/}, or at the root (Maven Shade / Gradle Shadow)
  * are also extracted as separate units. Only one level of nesting is supported.
+ *
+ * <p>All extraction and storage is handled asynchronously after the JAR is written to disk,
+ * so the request returns {@code 202 Accepted} before extraction completes. Storage is performed
+ * per-unit (outer JAR classes + each embedded JAR) in separate transactions via
+ * {@link org.glodean.constants.store.CompositeUnitConstantsStore#storeAllStreaming}.
  */
 @Validated
 @RestController
@@ -47,33 +50,34 @@ import static org.glodean.constants.util.DigestUtils.sha256Hex;
 public class JarBinariesController {
     private static final Logger logger = LogManager.getLogger(JarBinariesController.class);
     private final UnitConstantsStore storage;
-    private final ExtractionService extractionService;
     private final NestedJarExtractionService nestedJarExtractionService;
 
     @Autowired
     public JarBinariesController(
             UnitConstantsStore storage,
-            ExtractionService extractionService,
             NestedJarExtractionService nestedJarExtractionService) {
         this.storage = storage;
-        this.extractionService = extractionService;
         this.nestedJarExtractionService = nestedJarExtractionService;
     }
 
     /**
-     * Upload a JAR file, extract all classes and nested JARs, and store them for the given project.
+     * Upload a JAR file, extract all classes / configs and nested JARs, and store them for the
+     * given project.
      *
-     * <p>The request body is written to a temporary file synchronously; the outer JAR constants are
-     * then extracted. As soon as that completes the response is sent back as {@code 202 Accepted}
-     * and the slow nested-JAR extraction + storage continues in a detached background task, so
-     * proxy timeouts (e.g. Cloudflare's 100 s limit) cannot cancel the server-side work.
+     * <p>The request body is written to a temporary file. Once the write completes, the descriptor
+     * is computed and {@code 202 Accepted} is returned immediately. Extraction and storage continue
+     * in a detached background task so proxy timeouts (e.g. Cloudflare's 100 s limit) cannot
+     * cancel the server-side work.
+     *
+     * <p>The outer JAR's class files and config files form one transaction; each embedded JAR
+     * forms a separate transaction. All batches are processed by
+     * {@link org.glodean.constants.services.NestedJarExtractionService#extractFatJar}.
      *
      * @param jarFile the raw bytes of a .jar file (as reactive stream of buffers)
      * @param project the project identifier
      * @param jarName the name of the JAR file being uploaded
-     * @return 202 Accepted immediately after outer extraction / version creation,
-     *         422 Unprocessable Entity if the JAR is invalid,
-     *         500 Internal Server Error for other failures
+     * @return 202 Accepted once the file is written to disk;
+     * 500 Internal Server Error if writing to disk fails
      */
     @PreAuthorize("isAuthenticated()")
     @PostMapping(consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -86,44 +90,46 @@ public class JarBinariesController {
                 .flatMap(tmp ->
                         // Step 1: stream body to disk
                         DataBufferUtils.write(jarFile, tmp)
-                                // Step 2: compute descriptor + extract outer JAR classes (~seconds)
+                                // Step 2: compute descriptor (cheap, synchronous)
                                 .then(Mono.fromCallable(() -> {
                                     long size = Files.size(tmp);
                                     String hash = sha256(tmp);
-                                    var descriptor = new UnitDescriptor(
+                                    return new UnitDescriptor(
                                             BytecodeSourceKind.JAR, jarName.strip(), size, hash);
-                                    return extractionService.extractJarFile(tmp, descriptor);
                                 }))
-                                .flatMap(outerUnits -> {
-                                    // Step 3: detach nested-JAR extraction + storage from the HTTP
-                                    // request chain so proxy timeouts cannot cancel the work.
-                                    nestedJarExtractionService
-                                            .extractNestedJars(tmp, project.strip())
-                                            .map(nestedUnits -> {
-                                                List<UnitConstants> all = new ArrayList<>(outerUnits);
-                                                all.addAll(nestedUnits);
-                                                return all;
-                                            })
-                                            .flatMap(allUnits -> storage.storeAll(allUnits, project.strip()))
+                                .flatMap(outerDescriptor -> {
+                                    // Step 3: detach the full extraction + storage pipeline from
+                                    // the HTTP request chain. Outer JAR classes form batch 0;
+                                    // each nested JAR is its own batch — stored atomically in one
+                                    // transaction per batch.
+                                    Flux<JarBatch> allBatches =
+                                            nestedJarExtractionService.extractFatJar(
+                                                    tmp, outerDescriptor, project.strip());
+                                    storage.storeAllStreaming(allBatches, project.strip())
                                             .doFinally(_ -> {
                                                 try {
                                                     Files.deleteIfExists(tmp);
-                                                } catch (IOException ignored) {}
+                                                } catch (IOException ignored) {
+                                                }
                                             })
                                             .subscribeOn(Schedulers.boundedElastic())
                                             .subscribe(
-                                                    _ -> {},
+                                                    _ -> {
+                                                    },
                                                     err -> logger.atError().withThrowable(err)
                                                             .log("Background JAR extraction failed for project={} jar={}",
                                                                     project, jarName)
                                             );
-                                    // Return 202 immediately — processing continues in the background.
+                                    // Return 202 immediately — processing continues in background.
                                     return Mono.just(
                                             ResponseEntity.accepted().build());
                                 })
-                                // Clean up tmp if body-write or outer extraction fails
+                                // Clean up tmp if body-write or descriptor computation fails
                                 .onErrorResume(ex -> {
-                                    try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
+                                    try {
+                                        Files.deleteIfExists(tmp);
+                                    } catch (IOException ignored) {
+                                    }
                                     return Mono.error(ex);
                                 })
                 )

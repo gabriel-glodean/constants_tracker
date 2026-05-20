@@ -21,6 +21,7 @@ import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
+import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
@@ -70,7 +71,7 @@ class NestedJarExtractionServiceTest {
   @BeforeEach
   void setUp() {
     service = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService);
+        extractionService, descriptorRepository, projectVersionService, 500);
 
     // Default: project has an open version.
     when(projectVersionService.getOrCreateOpenVersion(PROJECT))
@@ -128,7 +129,7 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of(expected));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactly(expected))
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(expected))
         .verifyComplete();
 
     verify(extractionService, times(1)).extractZipStream(any(), any());
@@ -144,7 +145,7 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of(expected));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactly(expected))
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(expected))
         .verifyComplete();
 
     verify(extractionService, times(1)).extractZipStream(any(), any());
@@ -160,7 +161,7 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of(expected));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactly(expected))
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(expected))
         .verifyComplete();
   }
 
@@ -178,9 +179,11 @@ class NestedJarExtractionServiceTest {
         .thenReturn(List.of(a))
         .thenReturn(List.of(b));
 
-    StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactlyInAnyOrder(a, b))
-        .verifyComplete();
+    // Each nested JAR emits one JarBatch — unwrap units and compare all UnitConstants
+    List<UnitConstants> result = service.extractNestedJars(fatJar, PROJECT)
+        .flatMapIterable(JarBatch::units)
+        .collectList().block();
+    assertThat(result).containsExactlyInAnyOrder(a, b);
 
     verify(extractionService, times(2)).extractZipStream(any(), any());
   }
@@ -228,19 +231,15 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of(extracted));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> {
-          // Only the level-1 JAR extracted; inner.jar produces no separate UnitConstants
-          assertThat(result).containsExactly(extracted);
-        })
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(extracted))
         .verifyComplete();
 
-    // extractZipStream called exactly once (for outer-lib.jar only)
     verify(extractionService, times(1)).extractZipStream(any(), any());
   }
 
   /**
    * Verifies that a deeply nested path such as {@code lib/sub/deep.jar} does NOT match
-   * the recognised layout patterns and is therefore silently ignored.
+   * the recognized layout patterns and is therefore silently ignored.
    */
   @Test
   void jarInUnrecognisedSubdirectory_ignored() throws Exception {
@@ -248,7 +247,6 @@ class NestedJarExtractionServiceTest {
         java.util.Map.of("lib/sub/deep.jar", minimalJarBytes()));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).isEmpty())
         .verifyComplete();
 
     verify(extractionService, never()).extractZipStream(any(), any());
@@ -261,14 +259,12 @@ class NestedJarExtractionServiceTest {
     Path fatJar = buildFatJar(tempDir, "app.jar",
         java.util.Map.of("BOOT-INF/lib/cached.jar", minimalJarBytes()));
 
-    // Simulate the hash already present in unit_descriptors
     when(descriptorRepository.findByProjectAndVersionAndContentHash(
         eq(PROJECT), eq(VERSION), anyString()))
         .thenReturn(Mono.just(new UnitDescriptorEntity(
             1L, PROJECT, VERSION, "JAR", "cached.jar", 100L, "somehash")));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).isEmpty())
         .verifyComplete();
 
     verify(extractionService, never()).extractZipStream(any(), any());
@@ -282,9 +278,6 @@ class NestedJarExtractionServiceTest {
         "BOOT-INF/lib/fresh.jar", libBytes
     ));
 
-    // cached.jar has a matching hash in unit_descriptors; fresh.jar does not.
-    // We can't easily control which hash is which without computing it, so we use
-    // argument capture and return "found" for the first call, "empty" for the second.
     when(descriptorRepository.findByProjectAndVersionAndContentHash(
         eq(PROJECT), eq(VERSION), anyString()))
         .thenReturn(Mono.just(new UnitDescriptorEntity(
@@ -295,7 +288,7 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of(fresh));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactly(fresh))
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(fresh))
         .verifyComplete();
 
     verify(extractionService, times(1)).extractZipStream(any(), any());
@@ -309,7 +302,6 @@ class NestedJarExtractionServiceTest {
         java.util.Map.of("com/example/App.class", new byte[]{1, 2, 3}));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).isEmpty())
         .verifyComplete();
 
     verify(extractionService, never()).extractZipStream(any(), any());
@@ -324,13 +316,12 @@ class NestedJarExtractionServiceTest {
     ));
 
     UnitConstants good = stubUnitConstants("good.jar");
-    // corrupt.jar → extractZipStream throws; good.jar → returns result
     when(extractionService.extractZipStream(any(), any()))
         .thenThrow(new org.glodean.constants.extractor.ModelExtractor.ExtractionException("bad zip"))
         .thenReturn(List.of(good));
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).containsExactly(good))
+        .assertNext(batch -> assertThat(batch.units()).containsExactly(good))
         .verifyComplete();
   }
 
@@ -343,10 +334,8 @@ class NestedJarExtractionServiceTest {
     when(extractionService.extractZipStream(any(), any())).thenReturn(List.of());
 
     StepVerifier.create(service.extractNestedJars(fatJar, PROJECT))
-        .assertNext(result -> assertThat(result).isEmpty())
         .verifyComplete();
 
-    // Verify the descriptor passed to extractZipStream has the nested JAR's filename
     var captor = org.mockito.ArgumentCaptor.forClass(UnitDescriptor.class);
     verify(extractionService).extractZipStream(any(), captor.capture());
     assertThat(captor.getValue().path()).isEqualTo("specific-name-1.0.0.jar");

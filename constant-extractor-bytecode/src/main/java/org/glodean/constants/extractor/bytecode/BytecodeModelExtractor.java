@@ -5,6 +5,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
@@ -141,6 +142,43 @@ public final class BytecodeModelExtractor implements ModelExtractor {
   /** Standalone variant with a silent notifier. */
   public static BytecodeModelExtractor forZipStream(ZipInputStream zis, AnalysisMerger merger) {
     return forZipStream(zis, merger, new ExtractionNotifier.Silent());
+  }
+
+  // -------------------------------------------------------------------------
+  // Chunk-level extraction helper — for use by reactive streaming callers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Extracts constants from a pre-selected list of file-system {@code paths} in one
+   * {@link ExtractionPool} batch. Intended to be called repeatedly by a streaming consumer
+   * (e.g. via {@code Flux.fromIterable(allPaths).buffer(n).concatMap(chunk -> extractPathChunk(...))})
+   * so that each chunk's bytes and futures are GC-eligible before the next chunk starts.
+   *
+   * @param executor   shared thread pool for parallel analysis of this chunk
+   * @param paths      the file-system paths to read and analyse
+   * @param notifier   progress/error listener
+   * @param repository maps file names to extractors
+   * @return all {@link UnitConstants} produced by the entries in {@code paths}
+   */
+  public static Collection<UnitConstants> extractPathChunk(
+      ExecutorService executor,
+      List<Path> paths,
+      ExtractionNotifier notifier,
+      ModelExtractorSupplierRepository repository) throws ExtractionException {
+    try {
+      var pool = new ExtractionPool(executor, notifier);
+      for (Path path : paths) {
+        String entryName = path.getFileName().toString();
+        byte[] bytes = Files.readAllBytes(path);
+        repository.resolve(entryName, bytes).ifPresent(supply -> {
+          var desc = new UnitDescriptor(supply.sourceKind(), path.toString(), bytes.length);
+          pool.submit(supply::extractor, path, desc);
+        });
+      }
+      return pool.collect();
+    } catch (IOException e) {
+      throw new ExtractionException(e);
+    }
   }
 
   // -------------------------------------------------------------------------
