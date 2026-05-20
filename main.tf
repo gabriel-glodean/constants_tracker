@@ -74,6 +74,18 @@ variable "cors_allowed_origins" {
   description = "Comma-separated list of allowed CORS origins for the app"
 }
 
+variable "solr_outbox_drain_interval_ms" {
+  type        = number
+  default     = 1000
+  description = "Solr outbox drain interval in milliseconds"
+}
+
+variable "solr_outbox_batch_size" {
+  type        = number
+  default     = 200
+  description = "Solr outbox batch size per drain cycle"
+}
+
 variable "auth_enabled" {
   type        = bool
   default     = true
@@ -201,7 +213,7 @@ resource "null_resource" "deploy" {
   # 8. Patch app-config with runtime values BEFORE rollout.
   provisioner "remote-exec" {
     inline = [
-      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CONSTANTS_CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --from-literal=JAVA_OPTS='-Xmx1500m' --dry-run=client -o yaml | kubectl apply -f -",
+      "kubectl create configmap app-config --namespace=constant-tracker --from-literal=CONSTANTS_CORS_ALLOWED_ORIGINS='${var.cors_allowed_origins}' --from-literal=SPRING_R2DBC_URL='r2dbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_FLYWAY_URL='jdbc:postgresql://postgres:5432/constant_tracker' --from-literal=SPRING_DATA_REDIS_HOST='redis' --from-literal=SPRING_DATA_REDIS_PORT='6379' --from-literal=CONSTANTS_SOLR_URL='http://solr:8983/solr/' --from-literal=SPRING_DATA_SOLR_HOST='http://solr:8983/solr' --from-literal=CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS='${var.solr_outbox_drain_interval_ms}' --from-literal=CONSTANTS_SOLR_OUTBOX_BATCH_SIZE='${var.solr_outbox_batch_size}' --from-literal=SERVER_PORT='8080' --from-literal=CONSTANTS_AUTH_ENABLED='${var.auth_enabled}' --from-literal=JAVA_OPTS='-Xmx1500m' --dry-run=client -o yaml | kubectl apply -f -",
     ]
   }
 

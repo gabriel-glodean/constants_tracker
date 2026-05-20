@@ -45,6 +45,16 @@ spec:
                             configMapKeyRef:
                                 name: app-config
                                 key: CONSTANTS_SOLR_URL
+                      - name: CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: CONSTANTS_SOLR_OUTBOX_DRAIN_INTERVAL_MS
+                      - name: CONSTANTS_SOLR_OUTBOX_BATCH_SIZE
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: CONSTANTS_SOLR_OUTBOX_BATCH_SIZE
                       - name: SPRING_DATA_REDIS_HOST
                         valueFrom:
                             configMapKeyRef:

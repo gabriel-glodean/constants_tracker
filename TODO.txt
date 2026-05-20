@@ -102,6 +102,15 @@
   → JAR: 5 min, class: 30s
   → Also add explicit socket/connect timeout to HttpJdkSolrClient.Builder (currently unbounded)
 
+- ⏳ [DEFERRED] Solr outbox drain overlap guard (single-flight scheduler)                P3g
+  → Root cause observed on Hetzner: very aggressive settings (200ms / 500) can create
+    many "idle in transaction" claim sessions for
+    `SELECT * FROM solr_outbox ... FOR UPDATE SKIP LOCKED`, stalling backlog drain
+  → Implement a non-overlap guard in SolrOutboxProcessor.drain() so a new scheduled tick
+    is skipped while the previous drain cycle is still running (single-flight behavior)
+  → Keep throughput tunables configurable, but safe to run high rates after guard lands
+  → Add regression test: repeated scheduled invocations must never execute concurrent claims
+
 - ✅ JAR upload streaming refactor (Flux<DataBuffer> → temp file, drop Jimfs)           P0e
   → @RequestBody Flux<DataBuffer> + DataBufferUtils.write(flux, tmp): body streamed to disk,
     each DataBuffer released as written — full JAR never in heap during extraction
