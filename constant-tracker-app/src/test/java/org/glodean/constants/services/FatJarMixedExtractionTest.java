@@ -32,6 +32,7 @@ import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
+import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,9 @@ class FatJarMixedExtractionTest {
 
   @Mock
   ProjectVersionService projectVersionService;
+
+  @Mock
+  JarExtractionRepository jarExtractionRepository;
 
   private ExtractionService extractionService;
   private NestedJarExtractionService nestedJarExtractionService;
@@ -147,8 +151,9 @@ class FatJarMixedExtractionTest {
         eq(PROJECT), eq(VERSION), anyString()))
         .thenReturn(Mono.empty());
 
+
     nestedJarExtractionService = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService, 500);
+        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository, 500);
   }
 
   // ── Test ──────────────────────────────────────────────────────────────────

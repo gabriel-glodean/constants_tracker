@@ -1,15 +1,20 @@
 package org.glodean.constants.web.endpoints;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import org.glodean.constants.dto.JarExtractionStatusResponse;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.NestedJarExtractionService;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.store.postgres.entity.JarExtractionEntity;
+import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -33,6 +38,7 @@ class JarBinariesControllerTest {
 
     @MockitoBean UnitConstantsStore storage;
     @MockitoBean NestedJarExtractionService nestedJarExtractionService;
+    @MockitoBean JarExtractionRepository jarExtractionRepository;
 
     static final String POST_URL = "/jar?project=demo&jarName=test.jar";
 
@@ -48,7 +54,7 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarSuccess() throws Exception {
+    void postJarSuccess(){
         UnitConstants constants = sampleConstants();
         when(nestedJarExtractionService.extractFatJar(any(), any(), anyString()))
             .thenReturn(Flux.just(new org.glodean.constants.store.JarBatch(constants.source(), List.of(constants), true)));
@@ -63,7 +69,7 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void postJarStorageExceptionStillReturns202() throws Exception {
+    void postJarStorageExceptionStillReturns202(){
         UnitConstants constants = sampleConstants();
         when(nestedJarExtractionService.extractFatJar(any(), any(), anyString()))
             .thenReturn(Flux.just(new org.glodean.constants.store.JarBatch(constants.source(), List.of(constants), true)));
@@ -108,5 +114,55 @@ class JarBinariesControllerTest {
             .bodyValue(new byte[]{1, 2, 3, 4})
             .exchange()
             .expectStatus().isBadRequest();
+    }
+
+    // ── GET /jar/status ───────────────────────────────────────────────────────
+
+    @Test
+    void getExtractionStatus_found_returns200WithBody() {
+        OffsetDateTime now = OffsetDateTime.now();
+        JarExtractionEntity entity = JarExtractionEntity.builder()
+                .id(1L).project("demo").version(1).jarName("app.jar")
+                .status(JarExtractionEntity.STATUS_COMPLETED)
+                .startedAt(now.minusMinutes(5)).lastUpdatedAt(now)
+                .nestedTotal(3).nestedProcessed(3).nestedFailed(0)
+                .build();
+
+        when(jarExtractionRepository.findByProjectAndVersionAndJarName("demo", 1, "app.jar"))
+                .thenReturn(Mono.just(entity));
+
+        web.get()
+                .uri("/jar/status?project=demo&version=1&jarName=app.jar")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(JarExtractionStatusResponse.class)
+                .value(r -> {
+                    assert r.project().equals("demo");
+                    assert r.version() == 1;
+                    assert r.jarName().equals("app.jar");
+                    assert r.status().equals(JarExtractionEntity.STATUS_COMPLETED);
+                    assert r.nestedTotal() == 3;
+                    assert r.nestedProcessed() == 3;
+                    assert r.nestedFailed() == 0;
+                });
+    }
+
+    @Test
+    void getExtractionStatus_notFound_returns404() {
+        when(jarExtractionRepository.findByProjectAndVersionAndJarName(anyString(), anyInt(), anyString()))
+                .thenReturn(Mono.empty());
+
+        web.get()
+                .uri("/jar/status?project=demo&version=1&jarName=missing.jar")
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void getExtractionStatus_missingJarNameParam_returns400() {
+        web.get()
+                .uri("/jar/status?project=demo&version=1")
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }

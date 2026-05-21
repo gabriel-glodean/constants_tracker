@@ -6,13 +6,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
 import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.services.NestedJarExtractionService;
+import org.glodean.constants.dto.JarExtractionStatusResponse;
 import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.UnitConstantsStore;
+import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
 import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -51,13 +54,16 @@ public class JarBinariesController {
     private static final Logger logger = LogManager.getLogger(JarBinariesController.class);
     private final UnitConstantsStore storage;
     private final NestedJarExtractionService nestedJarExtractionService;
+    private final JarExtractionRepository jarExtractionRepository;
 
     @Autowired
     public JarBinariesController(
             UnitConstantsStore storage,
-            NestedJarExtractionService nestedJarExtractionService) {
+            NestedJarExtractionService nestedJarExtractionService,
+            JarExtractionRepository jarExtractionRepository) {
         this.storage = storage;
         this.nestedJarExtractionService = nestedJarExtractionService;
+        this.jarExtractionRepository = jarExtractionRepository;
     }
 
     /**
@@ -134,6 +140,26 @@ public class JarBinariesController {
                                 })
                 )
                 .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * Returns the current extraction status of a fat JAR upload job.
+     *
+     * @param project project identifier
+     * @param version project version
+     * @param jarName name of the uploaded fat JAR
+     * @return 200 with {@link JarExtractionStatusResponse}, or 404 if not found
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/status")
+    public Mono<ResponseEntity<JarExtractionStatusResponse>> getExtractionStatus(
+            @NotBlank @ValidProjectName @RequestParam("project") String project,
+            @Positive @RequestParam("version") int version,
+            @NotBlank @RequestParam("jarName") String jarName) {
+        return jarExtractionRepository
+                .findByProjectAndVersionAndJarName(project.strip(), version, jarName.strip())
+                .map(entity -> ResponseEntity.ok(JarExtractionStatusResponse.from(entity)))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     private static String sha256(Path path) throws IOException {

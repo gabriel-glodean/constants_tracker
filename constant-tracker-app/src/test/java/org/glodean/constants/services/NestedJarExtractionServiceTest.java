@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -22,8 +23,10 @@ import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
 import org.glodean.constants.store.JarBatch;
+import org.glodean.constants.store.postgres.entity.JarExtractionEntity;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.entity.UnitDescriptorEntity;
+import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -51,6 +55,7 @@ class NestedJarExtractionServiceTest {
   @Mock ExtractionService extractionService;
   @Mock UnitDescriptorRepository descriptorRepository;
   @Mock ProjectVersionService projectVersionService;
+  @Mock JarExtractionRepository jarExtractionRepository;
 
   NestedJarExtractionService service;
 
@@ -71,7 +76,7 @@ class NestedJarExtractionServiceTest {
   @BeforeEach
   void setUp() {
     service = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService, 500);
+        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository, 500);
 
     // Default: project has an open version.
     when(projectVersionService.getOrCreateOpenVersion(PROJECT))
@@ -82,6 +87,14 @@ class NestedJarExtractionServiceTest {
     when(descriptorRepository.findByProjectAndVersionAndContentHash(
         eq(PROJECT), eq(VERSION), anyString()))
         .thenReturn(Mono.empty());
+
+    when(jarExtractionRepository.save(any(JarExtractionEntity.class)))
+        .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+    when(jarExtractionRepository.findByProjectAndVersionAndJarName(
+        eq(PROJECT), eq(VERSION), anyString()))
+        .thenAnswer(invocation -> Mono.just(JarExtractionEntity.started(
+            PROJECT, VERSION, invocation.getArgument(2, String.class))));
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -339,5 +352,84 @@ class NestedJarExtractionServiceTest {
     var captor = org.mockito.ArgumentCaptor.forClass(UnitDescriptor.class);
     verify(extractionService).extractZipStream(any(), captor.capture());
     assertThat(captor.getValue().path()).isEqualTo("specific-name-1.0.0.jar");
+  }
+
+  @Test
+  void extractFatJar_trackingMarkedCompletedOnSuccess() throws Exception {
+    Path fatJar = buildFatJar(tempDir, "outer.jar", java.util.Map.of());
+    UnitDescriptor outerDescriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "outer.jar", 1L, "hash");
+
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+        .thenReturn(Flux.empty());
+
+    StepVerifier.create(service.extractFatJar(fatJar, outerDescriptor, PROJECT))
+        .verifyComplete();
+
+    var saveCaptor = org.mockito.ArgumentCaptor.forClass(JarExtractionEntity.class);
+    verify(jarExtractionRepository, times(2)).save(saveCaptor.capture());
+    List<String> statuses = saveCaptor.getAllValues().stream().map(JarExtractionEntity::status).toList();
+    assertThat(statuses).containsExactly(
+        JarExtractionEntity.STATUS_STARTED,
+        JarExtractionEntity.STATUS_COMPLETED);
+  }
+
+  @Test
+  void extractFatJar_trackingMarkedFailedOnError() throws Exception {
+    Path fatJar = buildFatJar(tempDir, "outer.jar", java.util.Map.of());
+    UnitDescriptor outerDescriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "outer.jar", 1L, "hash");
+
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+        .thenReturn(Flux.error(new RuntimeException("boom")));
+
+    StepVerifier.create(service.extractFatJar(fatJar, outerDescriptor, PROJECT))
+        .expectErrorMatches(e -> e instanceof RuntimeException && "boom".equals(e.getMessage()))
+        .verify();
+
+    var saveCaptor = org.mockito.ArgumentCaptor.forClass(JarExtractionEntity.class);
+    verify(jarExtractionRepository, times(2)).save(saveCaptor.capture());
+    List<String> statuses = saveCaptor.getAllValues().stream().map(JarExtractionEntity::status).toList();
+    assertThat(statuses).containsExactly(
+        JarExtractionEntity.STATUS_STARTED,
+        JarExtractionEntity.STATUS_FAILED);
+  }
+
+  @Test
+  void extractFatJar_completionRefreshesLastUpdatedAtAndKeepsStartedAt() throws Exception {
+    Path fatJar = buildFatJar(tempDir, "outer.jar", java.util.Map.of());
+    UnitDescriptor outerDescriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "outer.jar", 1L, "hash");
+
+    OffsetDateTime startedAt = OffsetDateTime.now().minusHours(2);
+    OffsetDateTime previousUpdate = OffsetDateTime.now().minusHours(1);
+    JarExtractionEntity existing = JarExtractionEntity.builder()
+        .id(10L)
+        .project(PROJECT)
+        .version(VERSION)
+        .jarName("outer.jar")
+        .status(JarExtractionEntity.STATUS_STARTED)
+        .startedAt(startedAt)
+        .lastUpdatedAt(previousUpdate)
+        .nestedTotal(0)
+        .nestedProcessed(0)
+        .nestedFailed(0)
+        .build();
+
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+        .thenReturn(Flux.empty());
+    when(jarExtractionRepository.findByProjectAndVersionAndJarName(
+        eq(PROJECT), eq(VERSION), eq("outer.jar")))
+        .thenReturn(Mono.just(existing));
+
+    StepVerifier.create(service.extractFatJar(fatJar, outerDescriptor, PROJECT))
+        .verifyComplete();
+
+    var saveCaptor = org.mockito.ArgumentCaptor.forClass(JarExtractionEntity.class);
+    verify(jarExtractionRepository, times(2)).save(saveCaptor.capture());
+    JarExtractionEntity completed = saveCaptor.getAllValues().stream()
+        .filter(e -> JarExtractionEntity.STATUS_COMPLETED.equals(e.status()))
+        .findFirst()
+        .orElseThrow();
+
+    assertThat(completed.startedAt()).isEqualTo(startedAt);
+    assertThat(completed.lastUpdatedAt()).isAfter(previousUpdate);
   }
 }
