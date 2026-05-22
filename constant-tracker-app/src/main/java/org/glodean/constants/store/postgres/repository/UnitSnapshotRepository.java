@@ -1,6 +1,7 @@
 package org.glodean.constants.store.postgres.repository;
 
 import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
+import org.glodean.constants.store.postgres.repository.projection.UnitConstantsCountRow;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
@@ -56,4 +57,22 @@ public interface UnitSnapshotRepository
       "LIMIT 1")
   Mono<UnitSnapshotEntity> findByProjectAndVersionAndUnitName(
       String project, int version, String unitName);
+
+  /**
+   * Returns one row per extracted unit (class/config file) with its constant count,
+   * grouped under the descriptor path that produced it.
+   */
+  @Query("""
+      SELECT d.path AS path,
+             s.unit_name AS name,
+             COUNT(c.id) AS constants
+      FROM unit_descriptors d
+      JOIN unit_snapshots s ON s.descriptor_id = d.id
+      LEFT JOIN unit_constants c ON c.snapshot_id = s.id
+      WHERE d.project = :project AND d.version = :version
+      GROUP BY d.path, s.unit_name
+      ORDER BY d.path, s.unit_name
+      """)
+  Flux<UnitConstantsCountRow> findUnitConstantCountsByProjectAndVersion(
+      String project, int version);
 }

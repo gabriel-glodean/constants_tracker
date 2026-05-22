@@ -3,7 +3,7 @@ package org.glodean.constants.dto;
 import java.time.OffsetDateTime;
 
 /**
- * Response DTO for {@code GET /jar/status} — represents the current extraction
+ * Response DTO for {@code GET /jar/jobs} — represents the current extraction
  * lifecycle state of a single fat JAR upload job.
  *
  * @param project         project identifier

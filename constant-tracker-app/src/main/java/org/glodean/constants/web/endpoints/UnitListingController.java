@@ -41,10 +41,10 @@ public class UnitListingController {
         .map(rows -> {
           Map<String, List<UnitListingResponse.UnitEntry>> grouped = new LinkedHashMap<>();
           for (var row : rows) {
-            grouped.computeIfAbsent(row.getUnitPath(), ignored -> new ArrayList<>())
+            grouped.computeIfAbsent(row.path(), ignored -> new ArrayList<>())
                 .add(new UnitListingResponse.UnitEntry(
-                    row.getName(),
-                    row.getConstants() == null ? 0L : row.getConstants()));
+                    row.name(),
+                    row.constants() == null ? 0L : row.constants()));
           }
           return grouped.entrySet().stream()
               .map(e -> new UnitListingResponse(e.getKey(), e.getValue()))
@@ -52,4 +52,3 @@ public class UnitListingController {
         });
   }
 }
-

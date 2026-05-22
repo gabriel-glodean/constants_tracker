@@ -75,28 +75,39 @@
   → Controller validation tests added to all 6 controller test classes + new DiffControllerTest
   → GitHub Actions: 17 CodeQL "unpinned action" alerts fixed (SHA-pinned all actions)
 
-- ⏳ JAR extraction status endpoint + UI                                                P0f
-  → Background: POST /jar now returns 202 immediately (fire-and-forget); clients have no
-    way to know when processing finished or whether it failed (storage errors are only logged)
+- ✅ Fix /units endpoint returning null fields                                           (bug fix)
+  → UnitConstantsCountRow was an interface projection; Spring Data R2DBC alias binding
+    was silently producing null for unitPath/name and 0 for constants
+  → Replaced with a Java record — R2DBC maps by constructor parameter names (path, name,
+    constants) deterministically; UnitListingController updated to use record accessors
+
+- ✅ JAR extraction status endpoint + UI                                                P0f
+  → Implementation diverged from original spec (no UUID jobId / Redis) — final design
+    is simpler and more persistent:
   → Backend:
-      • Generate a jobId (UUID) per POST /jar request; return it in the 202 body: { "jobId": "..." }
-      • Persist job state in Redis (HASH key "jar-job:<jobId>"): status ∈ {PENDING, PROCESSING,
-        DONE, FAILED}, startedAt, finishedAt, project, jarName, errorMessage (on FAILED)
-      • TTL: 24 h per job entry (enough for any reasonable polling window)
-      • New endpoint: GET /jar/status/{jobId} → JobStatusResponse { jobId, status, project,
-        jarName, startedAt, finishedAt, errorMessage }; 404 if not found (TTL expired or unknown)
-      • Background task in JarBinariesController updates job state at each phase transition
-      • @PreAuthorize("isAuthenticated()") on the status endpoint (same auth gate as POST /jar)
+      • Postgres table fat_jar_extractions (JarExtractionEntity) — one row per fat JAR upload;
+        status ∈ {STARTED, COMPLETED, FAILED}; tracks nestedTotal / nestedProcessed / nestedFailed
+        and errorMessage; startedAt + lastUpdatedAt timestamps; persistent (no TTL)
+      • JarExtractionRepository: findByProjectAndVersionAndJarName() + findAllByProjectAndVersion()
+      • GET /jar/jobs?project=&version=[&jarName=] → List<JarExtractionStatusResponse>;
+        optional jarName filter returns at most one row
+      • 202 response body remains empty (no jobId); jobs are correlated by project+version+jarName
+      • @PreAuthorize("isAuthenticated()") on GET /jar/jobs
   → UI:
-      • After a successful JAR upload (202), show a "Processing…" status badge next to the
-        uploaded JAR name in the VersionManager / upload panel
-      • Poll GET /jar/status/{jobId} every 3 s until status is DONE or FAILED (max 10 min)
-      • DONE → green "Indexed" badge; FAILED → red "Failed" badge + collapsed error detail
-      • Cancel polling if the user navigates away (useEffect cleanup)
+      • JarJobsPanel component: table of all jobs for workspace project/version;
+        status badges — STARTED (animated pulse), COMPLETED (green), FAILED (red);
+        shows nestedProcessed / nestedTotal, nestedFailed (destructive colour), lastUpdatedAt
+      • Polls GET /jar/jobs every 3 s while any job has status STARTED; stops automatically
+        when all jobs are terminal; useEffect cleanup cancels timer on unmount / scope change
+      • Manual refresh button always available
+      • Rendered in the Upload tab below UploadForm, bound to workspaceProject + workspaceVersion
   → Tests:
-      • JarBinariesControllerTest: assert 202 body contains jobId; assert GET /jar/status/{id}
-        returns correct state transitions (PENDING → DONE, PENDING → FAILED)
-      • UI: Jest tests for the polling hook (mock fetch, advance timers, assert badge states)
+      • JarBinariesControllerTest: POST 202 success, 202 even on storage error, validation 400s,
+        GET /jar/jobs with jarName filter (single row), GET /jar/jobs without filter (list),
+        GET /jar/jobs missing version → 400
+      • JarJobsPanel.test.tsx (7 Jest tests): renders nothing without valid scope, fetches on mount,
+        STARTED / COMPLETED / FAILED badge rendering, empty state, error state, polling stops on
+        terminal jobs, polling continues while STARTED jobs exist, manual refresh
 
 - ⏳ Request timeout + circuit breaker for Solr (Resilience4j)                          P0d
   → JAR: 5 min, class: 30s
@@ -190,31 +201,6 @@
 ## V2C — Feature Depth
 ## ════════════════════════════════════════════════════
 
-
-- ⏳ Fuzzy search pagination (cursor / offset beyond the 100-row cap)                   P3c
-  → GET /search?term=...&rows=20&offset=20 → Solr `start` param; return totalFound so UI can page
-  → Required before search becomes useful on large projects
-
-- ⏳ API versioning prefix (/v1/)                                                        P3d
-  → All endpoints are at root (/class, /jar, /search, etc.); any breaking change needs a
-    coordinated cutover with every client
-  → Add /v1/ prefix now (costs nothing) and redirect bare paths for backwards compatibility
-
-- ✅ Embedded JAR extraction (nested JARs inside uploaded JARs)                         P3e
-  → NestedJarExtractionService walks outer JAR via ZipFileSystem; detects nested JARs at
-    BOOT-INF/lib/*.jar (Spring Boot), WEB-INF/lib/*.jar (WAR), and root /*.jar (Shade/Shadow)
-  → Each nested JAR extracted as a separate UnitDescriptor under the same project/version
-  → Content-hash dedup via unit_descriptors: already-indexed nested JARs are skipped
-  → Reactive pipeline (Flux.using + filterWhen + boundedElastic); bad nested JARs skipped gracefully
-  → Also fixed a silent bug: ExtractionServiceConfiguration was registering .class via
-    register(BytecodeSourceKind.CLASS_FILE, …) whose predicate matched "CLASS_FILE" (enum name),
-    not ".class" filenames — so extractJarFile and extractZipStream silently skipped all
-    class entries; fixed to name -> name.endsWith(".class") throughout
-  → Removed ModelExtractorSupplierRepository.resolve(SourceKind, byte[]) and
-    Builder.register(SourceKind, factory) convenience overloads — all resolution is now
-    uniformly filename-based (consistent across extractClassFile, fileSystemFeeder, zipStreamFeeder)
-  → Test: NestedJarExtractionServiceTest (unit, mocked extractor)
-
 - ✅ Config file extraction from within JARs                                            P3f
   → ModelExtractorSupplierRepository registered with extension predicates for .yml/.yaml
     (YamlConstantsExtractor) and .properties (PropertiesConstantsExtractor)
@@ -224,6 +210,15 @@
   → Test: FatJarMixedExtractionTest — end-to-end unit test (real extractors, mocked store)
     builds a fat JAR with Greeter.class + application.yml at top level, and a nested JAR
     containing Greeter.class + nested.properties; asserts constants from all four sources
+
+- ✅ Search-UI workspace scope consistency                                               (UI polish)
+  → DiffViewer: project + fromVersion now driven by workspace scope pane (ProjectVersionPane);
+    duplicate Project / From version inputs removed from the diff form; only To version remains
+  → SearchForm.test.tsx: fixed stale assertions (project default '' not '*'; placeholder text
+    updated to match component)
+  → DiffViewer.test.tsx: fully rewritten for prop-driven component — fillAndSubmit() types
+    only the to-version; renderViewer() passes project/fromVersion as props; added disabled-
+    state tests for missing props (18 tests total)
 
 ## ════════════════════════════════════════════════════
 ## V3 — Advanced / Long-term
@@ -307,21 +302,20 @@
 ##              ConstraintViolationException → 400 in GlobalExceptionHandler,
 ##              validator unit tests + controller validation tests
 ##
-##  4   ✅P0e + P1c  (streaming refactor + logging)
-##                               ~1 d remaining    1.5 days      end May 2026  / May W3–W4
-##       ✅ P0e: replace Jimfs with DataBufferUtils.write() + native ZipFileSystem  done May 2026
-##       ✅ P3e: NestedJarExtractionService (nested JAR recursion + dedup)          done May 2026
-##       ✅ P3f: config file extraction inside JARs (YAML + .properties)            done May 2026
-##            → also fixed silent .class-skip bug in ExtractionServiceConfiguration;
-##              removed source-kind resolve overload from ModelExtractorSupplierRepository;
-##              added FatJarMixedExtractionTest covering all four source types
-##       P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
+##  4  ✅  P0e + P3e + P3f  (streaming refactor + nested JARs + in-JAR config)
+##                               done              done            May 2026
+##       ✅ P0e: Flux<DataBuffer> → temp file, native ZipFileSystem, Jimfs removed
+##       ✅ P3e: NestedJarExtractionService (nested JAR recursion + dedup)
+##       ✅ P3f: config file extraction inside JARs (YAML + .properties)
+##            → fixed silent .class-skip bug in ExtractionServiceConfiguration
+##       ✅ P0f: fat_jar_extractions table (Postgres), GET /jar/jobs, JarJobsPanel
+##            → done alongside P0e; diverged from spec (Postgres not Redis, no UUID jobId)
+##       ⏳ P1c: MdcContextLifter + traceId in log4j2.xml              ~1 d   /  1.5 d
 ##
-##  5   P0d + P0f  (Solr timeout + JAR status endpoint)
-##                               1–2 weekends (~3 d)  3 days        Jun W1        / May W4
+##  5   P0d + P1c  (Solr timeout + structured logging)
+##                               1 weekend  (~2 d)    2.5 days      Jun W1        / May W4
 ##       P0d: HttpJdkSolrClient timeout + Resilience4j CB           ~1.5 d /  2 d
-##       P0f: jobId in 202, Redis job state, GET /jar/status/{id},  ~1.5 d /  1 d
-##            status badge + polling in UI, controller + Jest tests
+##       P1c: MdcContextLifter + traceId in log4j2.xml              ~0.5 d /  0.5 d
 ##
 ##  6   P1b  (UI error boundary + SW offline)
 ##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1

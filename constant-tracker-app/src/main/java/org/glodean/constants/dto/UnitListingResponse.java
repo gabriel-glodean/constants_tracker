@@ -14,4 +14,3 @@ public record UnitListingResponse(
       String name,
       long constants) {}
 }
-

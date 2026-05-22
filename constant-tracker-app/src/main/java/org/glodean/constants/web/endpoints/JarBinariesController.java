@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -143,23 +144,27 @@ public class JarBinariesController {
     }
 
     /**
-     * Returns the current extraction status of a fat JAR upload job.
+     * Lists extraction jobs for a project/version.
      *
-     * @param project project identifier
-     * @param version project version
-     * @param jarName name of the uploaded fat JAR
-     * @return 200 with {@link JarExtractionStatusResponse}, or 404 if not found
+     * <p>If {@code jarName} is provided, the response contains at most one matching job.
      */
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/status")
-    public Mono<ResponseEntity<JarExtractionStatusResponse>> getExtractionStatus(
+    @GetMapping("/jobs")
+    public Mono<ResponseEntity<List<JarExtractionStatusResponse>>> getExtractionJobs(
             @NotBlank @ValidProjectName @RequestParam("project") String project,
             @Positive @RequestParam("version") int version,
-            @NotBlank @RequestParam("jarName") String jarName) {
-        return jarExtractionRepository
-                .findByProjectAndVersionAndJarName(project.strip(), version, jarName.strip())
-                .map(entity -> ResponseEntity.ok(JarExtractionStatusResponse.from(entity)))
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+            @RequestParam(value = "jarName", required = false) String jarName) {
+        Flux<JarExtractionStatusResponse> source =
+                (jarName != null && !jarName.isBlank())
+                        ? jarExtractionRepository
+                                .findByProjectAndVersionAndJarName(project.strip(), version, jarName.strip())
+                                .map(JarExtractionStatusResponse::from)
+                                .flux()
+                        : jarExtractionRepository
+                                .findAllByProjectAndVersion(project.strip(), version)
+                                .map(JarExtractionStatusResponse::from);
+
+        return source.collectList().map(ResponseEntity::ok);
     }
 
     private static String sha256(Path path) throws IOException {

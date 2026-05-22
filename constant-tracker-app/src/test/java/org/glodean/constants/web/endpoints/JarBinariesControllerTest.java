@@ -1,7 +1,6 @@
 package org.glodean.constants.web.endpoints;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -116,10 +115,10 @@ class JarBinariesControllerTest {
             .expectStatus().isBadRequest();
     }
 
-    // ── GET /jar/status ───────────────────────────────────────────────────────
+    // ── GET /jar/jobs ─────────────────────────────────────────────────────────
 
     @Test
-    void getExtractionStatus_found_returns200WithBody() {
+    void getExtractionJobs_withJarName_returnsSingleJob() {
         OffsetDateTime now = OffsetDateTime.now();
         JarExtractionEntity entity = JarExtractionEntity.builder()
                 .id(1L).project("demo").version(1).jarName("app.jar")
@@ -132,11 +131,13 @@ class JarBinariesControllerTest {
                 .thenReturn(Mono.just(entity));
 
         web.get()
-                .uri("/jar/status?project=demo&version=1&jarName=app.jar")
+                .uri("/jar/jobs?project=demo&version=1&jarName=app.jar")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(JarExtractionStatusResponse.class)
-                .value(r -> {
+                .expectBodyList(JarExtractionStatusResponse.class)
+                .value(rows -> {
+                    assert rows.size() == 1;
+                    JarExtractionStatusResponse r = rows.get(0);
                     assert r.project().equals("demo");
                     assert r.version() == 1;
                     assert r.jarName().equals("app.jar");
@@ -148,20 +149,38 @@ class JarBinariesControllerTest {
     }
 
     @Test
-    void getExtractionStatus_notFound_returns404() {
-        when(jarExtractionRepository.findByProjectAndVersionAndJarName(anyString(), anyInt(), anyString()))
-                .thenReturn(Mono.empty());
+    void getExtractionJobs_withoutJarName_listsAllJobs() {
+        OffsetDateTime now = OffsetDateTime.now();
+        JarExtractionEntity app = JarExtractionEntity.builder()
+                .id(1L).project("demo").version(1).jarName("app.jar")
+                .status(JarExtractionEntity.STATUS_COMPLETED)
+                .startedAt(now.minusMinutes(10)).lastUpdatedAt(now.minusMinutes(1))
+                .nestedTotal(4).nestedProcessed(4).nestedFailed(0)
+                .build();
+        JarExtractionEntity lib = JarExtractionEntity.builder()
+                .id(2L).project("demo").version(1).jarName("lib.jar")
+                .status(JarExtractionEntity.STATUS_STARTED)
+                .startedAt(now.minusMinutes(2)).lastUpdatedAt(now)
+                .nestedTotal(2).nestedProcessed(1).nestedFailed(0)
+                .build();
+
+        when(jarExtractionRepository.findAllByProjectAndVersion("demo", 1))
+                .thenReturn(Flux.just(app, lib));
 
         web.get()
-                .uri("/jar/status?project=demo&version=1&jarName=missing.jar")
+                .uri("/jar/jobs?project=demo&version=1")
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBodyList(JarExtractionStatusResponse.class)
+                .value(rows -> {
+                    assert rows.size() == 2;
+                });
     }
 
     @Test
-    void getExtractionStatus_missingJarNameParam_returns400() {
+    void getExtractionJobs_missingVersionParam_returns400() {
         web.get()
-                .uri("/jar/status?project=demo&version=1")
+                .uri("/jar/jobs?project=demo")
                 .exchange()
                 .expectStatus().isBadRequest();
     }

@@ -58,22 +58,6 @@ class UnitListingControllerTest {
   }
 
   private static UnitConstantsCountRow row(String unitPath, String name, Long constants) {
-    return new UnitConstantsCountRow() {
-      @Override
-      public String getUnitPath() {
-        return unitPath;
-      }
-
-      @Override
-      public String getName() {
-        return name;
-      }
-
-      @Override
-      public Long getConstants() {
-        return constants;
-      }
-    };
+    return new UnitConstantsCountRow(unitPath, name, constants);
   }
 }
-
