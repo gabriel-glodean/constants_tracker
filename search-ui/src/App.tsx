@@ -249,7 +249,7 @@ function App() {
               onProjectChange={setWorkspaceProject}
               onVersionChange={setWorkspaceVersion}
             />
-            <ClassLookupForm project={workspaceProject} version={workspaceVersion} />
+            <ClassLookupForm project={workspaceProject} version={workspaceVersion} fetcher={authFetch} />
           </section>
         )}
         {tab === 'versions' && (

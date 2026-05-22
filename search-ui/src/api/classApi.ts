@@ -9,13 +9,15 @@ export interface ClassConstantsReply {
 }
 
 export async function getClassConstants(
-  params: ClassConstantsLookup
+  params: ClassConstantsLookup,
+  options?: { fetcher?: typeof fetch }
 ): Promise<ClassConstantsReply> {
+  const fetcher = options?.fetcher ?? globalThis.fetch;
   const stringParams: Record<string, string> = Object.fromEntries(
     Object.entries(params).map(([k, v]) => [k, String(v)])
   );
   const query = new URLSearchParams(stringParams).toString();
-  const res = await fetch(`/class?${query}`, {
+  const res = await fetcher(`/class?${query}`, {
     method: 'GET',
   });
   if (!res.ok) {

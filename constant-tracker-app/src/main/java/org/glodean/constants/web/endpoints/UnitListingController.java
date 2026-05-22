@@ -31,7 +31,6 @@ public class UnitListingController {
     this.unitSnapshotRepository = unitSnapshotRepository;
   }
 
-  @PreAuthorize("isAuthenticated()")
   @GetMapping
   public Mono<List<UnitListingResponse>> listUnits(
       @NotBlank @ValidProjectName @RequestParam("project") String project,

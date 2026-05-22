@@ -6,9 +6,10 @@ import { AlertCircle, FolderTree, FileCode2 } from 'lucide-react'
 interface ClassLookupFormProps {
   project?: string
   version?: string
+  fetcher?: typeof fetch
 }
 
-export function ClassLookupForm({ project: sharedProject, version: sharedVersion }: ClassLookupFormProps) {
+export function ClassLookupForm({ project: sharedProject, version: sharedVersion, fetcher }: ClassLookupFormProps) {
   const projectInputId = 'class-lookup-project'
   const versionInputId = 'class-lookup-version'
   const filterInputId = 'class-lookup-filter'
@@ -52,7 +53,7 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
     }
 
     try {
-      const data = await getUnits(activeProject, activeVersion)
+      const data = await getUnits(activeProject, activeVersion, { fetcher })
       setGroups(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unit lookup failed')
@@ -71,7 +72,7 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
         project: activeProject,
         className: unitName,
         version: activeVersion,
-      })
+      }, { fetcher })
       setResult(data.constants)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lookup failed')
