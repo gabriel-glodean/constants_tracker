@@ -15,7 +15,7 @@ const FUZZY_OPTIONS = [
 
 export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   const [term, setTerm] = useState('')
-  const [project, setProject] = useState('*')
+  const [project, setProject] = useState('')
   const [fuzzy, setFuzzy] = useState(1)
   const [rows, setRows] = useState(25)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -23,7 +23,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!term.trim()) return
-    onSearch({ project: project.trim() || '*', term: term.trim(), fuzzy, rows })
+    onSearch({ project: project.trim() || '', term: term.trim(), fuzzy, rows })
   }
 
   return (
@@ -64,7 +64,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <SlidersHorizontal className="h-3.5 w-3.5" />
           {showAdvanced ? 'Hide' : 'Show'} advanced options
         </button>
-        {project !== '*' && (
+        {project.trim() !== '' && (
           <span className="text-xs text-muted-foreground">
             Filtering by project: <span className="text-foreground font-medium">{project}</span>
           </span>
@@ -79,7 +79,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               Project
               <span
-                title='Use "*" to search across all projects, or type a project name to narrow results'
+                title='Leave empty to search across all projects, or type a project name to narrow results'
                 className="cursor-help normal-case text-muted-foreground/60 hover:text-muted-foreground"
               >ⓘ</span>
             </label>
@@ -87,7 +87,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               type="text"
               value={project}
               onChange={e => setProject(e.target.value)}
-              placeholder="* (all projects)"
+              placeholder="(leave blank for all projects)"
               className="w-full h-9 px-3 rounded-lg border border-input bg-secondary/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
             />
           </div>

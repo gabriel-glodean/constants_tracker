@@ -4,9 +4,19 @@ import { Upload, FileArchive, FileCode2, FileText, CheckCircle2, AlertCircle } f
 
 interface UploadFormProps {
   authFetch?: typeof fetch
+  project?: string
+  version?: string
+  onProjectChange?: (value: string) => void
+  onVersionChange?: (value: string) => void
 }
 
-export function UploadForm({ authFetch }: UploadFormProps = {}) {
+export function UploadForm({
+  authFetch,
+  project: sharedProject,
+  version: sharedVersion,
+  onProjectChange,
+  onVersionChange,
+}: UploadFormProps = {}) {
   const MAX_UPLOAD_BYTES = 100 * 1024 * 1024 // Keep in sync with backend/gateway limits.
 
   const ACCEPTED_EXTENSIONS: Record<'class' | 'jar' | 'config', string[]> = {
@@ -23,18 +33,37 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
   const [message, setMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const usesSharedScope =
+    sharedProject != null && sharedVersion != null &&
+    typeof onProjectChange === 'function' &&
+    typeof onVersionChange === 'function'
+
+  const projectValue = usesSharedScope ? sharedProject : project
+  const versionValue = usesSharedScope ? sharedVersion : version
+
+  function setProjectValue(value: string) {
+    if (usesSharedScope) onProjectChange(value)
+    else setProject(value)
+  }
+
+  function setVersionValue(value: string) {
+    if (usesSharedScope) onVersionChange(value)
+    else setVersion(value)
+  }
+
   async function handleUpload(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!file || !project.trim()) return
+    if (!file || !projectValue.trim()) return
     setStatus('loading')
     setMessage('')
     try {
       const fetcher = authFetch
+      const parsedVersion = versionValue ? Number(versionValue) : undefined
       const res = type === 'class'
-        ? await uploadClass({ file, project: project.trim(), version: version ? Number(version) : undefined, fetcher })
+        ? await uploadClass({ file, project: projectValue.trim(), version: parsedVersion, fetcher })
         : type === 'jar'
-        ? await uploadJar({ file, project: project.trim(), jarName: file.name, fetcher })
-        : await uploadConfig({ file, project: project.trim(), version: version ? Number(version) : undefined, fetcher })
+        ? await uploadJar({ file, project: projectValue.trim(), jarName: file.name, fetcher })
+        : await uploadConfig({ file, project: projectValue.trim(), version: parsedVersion, fetcher })
       setStatus(res.status)
       setMessage(res.message)
       if (res.status === 'success') {
@@ -145,30 +174,37 @@ export function UploadForm({ authFetch }: UploadFormProps = {}) {
       </div>
 
       {/* Project + Version fields */}
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">
-            Project name <span className="text-destructive">*</span>
-          </label>
-          <input type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e=>setProject(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+      {usesSharedScope ? (
+        <div className="text-xs text-muted-foreground bg-secondary/40 border border-border rounded-lg px-3 py-2">
+          Using workspace scope: <span className="font-medium text-foreground">{projectValue || '(missing project)'}</span>
+          {type !== 'jar' && <span> v<span className="font-medium text-foreground">{versionValue || '(auto)'}</span></span>}
         </div>
-        {type !== 'jar' && (
+      ) : (
+        <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              Version
-              <span
-                title="Leave blank to let the server assign the next version number automatically"
-                className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
-              >ⓘ</span>
+            <label className="text-xs font-medium text-muted-foreground">
+              Project name <span className="text-destructive">*</span>
             </label>
-            <input type="number" placeholder="Leave blank to auto-assign" value={version} onChange={e=>setVersion(e.target.value)}
+            <input type="text" placeholder="e.g. demo-crud-server" value={projectValue} onChange={e=>setProjectValue(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
           </div>
-        )}
-      </div>
+          {type !== 'jar' && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Version
+                <span
+                  title="Leave blank to let the server assign the next version number automatically"
+                  className="cursor-help text-muted-foreground/60 hover:text-muted-foreground"
+                >ⓘ</span>
+              </label>
+              <input type="number" placeholder="Leave blank to auto-assign" value={versionValue} onChange={e=>setVersionValue(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"/>
+            </div>
+          )}
+        </div>
+      )}
 
-      <button type="submit" disabled={!file||!project.trim()||status==='loading'} className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+      <button type="submit" disabled={!file||!projectValue.trim()||status==='loading'} className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
         {status==='loading'?<span className="animate-spin h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"/>:<Upload className="h-5 w-5"/>}
         Upload
       </button>

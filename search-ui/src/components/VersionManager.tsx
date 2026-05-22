@@ -19,9 +19,19 @@ import {
 
 interface VersionManagerProps {
   authFetch?: typeof fetch
+  project?: string
+  version?: string
+  onProjectChange?: (value: string) => void
+  onVersionChange?: (value: string) => void
 }
 
-export function VersionManager({ authFetch }: VersionManagerProps = {}) {
+export function VersionManager({
+  authFetch,
+  project: sharedProject,
+  version: sharedVersion,
+  onProjectChange,
+  onVersionChange,
+}: VersionManagerProps = {}) {
   // ── lookup state ──
   const [project, setProject] = useState('')
   const [versionNum, setVersionNum] = useState('')
@@ -38,6 +48,24 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
+  const usesSharedScope =
+    sharedProject != null && sharedVersion != null &&
+    typeof onProjectChange === 'function' &&
+    typeof onVersionChange === 'function'
+
+  const projectValue = usesSharedScope ? sharedProject : project
+  const versionValue = usesSharedScope ? sharedVersion : versionNum
+
+  function setProjectValue(value: string) {
+    if (usesSharedScope) onProjectChange(value)
+    else setProject(value)
+  }
+
+  function setVersionValue(value: string) {
+    if (usesSharedScope) onVersionChange(value)
+    else setVersionNum(value)
+  }
+
   function clearStatus() {
     setStatus('idle')
     setMessage('')
@@ -46,12 +74,12 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
 
   async function handleLookup(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!project.trim() || !versionNum) return
+    if (!projectValue.trim() || !versionValue) return
     clearStatus()
     setVersionData(null)
     setLoading(true)
     try {
-      const data = await getVersion(project.trim(), Number(versionNum), { fetcher: authFetch })
+      const data = await getVersion(projectValue.trim(), Number(versionValue), { fetcher: authFetch })
       setVersionData(data)
     } catch (err) {
       setStatus('error')
@@ -127,29 +155,38 @@ export function VersionManager({ authFetch }: VersionManagerProps = {}) {
       {/* ── Version Lookup ── */}
       <form onSubmit={handleLookup} className="space-y-4">
         <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Project</label>
-            <input
-              type="text"
-              placeholder="e.g. demo-crud-server"
-              value={project}
-              onChange={e => setProject(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Version</label>
-            <input
-              type="number"
-              placeholder="e.g. 1"
-              value={versionNum}
-              onChange={e => setVersionNum(e.target.value)}
-              className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
-            />
-          </div>
+          {usesSharedScope ? (
+            <div className="text-xs text-muted-foreground bg-secondary/40 border border-border rounded-lg px-3 py-2">
+              Using workspace scope: <span className="font-medium text-foreground">{projectValue || '(missing project)'}</span>
+              <span> v<span className="font-medium text-foreground">{versionValue || '(missing version)'}</span></span>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Project</label>
+                <input
+                  type="text"
+                  placeholder="e.g. demo-crud-server"
+                  value={projectValue}
+                  onChange={e => setProjectValue(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Version</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1"
+                  value={versionValue}
+                  onChange={e => setVersionValue(e.target.value)}
+                  className="w-28 px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm"
+                />
+              </div>
+            </>
+          )}
           <button
             type="submit"
-            disabled={loading || !project.trim() || !versionNum}
+            disabled={loading || !projectValue.trim() || !versionValue}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             <Search className="h-4 w-4" /> Lookup

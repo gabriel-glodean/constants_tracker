@@ -1,5 +1,5 @@
-import { useState, useRef, Fragment } from 'react'
-import { Database, GithubIcon, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch, GitCompareArrows, Lock, LogIn, LogOut, ServerCrash } from 'lucide-react'
+import { useState, useRef, Fragment, useEffect } from 'react'
+import { Database, AlertCircle, Search as SearchIcon, Upload as UploadIcon, BookOpen, GitBranch, GitCompareArrows, Lock, LogIn, LogOut, ServerCrash } from 'lucide-react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { useSearch } from '@/hooks/useSearch'
@@ -9,6 +9,8 @@ import { ClassLookupForm } from '@/components/ClassLookupForm'
 import { VersionManager } from '@/components/VersionManager'
 import { DiffViewer } from '@/components/DiffViewer'
 import { LoginModal } from '@/components/LoginForm'
+import { ProjectVersionPane } from '@/components/ProjectVersionPane'
+import { JarJobsPanel } from '@/components/JarJobsPanel'
 
 const TABS = [
   { key: 'search',   label: 'Search',       icon: SearchIcon,       title: 'Full-text fuzzy search across all indexed constants' },
@@ -22,12 +24,22 @@ type TabKey = typeof TABS[number]['key']
 
 
 function App() {
+  const [workspaceProject, setWorkspaceProject] = useState(() => localStorage.getItem('workspace.project') ?? '')
+  const [workspaceVersion, setWorkspaceVersion] = useState(() => localStorage.getItem('workspace.version') ?? '')
   const [tab, setTab] = useState<TabKey>('search')
   const { data, isLoading, error, hasSearched, search } = useSearch()
   const { isAuthenticated, authRequired, backendAvailable, canAccess, signIn, signOut, authFetch } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [lastTerm, setLastTerm] = useState('')
   const resultsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem('workspace.project', workspaceProject)
+  }, [workspaceProject])
+
+  useEffect(() => {
+    localStorage.setItem('workspace.version', workspaceVersion)
+  }, [workspaceVersion])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -86,7 +98,10 @@ function App() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              <GithubIcon className="h-5 w-5" />
+              {/* GitHub mark SVG — brand icon removed from lucide-react */}
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z" />
+              </svg>
             </a>
           </div>
         </div>
@@ -182,12 +197,25 @@ function App() {
         {tab === 'diff' && (
           <section className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Version Diff</h1>
-            <DiffViewer />
+            <ProjectVersionPane
+              project={workspaceProject}
+              version={workspaceVersion}
+              onProjectChange={setWorkspaceProject}
+              onVersionChange={setWorkspaceVersion}
+            />
+            <DiffViewer project={workspaceProject} fromVersion={workspaceVersion} />
           </section>
         )}
         {tab === 'upload' && (
           <section className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Upload Class, JAR, or Config</h1>
+            <ProjectVersionPane
+              project={workspaceProject}
+              version={workspaceVersion}
+              onProjectChange={setWorkspaceProject}
+              onVersionChange={setWorkspaceVersion}
+              versionRequired={false}
+            />
             {!canAccess && (
               <div className="flex items-center gap-3 p-4 mb-6 rounded-xl border border-destructive/50 bg-destructive/5 text-sm">
                 <Lock className="h-4 w-4 text-destructive shrink-0" />
@@ -201,19 +229,38 @@ function App() {
               </div>
             )}
             <div className={!canAccess ? 'pointer-events-none opacity-40 select-none' : ''}>
-              <UploadForm authFetch={authFetch} />
+              <UploadForm
+                authFetch={authFetch}
+                project={workspaceProject}
+                version={workspaceVersion}
+                onProjectChange={setWorkspaceProject}
+                onVersionChange={setWorkspaceVersion}
+              />
             </div>
+            <JarJobsPanel project={workspaceProject} version={workspaceVersion} />
           </section>
         )}
         {tab === 'lookup' && (
-          <section className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
+          <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Class Constants Lookup</h1>
-            <ClassLookupForm />
+            <ProjectVersionPane
+              project={workspaceProject}
+              version={workspaceVersion}
+              onProjectChange={setWorkspaceProject}
+              onVersionChange={setWorkspaceVersion}
+            />
+            <ClassLookupForm project={workspaceProject} version={workspaceVersion} />
           </section>
         )}
         {tab === 'versions' && (
           <section className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-16 pb-16">
             <h1 className="text-2xl font-bold mb-6">Version Manager</h1>
+            <ProjectVersionPane
+              project={workspaceProject}
+              version={workspaceVersion}
+              onProjectChange={setWorkspaceProject}
+              onVersionChange={setWorkspaceVersion}
+            />
             {!canAccess && (
               <div className="flex items-center gap-3 p-4 mb-6 rounded-xl border border-destructive/50 bg-destructive/5 text-sm">
                 <Lock className="h-4 w-4 text-destructive shrink-0" />
@@ -227,7 +274,13 @@ function App() {
               </div>
             )}
             <div className={!canAccess ? 'pointer-events-none opacity-40 select-none' : ''}>
-              <VersionManager authFetch={authFetch} />
+              <VersionManager
+                authFetch={authFetch}
+                project={workspaceProject}
+                version={workspaceVersion}
+                onProjectChange={setWorkspaceProject}
+                onVersionChange={setWorkspaceVersion}
+              />
             </div>
           </section>
         )}

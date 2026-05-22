@@ -132,9 +132,14 @@ function DiffSummary({ diff }: { diff: ProjectDiffResponse }) {
     </div>
   )
 }
-export function DiffViewer() {
-  const [project, setProject] = useState('')
-  const [fromV, setFromV] = useState('')
+interface DiffViewerProps {
+  project?: string
+  fromVersion?: string
+}
+
+export function DiffViewer({ project: sharedProject, fromVersion: sharedFromVersion }: DiffViewerProps = {}) {
+  const project = sharedProject?.trim() ?? ''
+  const fromV = sharedFromVersion ?? ''
   const [toV, setToV] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,12 +147,12 @@ export function DiffViewer() {
   const [filter, setFilter] = useState<'all' | 'added' | 'removed' | 'changed'>('all')
   async function handleDiff(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!project.trim() || !fromV || !toV) return
+    if (!project || !fromV || !toV) return
     setLoading(true)
     setError(null)
     setDiff(null)
     try {
-      const result = await getDiff(project.trim(), Number(fromV), Number(toV))
+      const result = await getDiff(project, Number(fromV), Number(toV))
       setDiff(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Diff failed')
@@ -174,20 +179,12 @@ export function DiffViewer() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <form onSubmit={handleDiff} className="flex flex-wrap gap-2 items-end">
-        <div className="flex-1 min-w-40">
-          <label className="block text-xs text-muted-foreground mb-1">Project</label>
-          <input type="text" placeholder="e.g. demo-crud-server" value={project} onChange={e => setProject(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm" />
-        </div>
-        <div className="w-28">
-          <label className="block text-xs text-muted-foreground mb-1">From version</label>
-          <input type="number" placeholder="1" value={fromV} onChange={e => setFromV(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm" />
-        </div>
-        <div className="w-28">
+      <form onSubmit={handleDiff} className="flex gap-2 items-end">
+        <div className="w-36">
           <label className="block text-xs text-muted-foreground mb-1">To version</label>
           <input type="number" placeholder="2" value={toV} onChange={e => setToV(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm" />
         </div>
-        <button type="submit" disabled={loading || !project.trim() || !fromV || !toV} className="h-[38px] px-5 rounded-lg bg-primary text-primary-foreground text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition">
+        <button type="submit" disabled={loading || !project || !fromV || !toV} className="h-[38px] px-5 rounded-lg bg-primary text-primary-foreground text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition">
           <GitCompareArrows className="h-4 w-4" />
           {loading ? 'Loading…' : 'Compare'}
         </button>
@@ -214,7 +211,7 @@ export function DiffViewer() {
           </div>
           <p className="text-base font-medium text-foreground mb-1">No diff loaded yet</p>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Enter a project name and two version numbers above, then click <span className="font-medium text-foreground">Compare</span>.
+            Set the project and from-version in the workspace scope above, enter a target version, then click <span className="font-medium text-foreground">Compare</span>.
           </p>
         </div>
       )}
@@ -254,3 +251,4 @@ export function DiffViewer() {
     </div>
   )
 }
+

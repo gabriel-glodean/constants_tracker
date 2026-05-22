@@ -15,6 +15,7 @@ export default defineConfig({
       '/search': 'http://localhost:8080',
       '/class': 'http://localhost:8080',
       '/jar': 'http://localhost:8080',
+      '/units': 'http://localhost:8080',
     },
   },
 })

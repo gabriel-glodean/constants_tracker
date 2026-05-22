@@ -33,7 +33,7 @@ describe('SearchForm', () => {
     await user.type(screen.getByPlaceholderText(/search constants/i), 'SELECT')
     await user.click(screen.getByRole('button', { name: /^search$/i }))
     expect(onSearch).toHaveBeenCalledWith<[SearchParams]>({
-      project: '*',
+      project: '',
       term: 'SELECT',
       fuzzy: 1,
       rows: 25,
@@ -51,11 +51,11 @@ describe('SearchForm', () => {
   it('toggles advanced options panel', async () => {
     const user = userEvent.setup()
     renderForm()
-    expect(screen.queryByPlaceholderText(/\* \(all projects\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/leave blank for all projects/i)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /show advanced/i }))
-    expect(screen.getByPlaceholderText(/\* \(all projects\)/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/leave blank for all projects/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /hide advanced/i }))
-    expect(screen.queryByPlaceholderText(/\* \(all projects\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/leave blank for all projects/i)).not.toBeInTheDocument()
   })
 
   it('changes fuzzy tolerance and sends correct value', async () => {
@@ -82,7 +82,7 @@ describe('SearchForm', () => {
     const user = userEvent.setup()
     renderForm()
     await user.click(screen.getByRole('button', { name: /show advanced/i }))
-    const projectInput = screen.getByPlaceholderText(/\* \(all projects\)/i)
+    const projectInput = screen.getByPlaceholderText(/leave blank for all projects/i)
     await user.clear(projectInput)
     await user.type(projectInput, 'my-project')
     expect(screen.getByText('my-project')).toBeInTheDocument()
