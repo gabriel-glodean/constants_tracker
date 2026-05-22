@@ -9,7 +9,6 @@ import java.util.Map;
 import org.glodean.constants.dto.UnitListingResponse;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.glodean.constants.web.validation.ValidProjectName;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
