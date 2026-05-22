@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw, CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react'
 import { getJarJobs, type JarJob } from '@/api/jarJobsApi'
 
 interface Props {
   project: string
   version: string
+  authFetch: typeof fetch
 }
 
 const POLL_MS = 3_000
@@ -37,7 +38,7 @@ function fmt(iso: string): string {
   }
 }
 
-export function JarJobsPanel({ project, version }: Props) {
+export function JarJobsPanel({ project, version, authFetch }: Props) {
   const [jobs, setJobs] = useState<JarJob[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,11 +47,11 @@ export function JarJobsPanel({ project, version }: Props) {
   const versionNum = parseInt(version, 10)
   const ready = project.trim().length > 0 && !isNaN(versionNum) && versionNum > 0
 
-  const poll = async (silent = false) => {
+  const poll = useCallback(async (silent = false) => {
     if (!ready) return
     if (!silent) setLoading(true)
     try {
-      const data = await getJarJobs(project.trim(), versionNum)
+      const data = await getJarJobs(project.trim(), versionNum, undefined, { fetcher: authFetch })
       setJobs(data)
       setError(null)
     } catch (e) {
@@ -58,7 +59,7 @@ export function JarJobsPanel({ project, version }: Props) {
     } finally {
       if (!silent) setLoading(false)
     }
-  }
+  }, [ready, project, versionNum, authFetch])
 
   useEffect(() => {
     if (!ready) {
@@ -71,7 +72,7 @@ export function JarJobsPanel({ project, version }: Props) {
 
     const schedule = () => {
       timerRef.current = setTimeout(async () => {
-        const latest = await getJarJobs(project.trim(), versionNum).catch(() => null)
+        const latest = await getJarJobs(project.trim(), versionNum, undefined, { fetcher: authFetch }).catch(() => null)
         if (latest !== null) {
           setJobs(latest)
           setError(null)
@@ -86,9 +87,8 @@ export function JarJobsPanel({ project, version }: Props) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-    // Re-run whenever scope changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, version])
+    // Re-run whenever scope or auth state changes.
+  }, [poll])
 
   if (!ready) return null
 

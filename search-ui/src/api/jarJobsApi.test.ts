@@ -29,6 +29,15 @@ describe('getJarJobs', () => {
     expect(result).toEqual([JOB]);
   });
 
+  it('uses the injected fetcher when provided', async () => {
+    const authFetch = jest.fn().mockResolvedValue(mockOk([JOB]));
+
+    const result = await getJarJobs('my-app', 1, undefined, { fetcher: authFetch });
+
+    expect(authFetch).toHaveBeenCalledWith('/jar/jobs?project=my-app&version=1', { method: 'GET' });
+    expect(result).toEqual([JOB]);
+  });
+
   it('includes jarName param when provided', async () => {
     mockFetch.mockResolvedValue(mockOk([JOB]));
     await getJarJobs('my-app', 1, 'app.jar');

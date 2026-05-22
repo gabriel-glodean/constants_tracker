@@ -15,11 +15,13 @@ export async function getJarJobs(
   project: string,
   version: number,
   jarName?: string,
+  options?: { fetcher?: typeof fetch },
 ): Promise<JarJob[]> {
+  const fetcher = options?.fetcher ?? globalThis.fetch
   const params: Record<string, string> = { project, version: String(version) };
   if (jarName && jarName.trim()) params.jarName = jarName.trim();
   const query = new URLSearchParams(params).toString();
-  const res = await fetch(`/jar/jobs?${query}`, { method: 'GET' });
+  const res = await fetcher(`/jar/jobs?${query}`, { method: 'GET' });
   if (!res.ok) {
     if (res.status === 404) return [];
     throw new Error(`Jar jobs fetch failed (HTTP ${res.status})`);

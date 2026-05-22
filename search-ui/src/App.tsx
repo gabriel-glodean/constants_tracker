@@ -237,7 +237,13 @@ function App() {
                 onVersionChange={setWorkspaceVersion}
               />
             </div>
-            <JarJobsPanel project={workspaceProject} version={workspaceVersion} />
+            {canAccess && (
+              <JarJobsPanel
+                authFetch={authFetch}
+                project={workspaceProject}
+                version={workspaceVersion}
+              />
+            )}
           </section>
         )}
         {tab === 'lookup' && (

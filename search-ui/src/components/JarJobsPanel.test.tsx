@@ -46,39 +46,50 @@ afterEach(() => {
 
 describe('JarJobsPanel', () => {
   it('renders nothing when project or version is not set', () => {
-    const { container } = render(<JarJobsPanel project="" version="" />)
+    const { container } = render(<JarJobsPanel project="" version="" authFetch={jest.fn()} />)
     expect(container.firstChild).toBeNull()
   })
 
   it('renders nothing when version is invalid', () => {
-    const { container } = render(<JarJobsPanel project="my-app" version="abc" />)
+    const { container } = render(<JarJobsPanel project="my-app" version="abc" authFetch={jest.fn()} />)
     expect(container.firstChild).toBeNull()
   })
 
   it('fetches and displays jobs on mount', async () => {
     mockedGetJarJobs.mockResolvedValue([COMPLETED_JOB])
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('app.jar')).toBeInTheDocument())
     expect(screen.getByText('COMPLETED')).toBeInTheDocument()
     expect(screen.getByText('10 / 10')).toBeInTheDocument()
   })
 
+  it('forwards authFetch to the API client', async () => {
+    mockedGetJarJobs.mockResolvedValue([COMPLETED_JOB])
+    const authFetch = jest.fn()
+
+    render(<JarJobsPanel project="my-app" version="1" authFetch={authFetch} />)
+
+    await waitFor(() =>
+      expect(mockedGetJarJobs).toHaveBeenCalledWith('my-app', 1, undefined, { fetcher: authFetch }),
+    )
+  })
+
   it('shows STARTED badge with animation class', async () => {
     mockedGetJarJobs.mockResolvedValue([STARTED_JOB])
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('STARTED')).toBeInTheDocument())
   })
 
   it('shows failed count in destructive colour', async () => {
     mockedGetJarJobs.mockResolvedValue([FAILED_JOB])
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('FAILED')).toBeInTheDocument())
     expect(screen.getByText('2')).toBeInTheDocument()
   })
 
   it('shows empty state when no jobs returned', async () => {
     mockedGetJarJobs.mockResolvedValue([])
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() =>
       expect(screen.getByText(/no extraction jobs found/i)).toBeInTheDocument(),
     )
@@ -86,7 +97,7 @@ describe('JarJobsPanel', () => {
 
   it('shows error message on fetch failure', async () => {
     mockedGetJarJobs.mockRejectedValue(new Error('Jar jobs fetch failed (HTTP 500)'))
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() =>
       expect(screen.getByText(/Jar jobs fetch failed/i)).toBeInTheDocument(),
     )
@@ -97,7 +108,7 @@ describe('JarJobsPanel', () => {
       .mockResolvedValueOnce([STARTED_JOB])
       .mockResolvedValueOnce([COMPLETED_JOB])
 
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('STARTED')).toBeInTheDocument())
 
     await act(async () => {
@@ -108,7 +119,7 @@ describe('JarJobsPanel', () => {
 
   it('stops polling when all jobs are terminal', async () => {
     mockedGetJarJobs.mockResolvedValue([COMPLETED_JOB])
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('COMPLETED')).toBeInTheDocument())
 
     await act(async () => {
@@ -121,7 +132,7 @@ describe('JarJobsPanel', () => {
   it('manual refresh button triggers re-fetch', async () => {
     mockedGetJarJobs.mockResolvedValue([COMPLETED_JOB])
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
-    render(<JarJobsPanel project="my-app" version="1" />)
+    render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('app.jar')).toBeInTheDocument())
 
     mockedGetJarJobs.mockResolvedValue([FAILED_JOB])
