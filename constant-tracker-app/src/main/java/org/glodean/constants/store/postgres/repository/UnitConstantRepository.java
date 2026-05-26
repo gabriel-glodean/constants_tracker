@@ -42,4 +42,13 @@ public interface UnitConstantRepository
    */
   @Query("DELETE FROM unit_constants WHERE snapshot_id IN (:snapshotIds)")
   Mono<Void> deleteAllBySnapshotIdIn(Collection<Long> snapshotIds);
+
+  /** Returns distinct constant value types observed in persisted constants. */
+  @Query("""
+      SELECT DISTINCT constant_value_type
+      FROM unit_constants
+      WHERE constant_value_type IS NOT NULL
+        AND TRIM(constant_value_type) <> ''
+      """)
+  Flux<String> findDistinctConstantValueTypes();
 }

@@ -20,6 +20,7 @@ import org.glodean.constants.store.Constants;
 import org.glodean.constants.store.postgres.entity.*;
 import org.glodean.constants.store.postgres.repository.*;
 import org.glodean.constants.store.solr.SolrOutboxPayload;
+import org.glodean.constants.util.ConstantValueTypeMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -181,7 +182,7 @@ public class PostgresService implements UnitConstantsStore {
         .map(uc -> new ConstantWithUsages(
             new UnitConstantEntity(null, snapshot.id(),
                 sanitizeForPostgres(String.valueOf(uc.value())),
-                uc.value().getClass().getSimpleName()),
+                ConstantValueTypeMapper.map(uc.value())),
             uc.usages()))
         .toList();
 
@@ -288,7 +289,7 @@ public class PostgresService implements UnitConstantsStore {
   private Flux<ConstantUsageEntity> saveConstantWithUsages(
       UnitSnapshotEntity snapshot, UnitConstant uc) {
     String valueStr = sanitizeForPostgres(String.valueOf(uc.value()));
-    String valueType = uc.value().getClass().getSimpleName();
+    String valueType = ConstantValueTypeMapper.map(uc.value());
     var entity = new UnitConstantEntity(null, snapshot.id(), valueStr, valueType);
     return constantRepo.save(entity)
         .flatMapMany(saved -> {

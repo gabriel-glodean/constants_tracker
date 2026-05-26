@@ -1,6 +1,5 @@
 package org.glodean.constants.store.postgres.repository;
 
-import java.util.Collection;
 import org.glodean.constants.store.postgres.entity.ConstantUsageEntity;
 import org.glodean.constants.store.postgres.entity.UnitConstantEntity;
 import org.springframework.data.r2dbc.repository.Query;
@@ -33,10 +32,13 @@ public interface ConstantUsageRepository
    */
   Mono<Void> deleteAllByConstantId(Long constantId);
 
-  /**
-   * Bulk-deletes all usage entities for the given constant IDs in a single SQL statement.
-   * Used during batch storage to replace all usages for a set of constants at once.
-   */
-  @Query("DELETE FROM constant_usages WHERE constant_id IN (:constantIds)")
-  Mono<Void> deleteAllByConstantIdIn(Collection<Long> constantIds);
+  /** Returns distinct custom semantic type names found in persisted usage rows. */
+  @Query("""
+      SELECT DISTINCT semantic_type_name
+      FROM constant_usages
+      WHERE semantic_type_kind = 'CUSTOM'
+        AND semantic_type_name IS NOT NULL
+        AND TRIM(semantic_type_name) <> ''
+      """)
+  Flux<String> findDistinctCustomSemanticTypeNames();
 }

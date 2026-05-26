@@ -1,8 +1,10 @@
 package org.glodean.constants.extractor;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.glodean.constants.model.SourceKind;
@@ -63,6 +65,15 @@ public final class ModelExtractorSupplierRepository {
                 .filter(e -> e.test().test(lower))
                 .findFirst()
                 .map(e -> new Supply(e.factory().apply(content), e.sourceKind()));
+    }
+
+    /**
+     * Returns the distinct source kinds that currently have a registered extractor supplier.
+     */
+    public Set<SourceKind> supportedSourceKinds() {
+        return entries.stream()
+                .map(Entry::sourceKind)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
 
 

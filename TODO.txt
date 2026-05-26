@@ -194,7 +194,11 @@
 
 - ⏳ Classifier calibration: upload real-world JARs and inspect extracted constants      P2j
   → Goal: discover constant patterns not covered by existing 6 classifiers, especially
-    CONSTANT_Dynamic (condy) bootstrap arguments emitted by non-javac compilers
+    CONSTANT_Dynamic (condy) cases emitted by non-javac compilers
+  → Important feedback to verify during calibration:
+      • A condy value is resolved by a bootstrap method at runtime and then cached per call site
+      • Some condy values are not safely reducible to a static literal
+      • Condy may be nested inside invokedynamic bootstrap data (including string concat recipes)
   → Candidate JARs (all on Maven Central):
       kotlin-stdlib.jar       — condy CONSTANT_VALUE bootstraps, lambda handles
       groovy-all.jar          — dynamic dispatch bootstrap args (Groovy 4.x)
@@ -212,13 +216,17 @@
 - ⏳ CONSTANT_Dynamic (condy) support in ConstantHandler                                P2k
   → Currently: ci.constantValue() instanceof DynamicConstantDesc flows into ObjectConstant
     and silently falls through AnalysisMerger — never emitted as a trackable usage
-  → Fix: in ConstantHandler, detect DynamicConstantDesc and attempt static resolution for
-    well-known bootstrap methods (ConstantBootstraps.getStaticFinal, .primitiveClass, .invoke,
-    Kotlin Reflection bootstrap, Groovy metaclass bootstrap)
-  → Resolved value: push NumericConstant / ObjectConstant as normal → flows into existing pipeline
-  → Unresolved BSM: push ObjectReference with BSM owner+name as the tag (intentional, not silent)
-  → Additionally: record BSM owner + name + static args as metadata on the emitted ConstantUsage
-    (ConstantUsage already has a metadata map) — this is the coupling signal for P4d
+  → Fix (plain English):
+      • Detect DynamicConstantDesc and try to resolve it only for known safe/deterministic bootstrap patterns
+      • If resolved, emit a normal constant (NumericConstant/ObjectConstant) so existing analysis still works
+      • If not resolved, do not drop it; emit a symbolic dynamic value (PHI-like placeholder) so it stays traceable
+  → Symbolic value key should include bootstrap owner + name + descriptor + static args (+ cp index if needed)
+    so each dynamic source is stable and uniquely identifiable
+  → Store metadata on ConstantUsage for both resolved and unresolved condy:
+      • bsmOwner, bsmName, bsmDescriptor, staticArgs
+      • resolutionStatus: RESOLVED or SYMBOLIC
+      • sourceContext: LDC or BOOTSTRAP_ARG
+  → This metadata is the coupling signal for P4d
   → Do after P2j calibration (findings inform which BSMs are worth pattern-matching)
 
 ## ════════════════════════════════════════════════════
@@ -284,16 +292,14 @@
   → Prerequisite: P2k (condy metadata) for BSM-level edges
 
 - ⏳ BootstrapMethods attribute scanning (condy-in-invokedynamic BSM args)              P4e
-  → Novel analysis: scan ClassModel.attributes() → BootstrapMethodsAttribute directly,
-    independent of method-body walking
-  → Each BootstrapMethodEntry.arguments() can contain DynamicConstantDesc entries —
-    condys nested as static arguments to invokedynamic call sites; these are never emitted
-    as standalone ldc instructions and are completely invisible to method-body analysis
-  → Emits new UsageType: CONDY_BOOTSTRAP_ARG — constant whose value is baked into a call
-    site recipe rather than loaded directly; especially relevant for Kotlin and Groovy
-  → For coupling analysis (P4d): two components sharing the same nested condy in their
-    bootstrap args are coupled at the call-site-recipe level — the deepest form of hidden
-    constant coupling detectable statically
+  → Scan ClassModel.attributes() → BootstrapMethodsAttribute directly, not only method bodies
+  → Reason: condy can be nested inside invokedynamic bootstrap arguments (including concat recipes),
+    and those values may never appear as standalone ldc instructions
+  → Emit new UsageType: CONDY_BOOTSTRAP_ARG for values found in bootstrap argument lists
+  → Use the same symbolic key model as P2k for unresolved nested condy so they can still be compared
+    across projects/versions
+  → For coupling analysis (P4d): if two components share the same nested condy symbolic key,
+    treat it as a strong hidden coupling signal at call-site recipe level
   → Prerequisite: P2k (establishes condy handling patterns); P2j (calibration identifies
     which JVM languages actually emit this structure)
 
