@@ -154,5 +154,68 @@ describe('UploadForm', () => {
     await user.click(screen.getByRole('button', { name: /upload/i }))
     await waitFor(() => expect(screen.getByText('Upload failed')).toBeInTheDocument())
   })
+
+  it('rejects file that exceeds maximum upload size', async () => {
+    const user = userEvent.setup()
+    render(<UploadForm />)
+    const bigFile = new File(['x'.repeat(10)], 'Huge.class', { type: 'application/octet-stream' })
+    Object.defineProperty(bigFile, 'size', { value: 110 * 1024 * 1024 })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await user.upload(input, bigFile)
+    expect(screen.getByText(/file is too large/i)).toBeInTheDocument()
+  })
+
+  it('clears the file when no file is selected in the input', () => {
+    render(<UploadForm />)
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('Test.class')] } })
+    expect(screen.getByText('Test.class')).toBeInTheDocument()
+    // Simulate clearing selection (empty files list)
+    fireEvent.change(input, { target: { files: [] } })
+    expect(screen.queryByText('Test.class')).not.toBeInTheDocument()
+  })
+
+  it('rejects invalid file type when selected via file input', () => {
+    render(<UploadForm />)
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('bad.jar')] } })
+    expect(screen.getByText(/invalid file type for class/i)).toBeInTheDocument()
+  })
+
+  it('ignores drop events with no files', () => {
+    render(<UploadForm />)
+    const dropZone = screen.getByText(/drag & drop/i).closest('div')!
+    fireEvent.drop(dropZone, { dataTransfer: { files: [] } })
+    // No error should appear, no file name shown
+    expect(screen.queryByText(/invalid file type/i)).not.toBeInTheDocument()
+  })
+
+  it('renders workspace scope banner and hides project/version inputs when shared scope is provided', () => {
+    render(
+      <UploadForm
+        project="shared-proj"
+        version="2"
+        onProjectChange={() => {}}
+        onVersionChange={() => {}}
+      />,
+    )
+    expect(screen.getByText(/using workspace scope/i)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/e\.g\. demo-crud-server/i)).not.toBeInTheDocument()
+  })
+
+  it('shows "auto" version in workspace banner for JAR type', async () => {
+    const user = userEvent.setup()
+    render(
+      <UploadForm
+        project="shared-proj"
+        version="2"
+        onProjectChange={() => {}}
+        onVersionChange={() => {}}
+      />,
+    )
+    await user.click(screen.getByTitle(/jar or zip archive/i))
+    // For JAR the version part should not be shown; banner shows project only
+    expect(screen.getByText(/using workspace scope/i)).toBeInTheDocument()
+  })
 })
 

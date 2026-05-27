@@ -44,6 +44,17 @@ describe('useBackendStatus', () => {
       })
       // No assertion needed; the test passes if no "act" warning / error is thrown.
     })
+
+    it('does not update state when probe fails after unmount', async () => {
+      mockedGetAuthStatus.mockRejectedValue(new TypeError('Failed to fetch'))
+      const { unmount, result } = renderHook(() => useBackendStatus())
+      unmount()
+      await act(async () => {
+        await Promise.resolve()
+      })
+      // State should still be the initial true since we cancelled before the rejection could update it
+      expect(result.current.backendAvailable).toBe(true)
+    })
   })
 
   // ── Browser online / offline events ────────────────────────────────────────
@@ -58,6 +69,17 @@ describe('useBackendStatus', () => {
       })
 
       expect(result.current.backendAvailable).toBe(false)
+    })
+
+    it('does not update state when offline event fires after unmount', async () => {
+      const { result, unmount } = renderHook(() => useBackendStatus())
+      await waitFor(() => expect(result.current.backendAvailable).toBe(true))
+      unmount()
+      act(() => {
+        window.dispatchEvent(new Event('offline'))
+      })
+      // State remains true — the cancelled flag prevents the update
+      expect(result.current.backendAvailable).toBe(true)
     })
 
     it('re-probes and marks available when the browser fires "online"', async () => {

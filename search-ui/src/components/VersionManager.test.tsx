@@ -189,5 +189,75 @@ describe('VersionManager', () => {
     await user.click(screen.getByRole('button', { name: /^delete$/i }))
     await waitFor(() => expect(screen.getByText('Version is finalized; cannot delete.')).toBeInTheDocument())
   })
+
+  it('shows fallback error for non-Error finalize rejection', async () => {
+    const user = userEvent.setup()
+    mockedGetVersion.mockResolvedValue(makeVersion())
+    mockedFinalize.mockRejectedValue('fail')
+    render(<VersionManager />)
+    await lookup()
+    await waitFor(() => screen.getByRole('button', { name: /close version/i }))
+    await user.click(screen.getByRole('button', { name: /close version/i }))
+    await waitFor(() => expect(screen.getByText('Finalize failed')).toBeInTheDocument())
+  })
+
+  it('shows fallback error for non-Error sync rejection', async () => {
+    const user = userEvent.setup()
+    mockedGetVersion.mockResolvedValue(makeVersion())
+    mockedSync.mockRejectedValue('fail')
+    render(<VersionManager />)
+    await lookup()
+    await waitFor(() => screen.getByRole('button', { name: /sync removals/i }))
+    await user.click(screen.getByRole('button', { name: /sync removals/i }))
+    await waitFor(() => expect(screen.getByText('Sync failed')).toBeInTheDocument())
+  })
+
+  it('shows fallback error for non-Error delete rejection', async () => {
+    const user = userEvent.setup()
+    mockedGetVersion.mockResolvedValue(makeVersion())
+    mockedDelete.mockRejectedValue('fail')
+    render(<VersionManager />)
+    await lookup()
+    await waitFor(() => screen.getByPlaceholderText(/BOOT-INF/i))
+    await user.type(screen.getByPlaceholderText(/BOOT-INF/i), 'com.Bar')
+    await user.click(screen.getByRole('button', { name: /^delete$/i }))
+    await waitFor(() => expect(screen.getByText('Delete failed')).toBeInTheDocument())
+  })
+
+  it('renders workspace scope banner when shared props are provided', async () => {
+    const onProjectChange = jest.fn()
+    const onVersionChange = jest.fn()
+    render(
+      <VersionManager
+        project="shared-proj"
+        version="3"
+        onProjectChange={onProjectChange}
+        onVersionChange={onVersionChange}
+      />,
+    )
+    expect(screen.getByText(/using workspace scope/i)).toBeInTheDocument()
+    expect(screen.getByText('shared-proj')).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+    // The standalone inputs should not be rendered
+    expect(screen.queryByPlaceholderText(/e\.g\. demo-crud-server/i)).not.toBeInTheDocument()
+  })
+
+  it('performs lookup with shared project/version scope', async () => {
+    mockedGetVersion.mockResolvedValue(makeVersion({ project: 'shared-proj', version: 3 }))
+    const onProjectChange = jest.fn()
+    const onVersionChange = jest.fn()
+    render(
+      <VersionManager
+        project="shared-proj"
+        version="3"
+        onProjectChange={onProjectChange}
+        onVersionChange={onVersionChange}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /lookup/i }))
+    await waitFor(() => expect(screen.getByText(/shared-proj v3/i)).toBeInTheDocument())
+    expect(mockedGetVersion).toHaveBeenCalledWith('shared-proj', 3, expect.anything())
+  })
 })
 
