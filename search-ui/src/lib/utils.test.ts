@@ -6,7 +6,8 @@ describe('cn', () => {
   })
 
   it('handles conditional classes (clsx falsy values)', () => {
-    expect(cn('foo', false && 'bar', 'baz')).toBe('foo baz')
+    const condition: boolean = false
+    expect(cn('foo', condition && 'bar', 'baz')).toBe('foo baz')
     expect(cn('foo', undefined, null, 'baz')).toBe('foo baz')
   })
 

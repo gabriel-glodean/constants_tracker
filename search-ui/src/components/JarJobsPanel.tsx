@@ -75,7 +75,7 @@ export function JarJobsPanel({ project, version, authFetch }: Props) {
     const id = setInterval(() => poll(true), POLL_MS)
     return () => clearInterval(id)
     // Re-run whenever scope or auth state changes.
-  }, [poll])
+  }, [poll, ready])
 
   if (!ready) return null
 
