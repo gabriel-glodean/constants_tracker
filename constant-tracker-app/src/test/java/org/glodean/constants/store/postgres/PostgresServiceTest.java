@@ -12,10 +12,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.CoreSemanticType;
@@ -337,13 +337,14 @@ class PostgresServiceTest {
         2L, 2L, "FIELD_STORE", "CORE", "CONFIGURATION_VALUE", null, null,
         "com/example/Greeter", "greet", "()V", 0, null, 0.8, "{}")));
 
-    Map<Object, Collection<UnitConstant.UsageType>> result =
-        service.find("proj:com/example/Greeter:1").block();
+    GetUnitConstantsReply reply = service.find("proj:com/example/Greeter:1").block();
 
-    assertThat(result).containsKey("Hello");
-    assertThat(result.get("Hello")).contains(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER);
-    assertThat(result).containsKey("World");
-    assertThat(result.get("World")).contains(UnitConstant.UsageType.FIELD_STORE);
+    assertThat(reply).isNotNull();
+    assertThat(reply.constants()).anyMatch(e -> e.value().equals("Hello")
+        && e.valueType().equals("String")
+        && e.usages().stream().anyMatch(u -> u.structuralType().equals("METHOD_INVOCATION_PARAMETER")));
+    assertThat(reply.constants()).anyMatch(e -> e.value().equals("World")
+        && e.usages().stream().anyMatch(u -> u.structuralType().equals("FIELD_STORE")));
   }
 
   @Test
@@ -361,12 +362,14 @@ class PostgresServiceTest {
         2L, 2L, "FIELD_STORE", "CORE", "CONFIGURATION_VALUE", null, null,
         "com/example/Greeter", "field", "Ljava/lang/String;", 0, null, 0.8, "{}")));
 
-    Map<Object, Collection<UnitConstant.UsageType>> result =
-        service.find("proj:com/example/Greeter:1").block();
+    GetUnitConstantsReply reply = service.find("proj:com/example/Greeter:1").block();
 
-    assertThat(result).hasSize(1);
-    assertThat(result.get("Hello"))
-        .contains(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER,
-            UnitConstant.UsageType.FIELD_STORE);
+    assertThat(reply).isNotNull();
+    assertThat(reply.constants()).hasSize(1);
+    GetUnitConstantsReply.ConstantEntry entry = reply.constants().get(0);
+    assertThat(entry.value()).isEqualTo("Hello");
+    assertThat(entry.usages())
+        .extracting(GetUnitConstantsReply.UsageInfo::structuralType)
+        .containsExactlyInAnyOrder("METHOD_INVOCATION_PARAMETER", "FIELD_STORE");
   }
 }

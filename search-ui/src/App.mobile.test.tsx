@@ -58,12 +58,15 @@ jest.mock('@/hooks/useAuth', () => ({
     isAuthenticated: mockIsAuthenticated,
     isLoading: false,
     authRequired: mockAuthRequired,
-    backendAvailable: mockBackendAvailable,
     canAccess: !mockAuthRequired || mockIsAuthenticated,
     signIn: mockSignIn,
     signOut: mockSignOut,
     authFetch: mockAuthFetch,
   }),
+}))
+
+jest.mock('@/hooks/useBackendStatus', () => ({
+  useBackendStatus: () => ({ backendAvailable: mockBackendAvailable }),
 }))
 
 jest.mock('@/hooks/useSearch', () => ({

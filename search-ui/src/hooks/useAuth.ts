@@ -9,7 +9,6 @@ export function useAuth() {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authRequired, setAuthRequired] = useState(true)
-  const [backendAvailable, setBackendAvailable] = useState(true)
 
   const isAuthenticated = accessToken !== null
   /** True when the user can access protected features (auth disabled OR signed in). */
@@ -20,11 +19,10 @@ export function useAuth() {
     const statusPromise = getAuthStatus()
       .then(({ enabled }) => {
         setAuthRequired(enabled)
-        setBackendAvailable(true)
       })
       .catch(() => {
-        setBackendAvailable(false)
-        // Keep authRequired as true so login UI still shows when connectivity returns.
+        // Backend unreachable — authRequired stays true so login UI shows when
+        // connectivity returns. Backend availability is tracked by useBackendStatus.
       })
 
     const stored = localStorage.getItem(REFRESH_TOKEN_KEY)
@@ -74,5 +72,5 @@ export function useAuth() {
     },
   }), [accessToken])
 
-  return { isAuthenticated, isLoading, authRequired, backendAvailable, canAccess, accessToken, signIn, signOut, authFetch }
+  return { isAuthenticated, isLoading, authRequired, canAccess, accessToken, signIn, signOut, authFetch }
 }

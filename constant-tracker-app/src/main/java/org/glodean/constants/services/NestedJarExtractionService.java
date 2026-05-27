@@ -122,7 +122,7 @@ public class NestedJarExtractionService {
 
                     // Nested JARs: each JAR produces one or more JarBatch elements.
                     Flux<JarBatch> nestedBatches =
-                            extractNestedJarsWithVersion(outerJarPath, project, version);
+                            extractNestedJarsWithVersion(outerJarPath, jarName, project, version);
 
                     Flux<JarBatch> allBatches = Flux.concat(outerBatches, nestedBatches);
 
@@ -153,63 +153,82 @@ public class NestedJarExtractionService {
         return projectVersionService
                 .getOrCreateOpenVersion(project)
                 .flatMapMany(versionEntity ->
-                        extractNestedJarsWithVersion(outerJarPath, project, versionEntity.version()));
+                        extractNestedJarsWithVersion(outerJarPath, null, project, versionEntity.version()));
     }
 
     /**
      * Core nested-JAR extraction logic, given an already-resolved {@code version}.
+     *
+     * @param trackingJarName the jar_name used in the fat_jar_extractions row, or {@code null}
+     *                        when called standalone (no tracking row exists)
      */
     private Flux<JarBatch> extractNestedJarsWithVersion(
-            Path outerJarPath, String project, int version) {
-        var jarName = outerJarPath.getFileName().toString();
+            Path outerJarPath, String trackingJarName, String project, int version) {
+        var jarName = trackingJarName != null ? trackingJarName : outerJarPath.getFileName().toString();
         return Flux.using(
                 () -> FileSystems.newFileSystem(outerJarPath, (ClassLoader) null),
                 outerFs ->
                         Mono.fromCallable(() -> listNestedJarEntries(outerFs))
                                 .subscribeOn(Schedulers.boundedElastic())
-                                .doOnNext(paths -> {
-                                    if (paths.isEmpty())
-                                        logger.atDebug().log("No nested JARs found in {}",
-                                                jarName);
-                                    else
-                                        logger.atInfo().log(
-                                                "Found {} nested JAR(s) in {} — extracting for project={} v{}",
-                                                paths.size(), jarName, project, version);
+                                .flatMap(paths -> {
+                                    if (paths.isEmpty()) {
+                                        logger.atDebug().log("No nested JARs found in {}", jarName);
+                                        return Mono.just(paths);
+                                    }
+                                    logger.atInfo().log(
+                                            "Found {} nested JAR(s) in {} — extracting for project={} v{}",
+                                            paths.size(), jarName, project, version);
+                                    if (trackingJarName == null) {
+                                        return Mono.just(paths);
+                                    }
+                                    return updateNestedTotal(project, version, jarName, paths.size())
+                                            .thenReturn(paths);
                                 })
                                 .flatMapMany(Flux::fromIterable)
-                                .concatMap(entryPath ->
-                                        Mono.fromCallable(() -> readCandidate(outerFs, entryPath))
-                                                .subscribeOn(Schedulers.boundedElastic())
-                                                .filterWhen(candidate ->
-                                                        descriptorRepository
-                                                                .findByProjectAndVersionAndContentHash(
-                                                                        project, version, candidate.hash())
-                                                                .hasElement()
-                                                                .map(exists -> {
-                                                                    if (exists) logger.atInfo().log(
-                                                                            "Skipping already-indexed nested JAR '{}' (hash={})",
-                                                                            candidate.jarName(), candidate.hash());
-                                                                    return !exists;
-                                                                })
-                                                )
-                                                .flatMapMany(candidate ->
-                                                        Mono.fromCallable(() -> extractFromCandidate(candidate))
-                                                                .subscribeOn(Schedulers.boundedElastic())
-                                                                .flatMapMany(result ->
-                                                                        // Split into batchSize chunks; tag first chunk.
-                                                                        Flux.fromIterable(new ArrayList<>(result.units()))
-                                                                                .buffer(batchSize)
-                                                                                .index()
-                                                                                .map(t -> new JarBatch(
-                                                                                        result.descriptor(), t.getT2(), t.getT1() == 0))
-                                                                )
-                                                )
-                                                .onErrorResume(e -> {
-                                                    logger.atWarn().withThrowable(e)
-                                                            .log("Failed to process nested JAR '{}' — skipping", entryPath);
-                                                    return Flux.empty();
-                                                })
-                                ),
+                                .concatMap(entryPath -> {
+                                    Flux<JarBatch> perJarBatches =
+                                            Mono.fromCallable(() -> readCandidate(outerFs, entryPath))
+                                                    .subscribeOn(Schedulers.boundedElastic())
+                                                    .filterWhen(candidate ->
+                                                            descriptorRepository
+                                                                    .findByProjectAndVersionAndContentHash(
+                                                                            project, version, candidate.hash())
+                                                                    .hasElement()
+                                                                    .map(exists -> {
+                                                                        if (exists) logger.atInfo().log(
+                                                                                "Skipping already-indexed nested JAR '{}' (hash={})",
+                                                                                candidate.jarName(), candidate.hash());
+                                                                        return !exists;
+                                                                    })
+                                                    )
+                                                    .flatMapMany(candidate ->
+                                                            Mono.fromCallable(() -> extractFromCandidate(candidate))
+                                                                    .subscribeOn(Schedulers.boundedElastic())
+                                                                    .flatMapMany(result ->
+                                                                            // Split into batchSize chunks; tag first chunk.
+                                                                            Flux.fromIterable(new ArrayList<>(result.units()))
+                                                                                    .buffer(batchSize)
+                                                                                    .index()
+                                                                                    .map(t -> new JarBatch(
+                                                                                            result.descriptor(), t.getT2(), t.getT1() == 0))
+                                                                    )
+                                                    );
+                                    return perJarBatches
+                                            .concatWith(
+                                                    (trackingJarName != null
+                                                            ? incrementNestedProcessed(project, version, jarName)
+                                                            : Mono.empty())
+                                                            .thenMany(Flux.empty())
+                                            )
+                                            .onErrorResume(e -> {
+                                                logger.atWarn().withThrowable(e)
+                                                        .log("Failed to process nested JAR '{}' — skipping", entryPath);
+                                                return (trackingJarName != null
+                                                        ? incrementNestedFailed(project, version, jarName)
+                                                        : Mono.empty())
+                                                        .thenMany(Flux.empty());
+                                            });
+                                }),
                 outerFs -> {
                     try {
                         outerFs.close();
@@ -217,6 +236,42 @@ public class NestedJarExtractionService {
                     }
                 }
         );
+    }
+
+    private Mono<Void> updateNestedTotal(String project, int version, String jarName, int total) {
+        return jarExtractionRepository
+                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .flatMap(existing -> jarExtractionRepository.save(
+                        existing.toBuilder()
+                                .nestedTotal(total)
+                                .lastUpdatedAt(OffsetDateTime.now())
+                                .build()
+                ))
+                .then();
+    }
+
+    private Mono<Void> incrementNestedProcessed(String project, int version, String jarName) {
+        return jarExtractionRepository
+                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .flatMap(existing -> jarExtractionRepository.save(
+                        existing.toBuilder()
+                                .nestedProcessed(existing.nestedProcessed() + 1)
+                                .lastUpdatedAt(OffsetDateTime.now())
+                                .build()
+                ))
+                .then();
+    }
+
+    private Mono<Void> incrementNestedFailed(String project, int version, String jarName) {
+        return jarExtractionRepository
+                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .flatMap(existing -> jarExtractionRepository.save(
+                        existing.toBuilder()
+                                .nestedFailed(existing.nestedFailed() + 1)
+                                .lastUpdatedAt(OffsetDateTime.now())
+                                .build()
+                ))
+                .then();
     }
 
     // -------------------------------------------------------------------------

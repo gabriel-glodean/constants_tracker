@@ -117,7 +117,7 @@ describe('JarJobsPanel', () => {
     await waitFor(() => expect(screen.getByText('COMPLETED')).toBeInTheDocument())
   })
 
-  it('stops polling when all jobs are terminal', async () => {
+  it('keeps polling even when all jobs are terminal (catches new uploads)', async () => {
     mockedGetJarJobs.mockResolvedValue([COMPLETED_JOB])
     render(<JarJobsPanel project="my-app" version="1" authFetch={jest.fn()} />)
     await waitFor(() => expect(screen.getByText('COMPLETED')).toBeInTheDocument())
@@ -125,8 +125,8 @@ describe('JarJobsPanel', () => {
     await act(async () => {
       jest.advanceTimersByTime(10_000)
     })
-    // Only the initial + schedule calls, not repeated polling
-    expect(mockedGetJarJobs).toHaveBeenCalledTimes(2)
+    // Initial fetch + 3 interval ticks (3s, 6s, 9s) = 4 total
+    expect(mockedGetJarJobs).toHaveBeenCalledTimes(4)
   })
 
   it('manual refresh button triggers re-fetch', async () => {

@@ -4,8 +4,7 @@ import static org.glodean.constants.store.Constants.DATA_LOCATION;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +22,7 @@ import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.dto.FuzzySearchHit;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.store.UnitConstantsStore;
 import io.micrometer.core.annotation.Timed;
@@ -172,7 +171,7 @@ public class SolrService implements UnitConstantsStore {
    */
   @Timed(value = "solr.find", description = "Time to find a unit in Solr")
   @Override
-  public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
+  public Mono<GetUnitConstantsReply> find(String key) {
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.set("q", "id:\"" + ClientUtils.escapeQueryChars(key) + "\"");
     params.set("fl", "constant_pairs_ss");
@@ -185,19 +184,17 @@ public class SolrService implements UnitConstantsStore {
   }
 
   /**
-   * Parses the raw Solr response into a constant-value-to-usage-type map.
+   * Parses the raw Solr response into a {@link GetUnitConstantsReply}.
    *
-   * <p>Expects the response to contain a {@code response} block with at least one document
-   * that has a {@code constant_pairs_ss} multi-value field. Each pair has the format
-   * {@code "<value>|<USAGE_TYPE>"}.
+   * <p>Each {@code constant_pairs_ss} entry has the format {@code "<value>|<USAGE_TYPE>"}.
+   * Semantic type and value type are not stored in Solr, so those fields will be {@code null}.
    *
    * @param list the raw Solr {@link NamedList} response
-    * @return map of constant value ({@link String}) to a set of {@link org.glodean.constants.model.UnitConstant.UsageType}
+   * @return a {@link GetUnitConstantsReply} built from the pair strings
    * @throws IllegalArgumentException if the response contains no matching documents
    */
-  private static Map<Object, Collection<UnitConstant.UsageType>> parsePairs(
-      NamedList<Object> list) {
-    Map<Object, Collection<UnitConstant.UsageType>> result = HashMap.newHashMap(10);
+  private static GetUnitConstantsReply parsePairs(NamedList<Object> list) {
+    Map<String, List<GetUnitConstantsReply.UsageInfo>> grouped = new LinkedHashMap<>();
     if (list.get("response") instanceof Collection<?> response) {
       if (response.isEmpty()) {
         throw new IllegalArgumentException("Unknown unit!");
@@ -211,11 +208,9 @@ public class SolrService implements UnitConstantsStore {
                 int sep = pairStr.lastIndexOf('|');
                 if (sep > 0) {
                   String value = pairStr.substring(0, sep);
-                   UnitConstant.UsageType type =
-                       UnitConstant.UsageType.valueOf(pairStr.substring(sep + 1));
-                   result
-                       .computeIfAbsent(value, _ -> EnumSet.noneOf(UnitConstant.UsageType.class))
-                       .add(type);
+                  String structuralType = pairStr.substring(sep + 1);
+                  grouped.computeIfAbsent(value, _ -> new ArrayList<>())
+                      .add(new GetUnitConstantsReply.UsageInfo(structuralType, null));
                 }
               }
             }
@@ -223,7 +218,10 @@ public class SolrService implements UnitConstantsStore {
         }
       }
     }
-    return result;
+    List<GetUnitConstantsReply.ConstantEntry> entries = grouped.entrySet().stream()
+        .map(e -> new GetUnitConstantsReply.ConstantEntry(e.getKey(), null, e.getValue()))
+        .toList();
+    return new GetUnitConstantsReply(entries);
   }
   
   /**

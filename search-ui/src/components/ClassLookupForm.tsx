@@ -1,12 +1,64 @@
-import { useMemo, useState, type EventHandler, type SyntheticEvent } from 'react'
-import { getClassConstants } from '@/api/classApi'
+import { useEffect, useMemo, useRef, useState, type EventHandler, type SyntheticEvent } from 'react'
+import { getClassConstants, type ConstantEntry } from '@/api/classApi'
+import { getMetadata, type MetadataOption, type MetadataResponse } from '@/api/metadataApi'
 import { getUnits, type UnitGroup } from '@/api/unitsApi'
-import { AlertCircle, FolderTree, FileCode2 } from 'lucide-react'
+import { AlertCircle, ChevronDown, FolderTree, FileCode2, SlidersHorizontal } from 'lucide-react'
 
 interface ClassLookupFormProps {
   project?: string
   version?: string
   fetcher?: typeof fetch
+}
+
+interface AppliedFilters {
+  types: string[]
+  semanticTypes: string[]
+  usageTypes: string[]
+}
+
+interface MetadataMultiSelectGroupProps {
+  label: string
+  options: MetadataOption[]
+  selected: string[]
+  onToggle: (value: string) => void
+}
+
+function MetadataMultiSelectGroup({ label, options, selected, onToggle }: MetadataMultiSelectGroupProps) {
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="max-h-48 overflow-auto space-y-1 rounded-lg border border-border bg-background/40 p-2">
+        {options.length > 0 ? options.map(option => {
+          const isChecked = selected.includes(option.name)
+          return (
+            <label
+              key={option.name}
+              className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/60"
+            >
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => onToggle(option.name)}
+                className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-ring"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-foreground">
+                  {option.displayName || option.name}
+                </span>
+                {option.displayName && option.displayName !== option.name && (
+                  <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                    {option.name}
+                  </span>
+                )}
+              </span>
+            </label>
+          )
+        }) : (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">No {label.toLowerCase()} metadata available.</div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export function ClassLookupForm({ project: sharedProject, version: sharedVersion, fetcher }: ClassLookupFormProps) {
@@ -17,30 +69,157 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
   const [project, setProject] = useState('')
   const [version, setVersion] = useState('')
   const [groups, setGroups] = useState<UnitGroup[]>([])
+  const [hasLoadedUnits, setHasLoadedUnits] = useState(false)
+  const [matchingUnits, setMatchingUnits] = useState<Set<string> | null>(null)
+  const [applyingFilters, setApplyingFilters] = useState(false)
+  const [filtersNotice, setFiltersNotice] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
-  const [result, setResult] = useState<{[k:string]: string[]} | null>(null)
+  const [result, setResult] = useState<ConstantEntry[] | null>(null)
+  const [metadata, setMetadata] = useState<MetadataResponse | null>(null)
+  const [loadingMetadata, setLoadingMetadata] = useState(false)
+  const [metadataError, setMetadataError] = useState('')
+  const lastScopeRef = useRef<string>('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [selectedSemanticTypes, setSelectedSemanticTypes] = useState<string[]>([])
+  const [selectedUsageTypes, setSelectedUsageTypes] = useState<string[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingUnits, setLoadingUnits] = useState(false)
+  const classConstantsCacheRef = useRef<Map<string, ConstantEntry[]>>(new Map())
+
+  useEffect(() => {
+    let alive = true
+
+    async function loadMetadata() {
+      setLoadingMetadata(true)
+      setMetadataError('')
+      try {
+        const data = await getMetadata({ fetcher })
+        if (alive) setMetadata(data)
+      } catch (err) {
+        if (alive) setMetadataError(err instanceof Error ? err.message : 'Metadata lookup failed')
+      } finally {
+        if (alive) setLoadingMetadata(false)
+      }
+    }
+
+    void loadMetadata()
+
+    return () => {
+      alive = false
+    }
+  }, [fetcher])
 
   const activeProject = (sharedProject ?? project).trim()
   const activeVersion = Number(sharedVersion ?? version)
   const hasScope = !!activeProject && Number.isFinite(activeVersion) && activeVersion > 0
 
+  const filterSummary = [
+    selectedTypes.length,
+    selectedSemanticTypes.length,
+    selectedUsageTypes.length,
+  ].reduce((sum, count) => sum + count, 0)
+
+  const metadataStatus = loadingMetadata
+    ? 'Loading metadata filters'
+    : metadata
+      ? 'Metadata filters loaded'
+      : metadataError
+        ? 'Metadata filters unavailable'
+        : 'Metadata filters idle'
+
   const filteredGroups = useMemo(() => {
     const normalized = filter.trim().toLowerCase()
-    if (!normalized) return groups
-    return groups
+    const metadataFiltered = matchingUnits == null
+      ? groups
+      : groups
+        .map(group => ({
+          ...group,
+          units: group.units.filter(unit => matchingUnits.has(unit.name)),
+        }))
+        .filter(group => group.units.length > 0)
+
+    if (!normalized) return metadataFiltered
+    return metadataFiltered
       .map(group => ({
         ...group,
         units: group.units.filter(u => u.name.toLowerCase().includes(normalized)),
       }))
       .filter(group => group.units.length > 0)
-  }, [groups, filter])
+  }, [groups, filter, matchingUnits])
 
-  const handleSubmit: EventHandler<SyntheticEvent<HTMLFormElement>> = async e => {
-    e.preventDefault()
+  async function loadUnitConstants(unitName: string): Promise<ConstantEntry[]> {
+    const cached = classConstantsCacheRef.current.get(unitName)
+    if (cached) return cached
+
+    const data = await getClassConstants({
+      project: activeProject,
+      className: unitName,
+      version: activeVersion,
+    }, { fetcher })
+
+    classConstantsCacheRef.current.set(unitName, data.constants)
+    return data.constants
+  }
+
+  function constantMatchesFilters(entry: ConstantEntry, filters: AppliedFilters): boolean {
+    const structuralTypes = entry.usages.map(u => u.structuralType)
+    const usageMatches = filters.usageTypes.length === 0 || structuralTypes.some(t => filters.usageTypes.includes(t))
+    if (!usageMatches) return false
+
+    // valueType is always provided by the backend
+    const typeMatches = filters.types.length === 0 || (!!entry.valueType && filters.types.includes(entry.valueType))
+    if (!typeMatches) return false
+
+    const semanticNames = entry.usages.flatMap(u => u.semanticType ? [u.semanticType.name] : [])
+    return filters.semanticTypes.length === 0
+      || semanticNames.some(n => filters.semanticTypes.includes(n))
+  }
+
+  async function applyMetadataFilters(filtersToApply: AppliedFilters, sourceGroups: UnitGroup[] = groups) {
+    setFiltersNotice('')
+
+    const hasAnyFilter =
+      filtersToApply.types.length > 0 ||
+      filtersToApply.semanticTypes.length > 0 ||
+      filtersToApply.usageTypes.length > 0
+
+    if (!hasAnyFilter) {
+      setMatchingUnits(null)
+      return
+    }
+
+    setApplyingFilters(true)
+    try {
+      const allUnits = sourceGroups.flatMap(group => group.units)
+      const matchCandidates = await Promise.all(
+        allUnits.map(async unit => {
+          try {
+            const constants = await loadUnitConstants(unit.name)
+            const hasMatch = constants.some(entry => constantMatchesFilters(entry, filtersToApply))
+            return hasMatch ? unit.name : null
+          } catch {
+            return null
+          }
+        }),
+      )
+      setMatchingUnits(new Set(matchCandidates.filter((value): value is string => value != null)))
+    } finally {
+      setApplyingFilters(false)
+    }
+  }
+
+  function toggleValue(selectedValues: string[], value: string, setSelectedValues: (values: string[]) => void) {
+    setSelectedValues(
+      selectedValues.includes(value)
+        ? selectedValues.filter(item => item !== value)
+        : [...selectedValues, value],
+    )
+  }
+
+  async function loadUnits() {
     setError('')
     setLoadingUnits(true)
     setResult(null)
@@ -53,13 +232,60 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
     }
 
     try {
-      const data = await getUnits(activeProject, activeVersion, { fetcher })
+      const data = await getUnits(activeProject, activeVersion, {
+        fetcher,
+        filters: {
+          types: selectedTypes,
+          semanticTypes: selectedSemanticTypes,
+          usageTypes: selectedUsageTypes,
+        },
+      })
+
+      // Bust the constants cache only when the project/version scope changes.
+      const scopeKey = `${activeProject}@${activeVersion}`
+      if (lastScopeRef.current !== scopeKey) {
+        classConstantsCacheRef.current.clear()
+        lastScopeRef.current = scopeKey
+      }
+
       setGroups(data)
+      // Reset the filter view — the user can explicitly re-apply filters via the button.
+      setMatchingUnits(null)
+      setHasLoadedUnits(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unit lookup failed')
     } finally {
+      setHasLoadedUnits(true)
       setLoadingUnits(false)
     }
+  }
+
+  // Stable color classes per value type — Tailwind classes must be written in full so the
+  // purger keeps them. Fallback for unknown types uses a neutral style.
+  const VALUE_TYPE_CLASSES: Record<string, string> = {
+    String:          'bg-blue-500/15 text-blue-700 border-blue-400/30 dark:text-blue-300',
+    Character:       'bg-sky-500/15 text-sky-700 border-sky-400/30 dark:text-sky-300',
+    Integer:         'bg-emerald-500/15 text-emerald-700 border-emerald-400/30 dark:text-emerald-300',
+    Long:            'bg-emerald-500/15 text-emerald-700 border-emerald-400/30 dark:text-emerald-300',
+    Short:           'bg-emerald-500/15 text-emerald-700 border-emerald-400/30 dark:text-emerald-300',
+    Byte:            'bg-emerald-500/15 text-emerald-700 border-emerald-400/30 dark:text-emerald-300',
+    Float:           'bg-cyan-500/15 text-cyan-700 border-cyan-400/30 dark:text-cyan-300',
+    Double:          'bg-cyan-500/15 text-cyan-700 border-cyan-400/30 dark:text-cyan-300',
+    Boolean:         'bg-violet-500/15 text-violet-700 border-violet-400/30 dark:text-violet-300',
+    Null:            'bg-zinc-500/15 text-zinc-500 border-zinc-400/30 dark:text-zinc-400',
+    MethodHandle:    'bg-orange-500/15 text-orange-700 border-orange-400/30 dark:text-orange-300',
+    DynamicConstant: 'bg-rose-500/15 text-rose-700 border-rose-400/30 dark:text-rose-300',
+    ClassDescriptor: 'bg-indigo-500/15 text-indigo-700 border-indigo-400/30 dark:text-indigo-300',
+    ArrayDesc:       'bg-purple-500/15 text-purple-700 border-purple-400/30 dark:text-purple-300',
+  }
+
+  function valueTypeBadgeClasses(valueType: string): string {
+    return VALUE_TYPE_CLASSES[valueType]
+      ?? 'bg-muted/50 text-muted-foreground border-border'
+  }
+
+  const handleSubmit: EventHandler<SyntheticEvent<HTMLFormElement>> = async e => {    e.preventDefault()
+    await loadUnits()
   }
 
   async function lookupUnit(unitName: string) {
@@ -68,12 +294,8 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
     setResult(null)
     setSelectedUnit(unitName)
     try {
-      const data = await getClassConstants({
-        project: activeProject,
-        className: unitName,
-        version: activeVersion,
-      }, { fetcher })
-      setResult(data.constants)
+      const constants = await loadUnitConstants(unitName)
+      setResult(constants)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lookup failed')
     } finally {
@@ -111,15 +333,84 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
           {loadingUnits ? <span className="animate-spin h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"/> : <FolderTree className="h-5 w-5"/>}
           Load Units
         </button>
+
+        <span className="sr-only" aria-live="polite">{metadataStatus}</span>
+
       </form>
 
-      {groups.length > 0 && (
+      {hasLoadedUnits && (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(300px,1.2fr)_2fr] gap-4">
           <div className="border border-border rounded-xl bg-card/50 p-3 space-y-3">
             <div className="space-y-1">
               <label htmlFor={filterInputId} className="text-xs font-medium text-muted-foreground">Filter units</label>
               <input id={filterInputId} type="text" placeholder="Type class or file name" value={filter} onChange={e => setFilter(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-input bg-secondary/50 text-sm" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedFilters(value => !value)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {showAdvancedFilters ? 'Hide' : 'Show'} advanced filters
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+                </button>
+                {filterSummary > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {filterSummary} metadata filter{filterSummary === 1 ? '' : 's'} selected
+                  </span>
+                )}
+              </div>
+              {showAdvancedFilters && (
+                <div className="space-y-3 rounded-lg border border-border bg-card/50 p-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                  {loadingMetadata && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+                      Loading metadata filters…
+                    </div>
+                  )}
+                  {metadataError && <div className="text-xs text-destructive">{metadataError}</div>}
+                  {metadata && (
+                    <div className="grid grid-cols-1 gap-3">
+                      <MetadataMultiSelectGroup
+                        label="Type"
+                        options={metadata.types}
+                        selected={selectedTypes}
+                        onToggle={value => toggleValue(selectedTypes, value, setSelectedTypes)}
+                      />
+                      <MetadataMultiSelectGroup
+                        label="Semantic type"
+                        options={metadata.semanticTypes}
+                        selected={selectedSemanticTypes}
+                        onToggle={value => toggleValue(selectedSemanticTypes, value, setSelectedSemanticTypes)}
+                      />
+                      <MetadataMultiSelectGroup
+                        label="Usage type"
+                        options={metadata.usageTypes}
+                        selected={selectedUsageTypes}
+                        onToggle={value => toggleValue(selectedUsageTypes, value, setSelectedUsageTypes)}
+                      />
+                    </div>
+                  )}
+                  {filtersNotice && <div className="text-xs text-muted-foreground">{filtersNotice}</div>}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void applyMetadataFilters({
+                        types: selectedTypes,
+                        semanticTypes: selectedSemanticTypes,
+                        usageTypes: selectedUsageTypes,
+                      })
+                    }}
+                    disabled={loadingUnits || applyingFilters || !hasScope || !hasLoadedUnits}
+                    className="w-full rounded-lg border border-input bg-secondary/50 px-3 py-2 text-xs font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {applyingFilters ? 'Applying filters…' : 'Apply filters'}
+                  </button>
+                </div>
+              )}
             </div>
             <div className="max-h-[28rem] overflow-auto space-y-3">
               {filteredGroups.map(group => (
@@ -159,13 +450,39 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
               </div>
             )}
             {result && (
-              <ul className="space-y-2">
-                {Object.entries(result).map(([constant, usages]) => (
-                  <li key={constant} className="flex flex-col gap-1">
-                    <span className="font-mono text-xs bg-muted/40 rounded px-2 py-1 text-foreground break-all">{constant}</span>
-                    <span className="text-xs text-muted-foreground">{usages.join(', ')}</span>
+              <ul className="space-y-3">
+                {result.map((entry, idx) => (
+                  <li key={`${entry.value}-${idx}`} className="flex flex-col gap-1.5 border border-border rounded-lg p-2.5 bg-muted/20">
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <span className="font-mono text-xs bg-muted/40 rounded px-2 py-1 text-foreground break-all flex-1">{entry.value}</span>
+                      {entry.valueType && (
+                        <span className={`shrink-0 text-[10px] font-medium rounded-full px-2 py-0.5 border ${valueTypeBadgeClasses(entry.valueType)}`}>
+                          {entry.valueType}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {entry.usages.map((usage, uidx) => (
+                        <span key={uidx} className="flex items-center gap-1">
+                          <span className="text-[10px] rounded bg-secondary px-1.5 py-0.5 text-muted-foreground font-mono">
+                            {usage.structuralType}
+                          </span>
+                          {usage.semanticType && (
+                            <span
+                              className="text-[10px] rounded bg-accent px-1.5 py-0.5 text-accent-foreground"
+                              title={usage.semanticType.description ?? undefined}
+                            >
+                              {usage.semanticType.displayName ?? usage.semanticType.name}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
                   </li>
                 ))}
+                {result.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No constants found.</p>
+                )}
               </ul>
             )}
           </div>

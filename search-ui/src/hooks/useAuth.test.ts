@@ -25,12 +25,11 @@ beforeEach(() => {
 })
 
 describe('useAuth', () => {
-  describe('backend status', () => {
-    it('sets backendAvailable=true and authRequired=true when /auth/status returns enabled:true', async () => {
+  describe('auth status probe', () => {
+    it('sets authRequired=true when /auth/status returns enabled:true', async () => {
       mockedGetAuthStatus.mockResolvedValue({ enabled: true })
       const { result } = renderHook(() => useAuth())
       await waitFor(() => expect(result.current.isLoading).toBe(false))
-      expect(result.current.backendAvailable).toBe(true)
       expect(result.current.authRequired).toBe(true)
     })
 
@@ -42,17 +41,17 @@ describe('useAuth', () => {
       expect(result.current.canAccess).toBe(true)
     })
 
-    it('sets backendAvailable=false when /auth/status fetch fails', async () => {
+    it('keeps authRequired=true (default) when /auth/status fetch fails', async () => {
       mockedGetAuthStatus.mockRejectedValue(new TypeError('Failed to fetch'))
       const { result } = renderHook(() => useAuth())
       await waitFor(() => expect(result.current.isLoading).toBe(false))
-      expect(result.current.backendAvailable).toBe(false)
+      expect(result.current.authRequired).toBe(true)
     })
   })
 
   describe('initial load — no stored refresh token', () => {
     it('starts unauthenticated when localStorage is empty', async () => {
-      mockedRefresh.mockResolvedValue({ accessToken: 'at' })
+      mockedRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' })
       const { result } = renderHook(() => useAuth())
       await waitFor(() => expect(result.current.isLoading).toBe(false))
       expect(result.current.isAuthenticated).toBe(false)
@@ -256,7 +255,7 @@ describe('useAuth', () => {
         }
       })
 
-      expect(caughtError?.message).toBe('Session expired. Please sign in again.')
+      expect((caughtError as Error | null)?.message).toBe('Session expired. Please sign in again.')
       expect(result.current.isAuthenticated).toBe(false)
       expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull()
     })

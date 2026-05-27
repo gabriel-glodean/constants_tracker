@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { RefreshCw, CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react'
 import { getJarJobs, type JarJob } from '@/api/jarJobsApi'
 
@@ -42,7 +42,6 @@ export function JarJobsPanel({ project, version, authFetch }: Props) {
   const [jobs, setJobs] = useState<JarJob[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const versionNum = parseInt(version, 10)
   const ready = project.trim().length > 0 && !isNaN(versionNum) && versionNum > 0
@@ -70,23 +69,11 @@ export function JarJobsPanel({ project, version, authFetch }: Props) {
     // Initial fetch
     poll()
 
-    const schedule = () => {
-      timerRef.current = setTimeout(async () => {
-        const latest = await getJarJobs(project.trim(), versionNum, undefined, { fetcher: authFetch }).catch(() => null)
-        if (latest !== null) {
-          setJobs(latest)
-          setError(null)
-          const hasRunning = latest.some(j => j.status === 'STARTED')
-          if (hasRunning) schedule()
-        }
-      }, POLL_MS)
-    }
-
-    schedule()
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
+    // Always keep polling at a fixed interval while this panel is mounted.
+    // The previous setTimeout-with-conditional-reschedule stopped permanently
+    // when no jobs were in STARTED state, missing new uploads.
+    const id = setInterval(() => poll(true), POLL_MS)
+    return () => clearInterval(id)
     // Re-run whenever scope or auth state changes.
   }, [poll])
 

@@ -8,9 +8,8 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.EnumSet;
-import java.util.Map;
-import org.glodean.constants.model.UnitConstant;
+import java.util.List;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.UnitConstantsStore;
@@ -89,11 +88,10 @@ class ClassBinariesControllerTest {
   @Test
   void classConstants() {
     when(storage.find(anyString()))
-        .thenReturn(
-            Mono.just(
-                Map.of(
-                    "1",
-                    EnumSet.of(UnitConstant.UsageType.ARITHMETIC_OPERAND))));
+        .thenReturn(Mono.just(new GetUnitConstantsReply(List.of(
+            new GetUnitConstantsReply.ConstantEntry(
+                "1", "Integer",
+                List.of(new GetUnitConstantsReply.UsageInfo("ARITHMETIC_OPERAND", null)))))));
     web.get()
         .uri(GET_URL)
         .exchange()

@@ -181,7 +181,6 @@ public class ClassBinariesController {
             @Positive @RequestParam("version") int version) {
         String key = project.strip() + ":" + className.strip() + ":" + version;
         return storage.find(key)
-                .map(GetUnitConstantsReply::new)
                 .map(ResponseEntity::ok)
                 // "Unknown unit" from the store is semantically 404, not 400
                 .onErrorMap(IllegalArgumentException.class,

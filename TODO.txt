@@ -137,30 +137,37 @@
   → Do in same sprint as P0e
 
 - ⏳ Search-UI error boundary + offline detection (React ErrorBoundary + SW cache)      P1b
+  → ✅ PARTIAL (May 2026): offline detection done
+      • useBackendStatus.ts hook probes /auth/status on mount + every 15 s; also
+        reacts to browser's 'offline'/'online' events immediately
+      • App.tsx shows a "Backend unavailable" banner (ServerCrash icon) when hook returns false
+      • useBackendStatus.test.ts covers probe success/failure, offline/online events, cleanup
+  → ⏳ Remaining:
+      • React ErrorBoundary class component (catches render-phase exceptions in the React tree)
+      • Service Worker + cache strategy (offline shell / stale-while-revalidate)
+
 - ⏳ Class Lookup UX upgrade: collapsible unit tree + constant-type filtering            P1d
-  → Problem: current Class Lookup panel can become noisy on large projects; users cannot
-    quickly narrow units by semantic constant types (e.g., SQL, URL, FILE_PATH)
-  → Backend/API:
-      • Extend GET /units response (or add a companion endpoint) to include per-unit
-        semantic-type counts so filtering does not require opening each unit
-      • Keep payload bounded (only non-zero type buckets, optional flag to include type stats)
-      • Add contract tests for empty/large projects and unknown type handling
-  → UI/UX (`ClassLookupForm`):
-      • Make each `unitPath` group collapsible (default expanded for small result sets,
-        collapsed heuristic for large sets)
-      • Add "Expand all / Collapse all" controls
-      • Add semantic-type filter control (multi-select chips or checklist)
-      • Combine text filter + type filter with AND semantics
-      • Show active filter summary and a one-click reset
+  → ✅ PARTIAL (May 2026): metadata API + filter panel done
+      • GET /metadata endpoint (MetadataController) returns all constant types, usage types,
+        and semantic types as MetadataResponse — consumed by metadataApi.ts on mount
+      • ClassLookupForm shows an "advanced filters" panel (multi-select checkboxes) for
+        types, semantic types, and usage types; filter summary shows count of active selections
+      • "Apply filters" fetches constants for every unit in the scope, applies AND semantics
+        client-side across structural type + value type + semantic type; non-matching units
+        are hidden; constants cache keyed by project@version to avoid redundant fetches
+      • Text filter over unit names combined with metadata filter (AND)
+      • unitsApi.ts passes type/semanticType/usageType query params to /units (UI plumbing
+        is in place, but UnitListingController does not yet consume these params — see below)
+  → ⏳ Remaining:
+      • UnitListingController.listUnits(): accept optional type/semanticType/usageType query
+        params and push the filter into UnitSnapshotRepository so large projects don't send
+        all units to the client before filtering (currently applied client-side only)
+      • Collapsible unitPath groups (per group expand/collapse toggle)
+      • "Expand all / Collapse all" global controls
+      • One-click reset for active filters
       • Optional: highlight per-unit matching type counts in the unit row
-  → Testing:
-      • Jest tests for collapse state toggling, expand/collapse-all controls,
-        type filter behavior, and combined text+type filtering
-      • API/controller tests for semantic-type aggregation payload shape
-  → Acceptance criteria:
-      • User can collapse/expand groups without losing selected unit
-      • User can filter visible units by one or more semantic types before opening a unit
-      • Filtering remains responsive on large unit lists
+      • Jest tests for collapse state, expand/collapse-all, reset
+      • Backend contract tests for filtered /units response shape
 
 ## ════════════════════════════════════════════════════
 ## V2B — Operations
@@ -169,11 +176,14 @@
 - ⏳ Performance docs + JMH benchmarks (PERFORMANCE.md)                                 P2a
 - ⏳ Integration tests: failure scenarios + concurrency (Testcontainers chaos)           P2b
 - ⏳ R2DBC connection pool config + Flyway validation documented in application.yaml     P2c
-  → spring.r2dbc.pool.* values not set; defaults may be mismatched to load
-- ⏳ Secrets hygiene (.env in .gitignore, vars documented in README)                    P2d
+  → ✅ DONE (May 2026): spring.r2dbc.pool.max-size=20, pool.initial-size=5 configured in
+    application.yaml; comment explains the 20-connection headroom for concurrent class stores.
+    Flyway JDBC coords already present and validated at startup via spring.flyway.* block.
+- ✅ Secrets hygiene (.env in .gitignore, vars documented in README)                    P2d
   → .env in .gitignore ✅, .env.example ✅, CONSTANTS_AUTH_JWT_SECRET added to .env.example ✅
   → README build section now lists all three :check tasks ✅
-  → Remaining: verify terraform.tfvars is git-ignored, audit k8s secrets.yml for plain-text values
+  → terraform.tfvars: git-ignored (.gitignore line 61) ✅; terraform.tfvars.example tracked ✅
+  → k8s/secrets.yml: all values are <your-base64-encoded-*> placeholders — no real secrets ✅
 - ⏳ Monitoring: React metrics widget (poll /actuator/metrics) + Axiom OTLP traces      P2e
 
 ## ════════════════════════════════════════════════════
@@ -214,20 +224,28 @@
     for patterns found in ≥ 2 libraries; discard one-offs
 
 - ⏳ CONSTANT_Dynamic (condy) support in ConstantHandler                                P2k
-  → Currently: ci.constantValue() instanceof DynamicConstantDesc flows into ObjectConstant
-    and silently falls through AnalysisMerger — never emitted as a trackable usage
-  → Fix (plain English):
-      • Detect DynamicConstantDesc and try to resolve it only for known safe/deterministic bootstrap patterns
-      • If resolved, emit a normal constant (NumericConstant/ObjectConstant) so existing analysis still works
-      • If not resolved, do not drop it; emit a symbolic dynamic value (PHI-like placeholder) so it stays traceable
-  → Symbolic value key should include bootstrap owner + name + descriptor + static args (+ cp index if needed)
-    so each dynamic source is stable and uniquely identifiable
-  → Store metadata on ConstantUsage for both resolved and unresolved condy:
-      • bsmOwner, bsmName, bsmDescriptor, staticArgs
-      • resolutionStatus: RESOLVED or SYMBOLIC
-      • sourceContext: LDC or BOOTSTRAP_ARG
-  → This metadata is the coupling signal for P4d
-  → Do after P2j calibration (findings inform which BSMs are worth pattern-matching)
+  → ✅ DONE (May 2026) — implemented, diverged from spec (no resolutionStatus/sourceContext
+    on ConstantUsage; metadata is embedded in the storage value instead):
+      • ConstantValueNormalizer.normalize(): converts DynamicConstantDesc → DynamicConstantValue,
+        MethodHandleDesc → MethodHandleConstantValue, ClassDesc → ClassDescConstantValue
+      • StructuredConstantValue sealed interface (permits the three above) — carries
+        constantValueType(), storageValue(), attributes() — stored/searched by storageValue()
+      • DynamicConstantValue.storageValue() = "condy:name:type@bsm(args)" — stable, uniquely
+        identifies each dynamic source across projects/versions (coupling signal for P4d)
+      • DynamicConstantValue.attributes() returns bootstrapMethod + bootstrapArgs as a
+        machine-readable map; nested DynamicConstantDesc in bootstrap args are rendered
+        recursively so nothing is silently dropped
+      • ConstantHandler now calls ConstantValueNormalizer.normalize() before deciding
+        NumericConstant vs ObjectConstant — DynamicConstantDesc no longer falls through
+      • PostgresService.resolveValueType() returns DynamicConstantValue.constantValueType()
+        ("DynamicConstant") so the UI can badge these constants distinctly
+      • Tests: ConstantValueNormalizerTest, StructuredConstantValueTest
+  → ⏳ Gap vs. original spec:
+      • resolutionStatus (RESOLVED / SYMBOLIC) not stored on ConstantUsage — all condy
+        values are treated uniformly as their storageValue string
+      • No attempt to resolve "safe" bootstrap patterns to a normal literal
+      • BSM metadata is not a first-class field on ConstantUsage (it lives inside the value
+        string and attributes map, not directly queryable via SQL)
 
 ## ════════════════════════════════════════════════════
 ## V2C — Feature Depth
@@ -347,24 +365,31 @@
 ##       P0d: HttpJdkSolrClient timeout + Resilience4j CB           ~1.5 d /  2 d
 ##       P1c: MdcContextLifter + traceId in log4j2.xml              ~0.5 d /  0.5 d
 ##
-##  6   P1b  (UI error boundary + SW offline)
+##  6   P1b (finish) + P1d (finish)  (error boundary/SW + Class Lookup collapsible)
 ##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1
-##       React ErrorBoundary                                         ~0.5 d /  0.5 d
-##       Service Worker + cache strategy                             ~1.5 d /  2 d
+##       P1b: React ErrorBoundary + Service Worker cache strategy    ~1 d   /  1.5 d
+##            (offline banner + useBackendStatus done May 2026)
+##       P1d: UnitListingController filter params + collapsible tree ~1 d   /  1.5 d
+##            + expand/collapse-all + one-click reset + backend tests
+##            (metadata API, filter panel, text+type AND done May 2026)
 ##
 ##  7   P2j + P2k  (calibration + condy support)  ← immediately after all P1 tasks done
 ##                               1–2 weekends (~3 d)  3 days        Jun W3        / Jun W2
 ##       P2j: upload kotlin-stdlib, groovy-all, hibernate-core      ~0.5 d /  0.5 d
 ##            → calibration is read-only; findings directly feed P2k BSM pattern list
-##       P2k: ConstantHandler condy + BSM metadata on ConstantUsage ~1.5 d /  2 d
-##            → informed by P2j calibration findings
+##       P2k: ✅ ConstantHandler + StructuredConstantValue hierarchy (DynamicConstantValue,
+##            MethodHandleConstantValue, ClassDescConstantValue) — done May 2026
+##            → diverged from spec: no resolutionStatus/sourceContext on ConstantUsage;
+##              BSM metadata embedded in storageValue string and attributes map instead
+##            → gap: no attempt to resolve "safe" BSMs to literals; P2j calibration
+##              findings should inform whether that step is worth adding
 ##
 ##  8   P2a + P2b + P2c + P2d + P2e + P2g + P2h  (ops + code quality)
 ##                               3–4 weekends (~7 d)  9 days        Jun–Jul 2026  / Jun W3–Jul W1
 ##       P2a: PERFORMANCE.md + JMH benchmarks                       ~1.5 d /  2 d
 ##       P2b: failure/concurrency integration tests (Testcontainers) ~2 d   /  3 d
-##       P2c: R2DBC pool sizing + Flyway validation                  ~1 d   /  1 d
-##       P2d: tfvars/k8s secrets audit + README cleanup             ~0.5 d /  0.5 d
+##       P2c: ✅ R2DBC pool sizing (max-size=20, initial-size=5) + Flyway validation — done May 2026
+##       P2d: ✅ tfvars git-ignored, k8s secrets.yml placeholders only — done May 2026
 ##       P2e: metrics widget (React) + Axiom OTLP traces            ~2 d   /  2 d
 ##       P2g: ✅ @Timed fix in ConcreteExtractionService               done
 ##       P2h: consistent Solr response parsing                      ~0.5 d /  0.5 d
@@ -399,6 +424,11 @@
 ##   Added: P0f (JAR extraction status endpoint + UI), P3e (embedded JARs), P3f (in-JAR config),
 ##          P4d (coupling), P4e (BSM scan)
 ##   Done early: P3e + P3f completed in sprint 4 (May 2026) — ~4 d saved from sprint 9
+##   Done (May 2026, uncommitted): P2c (R2DBC pool config), P2d (tfvars git-ignored + k8s
+##          secrets.yml audit), P2k (condy StructuredConstantValue hierarchy — diverges from
+##          original spec; see P2k note above)
+##   Partial (May 2026, uncommitted): P1b (offline detection done; ErrorBoundary + SW remaining),
+##          P1d (filter panel + metadata API done; collapsible tree + backend params remaining)
 ##   Reordered: P2j + P2k pulled into sprint 7 (immediately after all P1 tasks);
 ##              P0d decoupled into sprint 5; ops bundle (P2a–P2h) pushed to sprint 8
 ## ─────────────────────────────────────────────────────────────────────────────────────

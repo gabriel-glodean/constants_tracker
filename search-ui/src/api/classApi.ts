@@ -4,8 +4,26 @@ export interface ClassConstantsLookup {
   version: number;
 }
 
+export interface SemanticTypeInfo {
+  kind: string;
+  name: string;
+  displayName: string | null;
+  description: string | null;
+}
+
+export interface UsageInfo {
+  structuralType: string;
+  semanticType: SemanticTypeInfo | null;
+}
+
+export interface ConstantEntry {
+  value: string;
+  valueType: string;
+  usages: UsageInfo[];
+}
+
 export interface ClassConstantsReply {
-  constants: Record<string, string[]>;
+  constants: ConstantEntry[];
 }
 
 export async function getClassConstants(
@@ -26,4 +44,3 @@ export async function getClassConstants(
   }
   return res.json();
 }
-

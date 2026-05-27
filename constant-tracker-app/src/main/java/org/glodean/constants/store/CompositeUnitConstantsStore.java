@@ -1,14 +1,12 @@
 package org.glodean.constants.store;
 
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.services.ProjectVersionService;
 import org.glodean.constants.store.postgres.PostgresService;
@@ -113,7 +111,13 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
                 return postgresService
                     .storeBatch(batch.containerDescriptor(), batch.units(),
                         batch.firstBatch(), project, version)
-                    .then(Mono.just(classFilePaths));
+                    .thenReturn(classFilePaths)
+                    .onErrorResume(e -> {
+                      logger.atError().withThrowable(e).log(
+                          "Failed to store batch for container={} project={} v{} — skipping this JAR and continuing",
+                          sanitize(batch.containerDescriptor().path()), sanitize(project), version);
+                      return Mono.just(Set.of());
+                    });
               })
               // Merge all class-file path sets for a complete picture of what was uploaded.
               .reduce((a, b) -> { Set<String> m = new HashSet<>(a); m.addAll(b); return m; })
@@ -136,12 +140,11 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
    * until a match is found or an explicit deletion is encountered.
    */
   @Override
-  public Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key) {
+  public Mono<GetUnitConstantsReply> find(String key) {
     return findWithInheritance(key, 0);
   }
 
-  private Mono<Map<Object, Collection<UnitConstant.UsageType>>> findWithInheritance(
-      String key, int depth) {
+  private Mono<GetUnitConstantsReply> findWithInheritance(String key, int depth) {
     if (depth > MAX_INHERITANCE_DEPTH) {
       return Mono.error(new IllegalArgumentException("Unknown unit!"));
     }

@@ -4,6 +4,7 @@ import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { useSearch } from '@/hooks/useSearch'
 import { useAuth } from '@/hooks/useAuth'
+import { useBackendStatus } from '@/hooks/useBackendStatus'
 import { UploadForm } from '@/components/UploadForm'
 import { ClassLookupForm } from '@/components/ClassLookupForm'
 import { VersionManager } from '@/components/VersionManager'
@@ -28,7 +29,8 @@ function App() {
   const [workspaceVersion, setWorkspaceVersion] = useState(() => localStorage.getItem('workspace.version') ?? '')
   const [tab, setTab] = useState<TabKey>('search')
   const { data, isLoading, error, hasSearched, search } = useSearch()
-  const { isAuthenticated, authRequired, backendAvailable, canAccess, signIn, signOut, authFetch } = useAuth()
+  const { isAuthenticated, authRequired, canAccess, signIn, signOut, authFetch } = useAuth()
+  const { backendAvailable } = useBackendStatus()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [lastTerm, setLastTerm] = useState('')
   const resultsRef = useRef<HTMLDivElement>(null)

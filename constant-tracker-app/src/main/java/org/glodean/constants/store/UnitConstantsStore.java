@@ -1,9 +1,7 @@
 package org.glodean.constants.store;
 
-import java.util.Collection;
-import java.util.Map;
 import org.glodean.constants.dto.FuzzySearchResponse;
-import org.glodean.constants.model.UnitConstant;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstants;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -55,12 +53,13 @@ public interface UnitConstantsStore {
   Mono<UnitConstants> store(UnitConstants constants, String project);
 
   /**
-   * Finds usages of unit constants by key.
+   * Finds constants for a versioned unit, returning each constant value with its type and
+   * the full semantic + structural usage information.
    *
-   * @param key the key to search for
-   * @return a {@link Mono} emitting a map of usages grouped by type
+   * @param key the lookup key in the form {@code project:unitPath:version}
+   * @return a {@link Mono} emitting a {@link GetUnitConstantsReply}
    */
-  Mono<Map<Object, Collection<UnitConstant.UsageType>>> find(String key);
+  Mono<GetUnitConstantsReply> find(String key);
 
   /**
    * Stores a streaming sequence of {@link JarBatch}es for a project. Each element carries

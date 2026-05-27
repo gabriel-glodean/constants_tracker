@@ -13,13 +13,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.mockito.ArgumentCaptor;
 import org.glodean.constants.dto.FuzzySearchHit;
 import org.glodean.constants.dto.FuzzySearchResponse;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.CoreSemanticType;
@@ -148,12 +147,12 @@ class CompositeUnitConstantsStoreTest {
 
   @Test
   void findDelegatesToPostgresNotSolr() {
-    Map<Object, Collection<UnitConstant.UsageType>> expected =
-        Map.of("Hello", Set.of(UsageType.METHOD_INVOCATION_PARAMETER));
+    GetUnitConstantsReply expected = new GetUnitConstantsReply(List.of(
+        new GetUnitConstantsReply.ConstantEntry("Hello", "String", List.of(
+            new GetUnitConstantsReply.UsageInfo("METHOD_INVOCATION_PARAMETER", null)))));
     when(postgresService.find("proj:com/example/Greeter:1")).thenReturn(Mono.just(expected));
 
-    Map<Object, Collection<UnitConstant.UsageType>> result =
-        store.find("proj:com/example/Greeter:1").block();
+    GetUnitConstantsReply result = store.find("proj:com/example/Greeter:1").block();
 
     assertThat(result).isSameAs(expected);
     verify(solrService, never()).find(anyString());
@@ -213,7 +212,7 @@ class CompositeUnitConstantsStoreTest {
     UnitConstantsStore minimal = new UnitConstantsStore() {
       @Override public Mono<UnitConstants> store(UnitConstants c, String p, int v) { return null; }
       @Override public Mono<UnitConstants> store(UnitConstants c, String p) { return null; }
-      @Override public Mono<java.util.Map<Object, Collection<UnitConstant.UsageType>>> find(String k) { return null; }
+      @Override public Mono<GetUnitConstantsReply> find(String k) { return null; }
     };
 
     assertThatThrownBy(() -> minimal.fuzzySearch("proj", "term", 0, 10).block())
@@ -283,8 +282,9 @@ class CompositeUnitConstantsStoreTest {
   @Test
   void find_fallsBackToParentVersionWhenUnitMissing() {
     // First call → unit not found; second call (parent version) → found
-    Map<Object, Collection<UnitConstant.UsageType>> expected =
-        Map.of("Hello", Set.of(UsageType.METHOD_INVOCATION_PARAMETER));
+    var expected = new GetUnitConstantsReply(List.of(
+        new GetUnitConstantsReply.ConstantEntry("Hello", "String", List.of(
+            new GetUnitConstantsReply.UsageInfo("METHOD_INVOCATION_PARAMETER", null)))));
     var versionWithParent = new ProjectVersionEntity(1L, "proj", 2, 1, "OPEN", null, null);
 
     when(postgresService.find("proj:com/example/Greeter:2"))
@@ -295,8 +295,7 @@ class CompositeUnitConstantsStoreTest {
     when(projectVersionService.isUnitDeleted("proj", 2, "com/example/Greeter"))
         .thenReturn(Mono.just(false));
 
-    Map<Object, Collection<UnitConstant.UsageType>> result =
-        store.find("proj:com/example/Greeter:2").block();
+    GetUnitConstantsReply result = store.find("proj:com/example/Greeter:2").block();
 
     assertThat(result).isSameAs(expected);
   }

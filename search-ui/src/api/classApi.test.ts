@@ -4,7 +4,17 @@ global.fetch = mockFetch
 beforeEach(() => mockFetch.mockReset())
 describe('getClassConstants', () => {
   const params = { project: 'proj', className: 'com/Foo', version: 1 }
-  const sampleReply = { constants: { 'SELECT *': ['METHOD_INVOCATION_PARAMETER'] } }
+  const sampleReply = {
+    constants: [
+      {
+        value: 'SELECT *',
+        valueType: 'String',
+        usages: [
+          { structuralType: 'METHOD_INVOCATION_PARAMETER', semanticType: null },
+        ],
+      },
+    ],
+  }
   it('calls the correct URL and returns parsed JSON', async () => {
     mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(sampleReply) })
     const result = await getClassConstants(params)

@@ -6,9 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.apache.solr.client.solrj.impl.HttpSolrClientBase;
@@ -16,6 +14,7 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.util.NamedList;
 import org.glodean.constants.dto.FuzzySearchResponse;
+import org.glodean.constants.dto.GetUnitConstantsReply;
 import org.glodean.constants.model.UnitConstant;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.CoreSemanticType;
@@ -114,12 +113,15 @@ class SolrServiceTest {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(response));
 
-    Map<Object, Collection<UsageType>> result =
-        svc.find("proj:com/example/Greeter:1").block();
+    GetUnitConstantsReply result = svc.find("proj:com/example/Greeter:1").block();
 
-    assertThat(result).isNotNull().containsKey("hello");
-    Collection<UsageType> usages = result.get("hello");
-    assertThat(usages).contains(UsageType.METHOD_INVOCATION_PARAMETER);
+    assertThat(result).isNotNull();
+    assertThat(result.constants()).anyMatch(e -> e.value().equals("hello"));
+    GetUnitConstantsReply.ConstantEntry entry = result.constants().stream()
+        .filter(e -> e.value().equals("hello")).findFirst().orElseThrow();
+    assertThat(entry.usages()).anyMatch(u -> u.structuralType().equals("METHOD_INVOCATION_PARAMETER"));
+    assertThat(entry.valueType()).isNull();
+    assertThat(entry.usages().get(0).semanticType()).isNull();
   }
 
   @Test
@@ -138,13 +140,14 @@ class SolrServiceTest {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(response));
 
-    Map<Object, Collection<UsageType>> result =
-        svc.find("proj:com/example/Repo:1").block();
+    GetUnitConstantsReply result = svc.find("proj:com/example/Repo:1").block();
 
     assertThat(result).isNotNull();
-    Collection<UsageType> usages = result.get("SELECT");
-    assertThat(usages)
-        .containsExactlyInAnyOrder(UsageType.METHOD_INVOCATION_PARAMETER, UsageType.FIELD_STORE);
+    GetUnitConstantsReply.ConstantEntry entry = result.constants().stream()
+        .filter(e -> e.value().equals("SELECT")).findFirst().orElseThrow();
+    assertThat(entry.usages())
+        .extracting(GetUnitConstantsReply.UsageInfo::structuralType)
+        .containsExactlyInAnyOrder("METHOD_INVOCATION_PARAMETER", "FIELD_STORE");
   }
 
   @Test
@@ -164,13 +167,13 @@ class SolrServiceTest {
   }
 
   @Test
-  void findReturnsEmptyMapWhenResponseBlockAbsent() {
+  void findReturnsEmptyWhenResponseBlockAbsent() {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(new NamedList<>()));
 
-    Map<Object, Collection<UsageType>> result =
-        svc.find("proj:com/example/Greeter:1").block();
-    assertThat(result).isNotNull().isEmpty();
+    GetUnitConstantsReply result = svc.find("proj:com/example/Greeter:1").block();
+    assertThat(result).isNotNull();
+    assertThat(result.constants()).isEmpty();
   }
 
   @Test
@@ -187,9 +190,9 @@ class SolrServiceTest {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(response));
 
-    Map<Object, Collection<UsageType>> result =
-        svc.find("proj:com/example/Greeter:1").block();
-    assertThat(result).isNotNull().isEmpty();
+    GetUnitConstantsReply result = svc.find("proj:com/example/Greeter:1").block();
+    assertThat(result).isNotNull();
+    assertThat(result.constants()).isEmpty();
   }
 
   @Test
@@ -205,9 +208,9 @@ class SolrServiceTest {
     when(solrClient.requestAsync(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(response));
 
-    Map<Object, Collection<UsageType>> result =
-        svc.find("proj:com/example/Greeter:1").block();
-    assertThat(result).isNotNull().isEmpty();
+    GetUnitConstantsReply result = svc.find("proj:com/example/Greeter:1").block();
+    assertThat(result).isNotNull();
+    assertThat(result.constants()).isEmpty();
   }
 
   // ── fuzzySearch(...) ───────────────────────────────────────────────────────
