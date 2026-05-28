@@ -107,6 +107,16 @@ spec:
                             configMapKeyRef:
                                 name: app-config
                                 key: CONSTANTS_AUTH_ENABLED
+                      - name: SPRING_CODEC_MAX_IN_MEMORY_SIZE
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: SPRING_CODEC_MAX_IN_MEMORY_SIZE
+                      - name: JAVA_OPTS
+                        valueFrom:
+                            configMapKeyRef:
+                                name: app-config
+                                key: JAVA_OPTS
                   readinessProbe:
                       httpGet:
                           path: /actuator/health
@@ -119,15 +129,15 @@ spec:
                           path: /actuator/health
                           port: 8080
                       initialDelaySeconds: 60
-                      periodSeconds: 10
-                      failureThreshold: 5
+                      periodSeconds: 20
+                      timeoutSeconds: 10
+                      failureThreshold: 10
                   resources:
                       requests:
-                          memory: "768Mi"
+                          memory: "1Gi"
                           cpu: "250m"
                       limits:
-                          memory: "2Gi"
-                          cpu: "1000m"
+                          memory: "3Gi"
 
 ---
 
