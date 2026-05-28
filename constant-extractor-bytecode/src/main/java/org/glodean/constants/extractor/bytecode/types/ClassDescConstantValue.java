@@ -2,6 +2,7 @@ package org.glodean.constants.extractor.bytecode.types;
 
 import java.lang.constant.ClassDesc;
 import java.util.Map;
+import org.glodean.constants.extractor.bytecode.Utils;
 
 /**
  * Structured representation for a JVM class-descriptor constant (LDC of a class literal).
@@ -16,7 +17,7 @@ import java.util.Map;
 public record ClassDescConstantValue(String javaName, boolean isArray) implements StructuredConstantValue {
 
   public static ClassDescConstantValue from(ClassDesc desc) {
-    return new ClassDescConstantValue(ClassDescNames.toJavaName(desc), desc.isArray());
+    return new ClassDescConstantValue(Utils.toJavaName(desc), desc.isArray());
   }
 
   @Override

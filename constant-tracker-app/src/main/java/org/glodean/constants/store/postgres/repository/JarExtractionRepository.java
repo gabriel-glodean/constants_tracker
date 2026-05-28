@@ -12,9 +12,13 @@ public interface JarExtractionRepository
     extends ReactiveCrudRepository<JarExtractionEntity, Long> {
 
   /**
-   * Finds the extraction job for the given project, version, and fat JAR name.
+   * Finds the most recent extraction job for the given project, version, and fat JAR name.
+   *
+   * <p>Multiple rows can exist for the same (project, version, jarName) when the same JAR is
+   * uploaded more than once. This method always returns the latest one by {@code id} so that
+   * counter updates and UI polling operate on the current run, not a previous completed job.
    */
-  Mono<JarExtractionEntity> findByProjectAndVersionAndJarName(
+  Mono<JarExtractionEntity> findFirstByProjectAndVersionAndJarNameOrderByIdDesc(
       String project, int version, String jarName);
 
   /** Finds all extraction jobs for the given project/version. */

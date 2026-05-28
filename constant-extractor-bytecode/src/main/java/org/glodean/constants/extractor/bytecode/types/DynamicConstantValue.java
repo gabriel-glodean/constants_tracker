@@ -5,12 +5,13 @@ import java.lang.constant.DynamicConstantDesc;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.glodean.constants.extractor.bytecode.Utils;
 
 /**
  * Structured representation for a JVM CONSTANT_Dynamic (condy) entry.
  *
- * <p>The {@link #constantType()} field uses Java dot notation (e.g. {@code java.lang.Object})
- * — consistent with {@code UsageLocation.className}.
+ * <p>All class-name and descriptor fields use Java dot notation — consistent with
+ * {@code UsageLocation.className}. Inner-class separator {@code $} is treated as {@code .}.
  */
 public record DynamicConstantValue(
     String constantName,
@@ -26,7 +27,7 @@ public record DynamicConstantValue(
 
     return new DynamicConstantValue(
         desc.constantName(),
-        ClassDescNames.toJavaName(desc.constantType()),
+        Utils.toJavaName(desc.constantType()),
         MethodHandleConstantValue.from(desc.bootstrapMethod()),
         args);
   }
@@ -39,10 +40,10 @@ public record DynamicConstantValue(
       return MethodHandleConstantValue.from(methodHandleDesc).storageValue();
     }
     if (constantDesc instanceof java.lang.constant.ClassDesc classDesc) {
-      return ClassDescNames.toJavaName(classDesc);
+      return Utils.toJavaName(classDesc);
     }
     if (constantDesc instanceof java.lang.constant.MethodTypeDesc methodTypeDesc) {
-      return methodTypeDesc.descriptorString();
+      return Utils.toJavaDescriptor(methodTypeDesc.descriptorString());
     }
     return String.valueOf(constantDesc);
   }

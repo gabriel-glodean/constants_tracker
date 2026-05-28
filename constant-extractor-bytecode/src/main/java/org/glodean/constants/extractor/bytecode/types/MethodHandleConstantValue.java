@@ -4,15 +4,13 @@ import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.glodean.constants.extractor.bytecode.Utils;
 
 /**
  * Structured representation for a JVM method-handle constant.
  *
- * <p>Class-name fields ({@link #ownerClass()}) use Java dot notation (e.g.
- * {@code java.lang.Integer}) — consistent with {@code UsageLocation.className}.
- * Method-type-descriptor fields ({@link #lookupDescriptor()},
- * {@link #invocationTypeDescriptor()}) retain JVM descriptor format since they
- * encode full parameter/return-type signatures, not bare class names.
+ * <p>All class-name and descriptor fields use Java dot notation — consistent with
+ * {@code UsageLocation.className}. Inner-class separator {@code $} is treated as {@code .}.
  */
 public record MethodHandleConstantValue(
     String kind,
@@ -22,18 +20,11 @@ public record MethodHandleConstantValue(
     String invocationTypeDescriptor
 ) implements StructuredConstantValue {
 
-  /**
-   * Builds a {@code MethodHandleConstantValue} from a JDK descriptor.
-   *
-   * <p>{@link MethodHandleDesc} is a sealed interface whose only permitted subtype is
-   * {@link DirectMethodHandleDesc}, so the cast below is always safe for any valid constant pool
-   * entry. A {@link ClassCastException} here would indicate a JDK API contract violation.
-   */
   public static MethodHandleConstantValue from(MethodHandleDesc desc) {
     DirectMethodHandleDesc direct = (DirectMethodHandleDesc) desc;
     return new MethodHandleConstantValue(
         direct.kind().name(),
-        ClassDescNames.toJavaName(direct.owner()),
+        Utils.toJavaName(direct.owner()),
         direct.methodName(),
         direct.lookupDescriptor(),
         desc.invocationType().descriptorString());
@@ -52,7 +43,7 @@ public record MethodHandleConstantValue(
         + ownerClass
         + "#"
         + methodName
-        + lookupDescriptor;
+        + Utils.toJavaDescriptor(lookupDescriptor);
   }
 
   @Override

@@ -91,7 +91,7 @@ class NestedJarExtractionServiceTest {
     when(jarExtractionRepository.save(any(JarExtractionEntity.class)))
         .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 
-    when(jarExtractionRepository.findByProjectAndVersionAndJarName(
+    when(jarExtractionRepository.findFirstByProjectAndVersionAndJarNameOrderByIdDesc(
         eq(PROJECT), eq(VERSION), anyString()))
         .thenAnswer(invocation -> Mono.just(JarExtractionEntity.started(
             PROJECT, VERSION, invocation.getArgument(2, String.class))));
@@ -415,7 +415,7 @@ class NestedJarExtractionServiceTest {
 
     when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
         .thenReturn(Flux.empty());
-    when(jarExtractionRepository.findByProjectAndVersionAndJarName(
+    when(jarExtractionRepository.findFirstByProjectAndVersionAndJarNameOrderByIdDesc(
         eq(PROJECT), eq(VERSION), eq("outer.jar")))
         .thenReturn(Mono.just(existing));
 

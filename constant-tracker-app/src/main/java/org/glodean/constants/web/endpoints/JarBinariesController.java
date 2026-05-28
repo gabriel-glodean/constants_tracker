@@ -157,7 +157,7 @@ public class JarBinariesController {
         Flux<JarExtractionStatusResponse> source =
                 (jarName != null && !jarName.isBlank())
                         ? jarExtractionRepository
-                                .findByProjectAndVersionAndJarName(project.strip(), version, jarName.strip())
+                                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project.strip(), version, jarName.strip())
                                 .map(JarExtractionStatusResponse::from)
                                 .flux()
                         : jarExtractionRepository

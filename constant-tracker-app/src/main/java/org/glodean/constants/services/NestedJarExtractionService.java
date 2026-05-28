@@ -240,7 +240,7 @@ public class NestedJarExtractionService {
 
     private Mono<Void> updateNestedTotal(String project, int version, String jarName, int total) {
         return jarExtractionRepository
-                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project, version, jarName)
                 .flatMap(existing -> jarExtractionRepository.save(
                         existing.toBuilder()
                                 .nestedTotal(total)
@@ -252,7 +252,7 @@ public class NestedJarExtractionService {
 
     private Mono<Void> incrementNestedProcessed(String project, int version, String jarName) {
         return jarExtractionRepository
-                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project, version, jarName)
                 .flatMap(existing -> jarExtractionRepository.save(
                         existing.toBuilder()
                                 .nestedProcessed(existing.nestedProcessed() + 1)
@@ -264,7 +264,7 @@ public class NestedJarExtractionService {
 
     private Mono<Void> incrementNestedFailed(String project, int version, String jarName) {
         return jarExtractionRepository
-                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project, version, jarName)
                 .flatMap(existing -> jarExtractionRepository.save(
                         existing.toBuilder()
                                 .nestedFailed(existing.nestedFailed() + 1)
@@ -329,7 +329,7 @@ public class NestedJarExtractionService {
     private Mono<JarExtractionEntity> updateTrackingStatus(
             String project, int version, String jarName, String status, String errorMessage) {
         return jarExtractionRepository
-                .findByProjectAndVersionAndJarName(project, version, jarName)
+                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project, version, jarName)
                 .flatMap(existing -> jarExtractionRepository.save(
                         existing.toBuilder().status(status).lastUpdatedAt(OffsetDateTime.now()).errorMessage(errorMessage).build()
                 ));

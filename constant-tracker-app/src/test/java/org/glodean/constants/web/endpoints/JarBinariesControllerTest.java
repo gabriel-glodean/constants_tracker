@@ -127,7 +127,7 @@ class JarBinariesControllerTest {
                 .nestedTotal(3).nestedProcessed(3).nestedFailed(0)
                 .build();
 
-        when(jarExtractionRepository.findByProjectAndVersionAndJarName("demo", 1, "app.jar"))
+        when(jarExtractionRepository.findFirstByProjectAndVersionAndJarNameOrderByIdDesc("demo", 1, "app.jar"))
                 .thenReturn(Mono.just(entity));
 
         web.get()
