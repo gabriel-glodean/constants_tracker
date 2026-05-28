@@ -359,7 +359,7 @@ class NestedJarExtractionServiceTest {
     Path fatJar = buildFatJar(tempDir, "outer.jar", java.util.Map.of());
     UnitDescriptor outerDescriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "outer.jar", 1L, "hash");
 
-    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(500)))
         .thenReturn(Flux.empty());
 
     StepVerifier.create(service.extractFatJar(fatJar, outerDescriptor, PROJECT))
@@ -378,7 +378,7 @@ class NestedJarExtractionServiceTest {
     Path fatJar = buildFatJar(tempDir, "outer.jar", java.util.Map.of());
     UnitDescriptor outerDescriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "outer.jar", 1L, "hash");
 
-    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(500)))
         .thenReturn(Flux.error(new RuntimeException("boom")));
 
     StepVerifier.create(service.extractFatJar(fatJar, outerDescriptor, PROJECT))
@@ -413,7 +413,7 @@ class NestedJarExtractionServiceTest {
         .nestedFailed(0)
         .build();
 
-    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(outerDescriptor), eq(500)))
+    when(extractionService.extractJarFileStreaming(eq(fatJar), eq(500)))
         .thenReturn(Flux.empty());
     when(jarExtractionRepository.findFirstByProjectAndVersionAndJarNameOrderByIdDesc(
         eq(PROJECT), eq(VERSION), eq("outer.jar")))

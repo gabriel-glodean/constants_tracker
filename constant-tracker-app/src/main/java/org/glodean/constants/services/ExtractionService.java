@@ -46,12 +46,11 @@ public interface ExtractionService {
    * {@link Flux} and is closed automatically on completion, error, or cancellation.
    *
    * @param jarPath    path to the JAR file on disk
-   * @param descriptor metadata describing the JAR unit
    * @param batchSize  maximum number of file-system entries (paths) per emitted chunk
    * @return a cold {@link Flux} that emits one {@code List<UnitConstants>} per non-empty chunk
    */
   Flux<List<UnitConstants>> extractJarFileStreaming(
-      Path jarPath, UnitDescriptor descriptor, int batchSize);
+      Path jarPath, int batchSize);
 
   /**
    * Walks a {@link ZipInputStream} and extracts constants from all {@code .class} entries.

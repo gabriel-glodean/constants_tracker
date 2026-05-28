@@ -24,6 +24,7 @@ import org.glodean.constants.store.postgres.entity.JarExtractionEntity;
 import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.util.DigestUtils;
+import org.glodean.constants.util.LogSanitizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -113,12 +114,12 @@ public class NestedJarExtractionService {
 
                     // Outer JAR: streaming by chunk; first chunk sets firstBatch=true.
                     Flux<JarBatch> outerBatches =
-                            extractionService.extractJarFileStreaming(outerJarPath, outerDescriptor, batchSize)
+                            extractionService.extractJarFileStreaming(outerJarPath, batchSize)
                                     .index()
                                     .map(t -> new JarBatch(outerDescriptor, t.getT2(), t.getT1() == 0))
                                     .doOnComplete(() -> logger.atInfo().log(
                                             "Finished streaming outer JAR {} for project={} v{}",
-                                            outerJarPath.getFileName(), project, version));
+                                            outerJarPath.getFileName(), LogSanitizer.sanitize(project), version));
 
                     // Nested JARs: each JAR produces one or more JarBatch elements.
                     Flux<JarBatch> nestedBatches =
@@ -177,7 +178,7 @@ public class NestedJarExtractionService {
                                     }
                                     logger.atInfo().log(
                                             "Found {} nested JAR(s) in {} — extracting for project={} v{}",
-                                            paths.size(), jarName, project, version);
+                                            paths.size(), jarName, LogSanitizer.sanitize(project), version);
                                     if (trackingJarName == null) {
                                         return Mono.just(paths);
                                     }

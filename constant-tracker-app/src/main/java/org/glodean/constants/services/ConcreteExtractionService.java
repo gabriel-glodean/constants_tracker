@@ -80,7 +80,7 @@ public class ConcreteExtractionService implements ExtractionService {
       throws ModelExtractor.ExtractionException {
     try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
       return BytecodeModelExtractor
-          .forFileSystem(bytecodeAnalysisExecutor, fs, merger, new LoggingExtractionNotifier(), bytecodeExtractorRepository)
+          .forFileSystem(bytecodeAnalysisExecutor, fs, new LoggingExtractionNotifier(), bytecodeExtractorRepository)
           .extract(descriptor);
     } catch (ModelExtractor.ExtractionException e) {
       throw e;
@@ -99,7 +99,7 @@ public class ConcreteExtractionService implements ExtractionService {
    */
   @Override
   public Flux<List<UnitConstants>> extractJarFileStreaming(
-      Path jarPath, UnitDescriptor descriptor, int batchSize) {
+      Path jarPath, int batchSize) {
     return Flux.using(
         () -> FileSystems.newFileSystem(jarPath, (ClassLoader) null),
         fs -> Mono.fromCallable(() -> {
@@ -128,7 +128,7 @@ public class ConcreteExtractionService implements ExtractionService {
   public Collection<UnitConstants> extractZipStream(ZipInputStream zis, UnitDescriptor descriptor)
       throws ModelExtractor.ExtractionException {
     return BytecodeModelExtractor
-        .forZipStream(bytecodeAnalysisExecutor, zis, merger, bytecodeExtractorRepository)
+        .forZipStream(bytecodeAnalysisExecutor, zis, bytecodeExtractorRepository)
         .extract(descriptor);
   }
 }

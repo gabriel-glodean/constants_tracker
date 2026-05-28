@@ -25,7 +25,7 @@ import org.glodean.constants.model.UnitDescriptor;
  * This means the extractor is not limited to {@code .class} files: any format registered in the
  * repository (e.g. YAML, properties) found inside a JAR or filesystem will also be extracted.
  *
- * <p>By default each {@link #extract} call creates and tears down its own thread pool. Pass a
+ * <p>By default, each {@link #extract} call creates and tears down its own thread pool. Pass a
  * shared {@link ExecutorService} via the overloaded factory methods to reuse one pool across
  * multiple extraction calls (recommended in server environments):
  *
@@ -46,18 +46,16 @@ public final class BytecodeModelExtractor implements ModelExtractor {
    */
   @FunctionalInterface
   interface PoolFeeder {
-    void feed(ExtractionPool pool, UnitDescriptor source) throws IOException;
+    void feed(ExtractionPool pool) throws IOException;
   }
 
   private final ExecutorService executor; // null = create a fresh pool per extract() call
-  private final AnalysisMerger merger;
   private final ExtractionNotifier notifier;
   private final PoolFeeder feeder;
 
   private BytecodeModelExtractor(
-      ExecutorService executor, AnalysisMerger merger, ExtractionNotifier notifier, PoolFeeder feeder) {
+      ExecutorService executor, ExtractionNotifier notifier, PoolFeeder feeder) {
     this.executor = executor;
-    this.merger = merger;
     this.notifier = notifier;
     this.feeder = feeder;
   }
@@ -68,17 +66,17 @@ public final class BytecodeModelExtractor implements ModelExtractor {
 
   /** Shared-executor variant. Walks {@code fs}, ignoring paths with the given prefix. */
   public static BytecodeModelExtractor forFileSystem(
-      ExecutorService executor, FileSystem fs, AnalysisMerger merger,
+      ExecutorService executor, FileSystem fs,
       String ignorePathPrefix, ExtractionNotifier notifier, ModelExtractorSupplierRepository repository) {
-    return new BytecodeModelExtractor(executor, merger, notifier,
+    return new BytecodeModelExtractor(executor, notifier,
         fileSystemFeeder(fs, ignorePathPrefix, repository));
   }
 
   /** Shared-executor variant. Walks {@code fs} with no path filtering. */
   public static BytecodeModelExtractor forFileSystem(
-      ExecutorService executor, FileSystem fs, AnalysisMerger merger,
+      ExecutorService executor, FileSystem fs,
       ExtractionNotifier notifier, ModelExtractorSupplierRepository repository) {
-    return forFileSystem(executor, fs, merger, null, notifier, repository);
+    return forFileSystem(executor, fs,null, notifier, repository);
   }
 
   // -------------------------------------------------------------------------
@@ -89,14 +87,8 @@ public final class BytecodeModelExtractor implements ModelExtractor {
   /** Standalone variant. Walks {@code fs}, ignoring paths with the given prefix. */
   public static BytecodeModelExtractor forFileSystem(
       FileSystem fs, AnalysisMerger merger, String ignorePathPrefix, ExtractionNotifier notifier) {
-    return new BytecodeModelExtractor(null, merger, notifier,
+    return new BytecodeModelExtractor(null, notifier,
         fileSystemFeeder(fs, ignorePathPrefix, defaultRepository(merger)));
-  }
-
-  /** Standalone variant. Walks {@code fs} with no path filtering. */
-  public static BytecodeModelExtractor forFileSystem(
-      FileSystem fs, AnalysisMerger merger, ExtractionNotifier notifier) {
-    return forFileSystem(fs, merger, null, notifier);
   }
 
   /** Standalone variant. Walks {@code fs}, ignoring paths with the given prefix, silent notifier. */
@@ -116,16 +108,16 @@ public final class BytecodeModelExtractor implements ModelExtractor {
 
   /** Shared-executor variant. Reads entries from {@code zis} sequentially. */
   public static BytecodeModelExtractor forZipStream(
-      ExecutorService executor, ZipInputStream zis, AnalysisMerger merger,
+      ExecutorService executor, ZipInputStream zis,
       ExtractionNotifier notifier, ModelExtractorSupplierRepository repository) {
-    return new BytecodeModelExtractor(executor, merger, notifier, zipStreamFeeder(zis, repository));
+    return new BytecodeModelExtractor(executor, notifier, zipStreamFeeder(zis, repository));
   }
 
   /** Shared-executor variant with a silent notifier. */
   public static BytecodeModelExtractor forZipStream(
-      ExecutorService executor, ZipInputStream zis, AnalysisMerger merger,
+      ExecutorService executor, ZipInputStream zis,
       ModelExtractorSupplierRepository repository) {
-    return forZipStream(executor, zis, merger, new ExtractionNotifier.Silent(), repository);
+    return forZipStream(executor, zis, new ExtractionNotifier.Silent(), repository);
   }
 
   // -------------------------------------------------------------------------
@@ -135,7 +127,7 @@ public final class BytecodeModelExtractor implements ModelExtractor {
   /** Standalone variant. */
   public static BytecodeModelExtractor forZipStream(
       ZipInputStream zis, AnalysisMerger merger, ExtractionNotifier notifier) {
-    return new BytecodeModelExtractor(null, merger, notifier,
+    return new BytecodeModelExtractor(null, notifier,
         zipStreamFeeder(zis, defaultRepository(merger)));
   }
 
@@ -155,7 +147,7 @@ public final class BytecodeModelExtractor implements ModelExtractor {
    * so that each chunk's bytes and futures are GC-eligible before the next chunk starts.
    *
    * @param executor   shared thread pool for parallel analysis of this chunk
-   * @param paths      the file-system paths to read and analyse
+   * @param paths      the file-system paths to read and analyze
    * @param notifier   progress/error listener
    * @param repository maps file names to extractors
    * @return all {@link UnitConstants} produced by the entries in {@code paths}
@@ -193,7 +185,7 @@ public final class BytecodeModelExtractor implements ModelExtractor {
         : executor;
     try {
       var pool = new ExtractionPool(exec, notifier);
-      feeder.feed(pool, source);
+      feeder.feed(pool);
       return pool.collect();
     } catch (IOException e) {
       throw new ExtractionException(e);
@@ -228,7 +220,7 @@ public final class BytecodeModelExtractor implements ModelExtractor {
       filter = filter.and(p -> !p.toString().startsWith(ignorePathPrefix));
     }
     Predicate<Path> finalFilter = filter;
-    return (pool, ignored) -> {
+    return (pool) -> {
       try (var walk = Files.walk(fs.getPath("/"))) {
         for (Path path : walk.filter(finalFilter).toList()) {
           String entryName = path.getFileName().toString();
@@ -248,7 +240,7 @@ public final class BytecodeModelExtractor implements ModelExtractor {
    */
   private static PoolFeeder zipStreamFeeder(
       ZipInputStream zis, ModelExtractorSupplierRepository repository) {
-    return (pool, ignored) -> {
+    return (pool) -> {
       for (ZipEntry ze = zis.getNextEntry(); ze != null; ze = zis.getNextEntry()) {
         if (!ze.isDirectory()) {
           String entryName = Path.of(ze.getName()).getFileName().toString();

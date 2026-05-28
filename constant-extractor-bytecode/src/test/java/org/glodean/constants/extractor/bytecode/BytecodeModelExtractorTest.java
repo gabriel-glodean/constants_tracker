@@ -185,7 +185,7 @@ class BytecodeModelExtractorTest {
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertFalse(result.isEmpty(), "Should find at least one UnitConstants for Greeter");
@@ -201,7 +201,7 @@ class BytecodeModelExtractorTest {
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertFalse(result.isEmpty());
@@ -223,7 +223,7 @@ class BytecodeModelExtractorTest {
         Files.write(dir.resolve("SimpleIteration.class"), loadClassBytes(SimpleIteration.class));
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertEquals(2, result.size(), "Both class files should produce one UnitConstants each");
@@ -241,7 +241,7 @@ class BytecodeModelExtractorTest {
         Files.write(dir.resolve("Greeter.class"), loadClassBytes(Greeter.class));
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertEquals(1, result.size(), "Only the .class file should produce a result");
@@ -260,7 +260,7 @@ class BytecodeModelExtractorTest {
         Files.write(skipDir.resolve("Greeter.class"), loadClassBytes(Greeter.class));
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, "/skip", new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, "/skip", new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertEquals(1, result.size(), "Only the file outside /skip should be extracted");
@@ -280,7 +280,7 @@ class BytecodeModelExtractorTest {
         Files.write(dir.resolve("SimpleIteration.class"), loadClassBytes(SimpleIteration.class));
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, (String) null, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, (String) null, new ExtractionNotifier.Silent(), extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertEquals(2, result.size(), "Both class files should be extracted");
@@ -294,7 +294,7 @@ class BytecodeModelExtractorTest {
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), extensionRepository());
+            exec, fs, new ExtractionNotifier.Silent(), extensionRepository());
         extractor.extract(anyDescriptor());
 
         assertFalse(exec.isShutdown(), "Shared executor must not be shut down by the extractor");
@@ -309,7 +309,7 @@ class BytecodeModelExtractorTest {
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
 
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, notifier, extensionRepository());
+            exec, fs, notifier, extensionRepository());
         extractor.extract(anyDescriptor());
       }
 
@@ -392,7 +392,7 @@ class BytecodeModelExtractorTest {
       byte[] zipBytes = buildZip("org/glodean/Greeter.class", loadClassBytes(Greeter.class));
       try (ZipInputStream zis = toZipInputStream(zipBytes);
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
-        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository());
+        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertFalse(result.isEmpty(), "Should extract constants from Greeter.class in the ZIP");
@@ -415,7 +415,7 @@ class BytecodeModelExtractorTest {
       }
       try (ZipInputStream zis = toZipInputStream(baos.toByteArray());
            ExecutorService exec = Executors.newFixedThreadPool(4)) {
-        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository());
+        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository());
         Collection<UnitConstants> result = extractor.extract(anyDescriptor());
 
         assertEquals(2, result.size(), "Both class entries should produce one UnitConstants each");
@@ -436,7 +436,7 @@ class BytecodeModelExtractorTest {
       }
       try (ZipInputStream zis = toZipInputStream(baos.toByteArray());
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
-        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository());
+        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository());
         assertEquals(1, extractor.extract(anyDescriptor()).size(),
             "Only the .class entry should produce a result");
       }
@@ -455,7 +455,7 @@ class BytecodeModelExtractorTest {
       }
       try (ZipInputStream zis = toZipInputStream(baos.toByteArray());
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
-        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository());
+        var extractor = BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository());
         assertEquals(1, extractor.extract(anyDescriptor()).size(),
             "Directory entry must be skipped");
       }
@@ -467,7 +467,7 @@ class BytecodeModelExtractorTest {
       byte[] zipBytes = buildZip("Greeter.class", loadClassBytes(Greeter.class));
       try (ZipInputStream zis = toZipInputStream(zipBytes);
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
-        BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository())
+        BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository())
             .extract(anyDescriptor());
         assertFalse(exec.isShutdown(), "Shared executor must not be shut down by the extractor");
       }
@@ -480,7 +480,7 @@ class BytecodeModelExtractorTest {
       var notifier = new ExtractionPoolTest.TrackingNotifier();
       try (ZipInputStream zis = toZipInputStream(zipBytes);
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
-        BytecodeModelExtractor.forZipStream(exec, zis, merger, notifier, extensionRepository())
+        BytecodeModelExtractor.forZipStream(exec, zis, notifier, extensionRepository())
             .extract(anyDescriptor());
       }
       assertTrue(notifier.startedThreadCount > 0, "onExtractionStarted should fire");
@@ -496,7 +496,7 @@ class BytecodeModelExtractorTest {
       try (ZipInputStream zis = toZipInputStream(baos.toByteArray());
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
         assertTrue(
-            BytecodeModelExtractor.forZipStream(exec, zis, merger, extensionRepository())
+            BytecodeModelExtractor.forZipStream(exec, zis, extensionRepository())
                 .extract(anyDescriptor()).isEmpty());
       }
     }
@@ -565,7 +565,7 @@ class BytecodeModelExtractorTest {
       try (FileSystem fs = buildSingleClassFs(Greeter.class);
            ExecutorService exec = Executors.newFixedThreadPool(2)) {
         var extractor = BytecodeModelExtractor.forFileSystem(
-            exec, fs, merger, new ExtractionNotifier.Silent(), repo);
+            exec, fs, new ExtractionNotifier.Silent(), repo);
         assertTrue(extractor.extract(anyDescriptor()).isEmpty(),
             "Repository that doesn't match .class should yield nothing");
       }

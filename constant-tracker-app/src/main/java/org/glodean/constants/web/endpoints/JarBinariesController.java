@@ -17,6 +17,7 @@ import org.glodean.constants.dto.JarExtractionStatusResponse;
 import org.glodean.constants.store.JarBatch;
 import org.glodean.constants.store.UnitConstantsStore;
 import org.glodean.constants.store.postgres.repository.JarExtractionRepository;
+import org.glodean.constants.util.LogSanitizer;
 import org.glodean.constants.web.validation.ValidProjectName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -125,7 +126,7 @@ public class JarBinariesController {
                                                     },
                                                     err -> logger.atError().withThrowable(err)
                                                             .log("Background JAR extraction failed for project={} jar={}",
-                                                                    project, jarName)
+                                                                    LogSanitizer.sanitize(project), LogSanitizer.sanitize(jarName))
                                             );
                                     // Return 202 immediately — processing continues in background.
                                     return Mono.just(
@@ -157,12 +158,12 @@ public class JarBinariesController {
         Flux<JarExtractionStatusResponse> source =
                 (jarName != null && !jarName.isBlank())
                         ? jarExtractionRepository
-                                .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project.strip(), version, jarName.strip())
-                                .map(JarExtractionStatusResponse::from)
-                                .flux()
+                          .findFirstByProjectAndVersionAndJarNameOrderByIdDesc(project.strip(), version, jarName.strip())
+                          .map(JarExtractionStatusResponse::from)
+                          .flux()
                         : jarExtractionRepository
-                                .findAllByProjectAndVersion(project.strip(), version)
-                                .map(JarExtractionStatusResponse::from);
+                          .findAllByProjectAndVersion(project.strip(), version)
+                          .map(JarExtractionStatusResponse::from);
 
         return source.collectList().map(ResponseEntity::ok);
     }

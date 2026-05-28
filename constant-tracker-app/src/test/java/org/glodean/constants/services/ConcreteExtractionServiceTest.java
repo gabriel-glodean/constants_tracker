@@ -90,7 +90,7 @@ class ConcreteExtractionServiceTest {
             ConcreteExtractionService svc = new ConcreteExtractionService(
                     null, executor, ModelExtractorSupplierRepository.builder().build());
 
-            byte[] zip = createZipBytes(zos -> {});
+            byte[] zip = createZipBytes(ignore -> {});
             try (var zis = new ZipInputStream(new ByteArrayInputStream(zip))) {
                 Collection<UnitConstants> result = svc.extractZipStream(zis, descriptor);
                 assertNotNull(result, "extractZipStream should never return null");
@@ -146,12 +146,11 @@ class ConcreteExtractionServiceTest {
 
         var executor = Executors.newSingleThreadExecutor();
         try {
-            var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "stream.jar");
             ConcreteExtractionService svc = new ConcreteExtractionService(
                     null, executor, ModelExtractorSupplierRepository.builder().build());
 
             List<List<UnitConstants>> batches =
-                    svc.extractJarFileStreaming(jarPath, descriptor, 100)
+                    svc.extractJarFileStreaming(jarPath, 100)
                        .collectList()
                        .block();
 
@@ -165,18 +164,17 @@ class ConcreteExtractionServiceTest {
 
     @Test
     void extractJarFileStreaming_emitsNothingForEmptyJar() throws Exception {
-        byte[] zip = createZipBytes(zos -> {});
+        byte[] zip = createZipBytes(ignore -> {});
         Path jarPath = tempDir.resolve("empty.jar");
         Files.write(jarPath, zip);
 
         var executor = Executors.newSingleThreadExecutor();
         try {
-            var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "empty.jar");
-            ConcreteExtractionService svc = new ConcreteExtractionService(
+             ConcreteExtractionService svc = new ConcreteExtractionService(
                     null, executor, ModelExtractorSupplierRepository.builder().build());
 
             List<List<UnitConstants>> batches =
-                    svc.extractJarFileStreaming(jarPath, descriptor, 10)
+                    svc.extractJarFileStreaming(jarPath, 10)
                        .collectList()
                        .block();
 
