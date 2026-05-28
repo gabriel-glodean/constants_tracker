@@ -24,7 +24,6 @@ import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
 import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.glodean.constants.store.postgres.repository.VersionDeletionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -56,7 +55,6 @@ public class DiffService {
   private final VersionDeletionRepository deletionRepo;
   private final DiffRepository diffRepo;
 
-  @Autowired
   public DiffService(
       ProjectVersionRepository versionRepo,
       UnitDescriptorRepository descriptorRepo,
@@ -100,7 +98,7 @@ public class DiffService {
           return Mono.zip(fromConstsMono, toConstsMono)
               .map(constants -> {
                 List<UnitDiff> units = buildUnitDiffs(
-                    fromMap, toMap, cats, constants.getT1(), constants.getT2());
+                    cats, constants.getT1(), constants.getT2());
                 return new ProjectDiffResponse(project, fromVersion, toVersion, units);
               });
         });
@@ -220,8 +218,6 @@ public class DiffService {
   // ── Unit diff assembly ────────────────────────────────────────────────────
 
   private static List<UnitDiff> buildUnitDiffs(
-      Map<String, Long> fromMap,
-      Map<String, Long> toMap,
       PathCategories cats,
       Map<String, Map<String, List<UsageDetail>>> fromConsts,
       Map<String, Map<String, List<UsageDetail>>> toConsts) {
