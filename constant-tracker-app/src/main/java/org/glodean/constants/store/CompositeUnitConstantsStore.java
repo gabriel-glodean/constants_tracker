@@ -45,10 +45,11 @@ public class CompositeUnitConstantsStore implements UnitConstantsStore {
   private final PostgresService postgresService;
   private final ProjectVersionService projectVersionService;
 
+  @Autowired
   public CompositeUnitConstantsStore(
-      @Autowired SolrService solrService,
-      @Autowired PostgresService postgresService,
-      @Autowired ProjectVersionService projectVersionService) {
+      SolrService solrService,
+      PostgresService postgresService,
+      ProjectVersionService projectVersionService) {
     this.solrService = solrService;
     this.postgresService = postgresService;
     this.projectVersionService = projectVersionService;

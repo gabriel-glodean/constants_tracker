@@ -141,7 +141,7 @@ class FatJarMixedExtractionTest {
             PropertiesConstantsExtractor::new)
         .build();
 
-    extractionService = new ConcreteExtractionService(merger, executor, repository);
+    extractionService = new ConcreteExtractionService(executor, repository);
 
     // Reactive store stubs — always looks like a fresh project/version with no cached entries.
     when(projectVersionService.getOrCreateOpenVersion(PROJECT))
@@ -153,7 +153,8 @@ class FatJarMixedExtractionTest {
 
 
     nestedJarExtractionService = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository, 500);
+        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository,
+        reactor.core.scheduler.Schedulers.immediate(), 500);
   }
 
   // ── Test ──────────────────────────────────────────────────────────────────

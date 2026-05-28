@@ -50,7 +50,7 @@ class ConcreteExtractionServiceTest {
 
         var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "test.jar");
         ConcreteExtractionService svc = new ConcreteExtractionService(
-                null, null, ModelExtractorSupplierRepository.builder().build());
+                null, ModelExtractorSupplierRepository.builder().build());
         Collection<UnitConstants> result = svc.extractJarFile(jarPath, descriptor);
         assertNotNull(result, "extractJarFile should return a non-null collection");
     }
@@ -60,7 +60,7 @@ class ConcreteExtractionServiceTest {
         Path nonExistent = tempDir.resolve("does-not-exist.jar");
         var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "does-not-exist.jar");
         ConcreteExtractionService svc = new ConcreteExtractionService(
-                null, null, ModelExtractorSupplierRepository.builder().build());
+                null, ModelExtractorSupplierRepository.builder().build());
 
         assertThrows(ModelExtractor.ExtractionException.class,
                 () -> svc.extractJarFile(nonExistent, descriptor),
@@ -73,7 +73,7 @@ class ConcreteExtractionServiceTest {
     void extractClassFile_throwsExceptionWhenNoExtractorRegistered() {
         var descriptor = new UnitDescriptor(BytecodeSourceKind.CLASS_FILE, "com/example/Foo.class");
         ConcreteExtractionService svc = new ConcreteExtractionService(
-                null, null, ModelExtractorSupplierRepository.builder().build());
+                null, ModelExtractorSupplierRepository.builder().build());
 
         assertThrows(ModelExtractor.ExtractionException.class,
                 () -> svc.extractClassFile(new byte[]{1, 2, 3}, descriptor),
@@ -88,7 +88,7 @@ class ConcreteExtractionServiceTest {
         try {
             var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "test.jar");
             ConcreteExtractionService svc = new ConcreteExtractionService(
-                    null, executor, ModelExtractorSupplierRepository.builder().build());
+                    executor, ModelExtractorSupplierRepository.builder().build());
 
             byte[] zip = createZipBytes(ignore -> {});
             try (var zis = new ZipInputStream(new ByteArrayInputStream(zip))) {
@@ -107,7 +107,7 @@ class ConcreteExtractionServiceTest {
         try {
             var descriptor = new UnitDescriptor(BytecodeSourceKind.JAR, "test.jar");
             ConcreteExtractionService svc = new ConcreteExtractionService(
-                    null, executor, ModelExtractorSupplierRepository.builder().build());
+                    executor, ModelExtractorSupplierRepository.builder().build());
 
             byte[] zip = createZipBytes(zos -> {
                 try {
@@ -147,7 +147,7 @@ class ConcreteExtractionServiceTest {
         var executor = Executors.newSingleThreadExecutor();
         try {
             ConcreteExtractionService svc = new ConcreteExtractionService(
-                    null, executor, ModelExtractorSupplierRepository.builder().build());
+                    executor, ModelExtractorSupplierRepository.builder().build());
 
             List<List<UnitConstants>> batches =
                     svc.extractJarFileStreaming(jarPath, 100)
@@ -171,7 +171,7 @@ class ConcreteExtractionServiceTest {
         var executor = Executors.newSingleThreadExecutor();
         try {
              ConcreteExtractionService svc = new ConcreteExtractionService(
-                    null, executor, ModelExtractorSupplierRepository.builder().build());
+                    executor, ModelExtractorSupplierRepository.builder().build());
 
             List<List<UnitConstants>> batches =
                     svc.extractJarFileStreaming(jarPath, 10)

@@ -1,9 +1,11 @@
 package org.glodean.constants.store.solr;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.common.SolrInputDocument;
@@ -41,132 +43,136 @@ import reactor.core.publisher.Mono;
 @Component
 public class SolrOutboxProcessor {
 
-  private static final Logger logger = LogManager.getLogger(SolrOutboxProcessor.class);
-  private final int batchSize;
-  static final int MAX_ATTEMPTS = 10;
+    private static final Logger logger = LogManager.getLogger(SolrOutboxProcessor.class);
+    private final int batchSize;
+    static final int MAX_ATTEMPTS = 10;
 
-  /** Plain mapper — {@link SolrOutboxPayload} only contains basic types; no mixins needed. */
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+    /**
+     * Plain mapper — {@link SolrOutboxPayload} only contains basic types; no mixins needed.
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private final SolrOutboxRepository outboxRepository;
-  private final SolrService solrService;
-  private final TransactionalOperator transactionalOperator;
+    private final SolrOutboxRepository outboxRepository;
+    private final SolrService solrService;
+    private final TransactionalOperator transactionalOperator;
 
-  public SolrOutboxProcessor(
-      @Autowired SolrOutboxRepository outboxRepository,
-      @Autowired SolrService solrService,
-      @Autowired TransactionalOperator transactionalOperator,
-      @Value("${constants.solr.outbox.batch-size:50}") int batchSize) {
-    this.outboxRepository = outboxRepository;
-    this.solrService = solrService;
-    this.transactionalOperator = transactionalOperator;
-    this.batchSize = batchSize;
-  }
-
-  // -------------------------------------------------------------------------
-  // Drain
-  // -------------------------------------------------------------------------
-
-  /**
-   * Claims a batch of ready outbox rows, submits them to Solr, and deletes the successfully
-   * indexed rows. Retries are scheduled automatically via exponential back-off on failure.
-   */
-  @Scheduled(fixedRateString = "${constants.solr.outbox.drain-interval-ms:1000}")
-  public void drain() {
-    Mono<Integer> work =
-        outboxRepository
-            .claimBatch(OffsetDateTime.now(), MAX_ATTEMPTS, batchSize)
-            .collectList()
-            .flatMap(this::processBatch);
-
-    transactionalOperator
-        .transactional(work)
-        .subscribe(
-            count -> {
-              if (count > 0) logger.atInfo().log("Solr outbox: flushed {} doc(s)", count);
-            },
-            e -> logger.atError().withThrowable(e).log("Solr outbox drain cycle failed"));
-  }
-
-  private Mono<Integer> processBatch(List<SolrOutboxEntry> batch) {
-    if (batch.isEmpty()) {
-      return Mono.just(0);
+    @Autowired
+    public SolrOutboxProcessor(
+            SolrOutboxRepository outboxRepository,
+            SolrService solrService,
+            TransactionalOperator transactionalOperator,
+            @Value("${constants.solr.outbox.batch-size:50}") int batchSize) {
+        this.outboxRepository = outboxRepository;
+        this.solrService = solrService;
+        this.transactionalOperator = transactionalOperator;
+        this.batchSize = batchSize;
     }
 
-    List<SolrOutboxEntry> good = new ArrayList<>(batch.size());
-    List<SolrOutboxEntry> corrupt = new ArrayList<>();
-    List<SolrInputDocument> docs = new ArrayList<>(batch.size());
+    // -------------------------------------------------------------------------
+    // Drain
+    // -------------------------------------------------------------------------
 
-    for (SolrOutboxEntry entry : batch) {
-      try {
-        docs.add(MAPPER.readValue(entry.payloadJson(), SolrOutboxPayload.class).toSolrDocument());
-        good.add(entry);
-      } catch (Exception e) {
-        logger.atError().withThrowable(e).log(
-            "Corrupt Solr outbox payload for {}:{}:{} — exhausting entry immediately",
-            entry.project(), entry.unitPath(), entry.version());
-        // Set attempts to MAX so the nightly compaction archives it to dead-letter
-        corrupt.add(new SolrOutboxEntry(
-            entry.id(), entry.createdAt(), entry.project(), entry.unitPath(), entry.version(),
-            entry.payloadJson(), MAX_ATTEMPTS,
-            "Corrupt payload: " + e.getMessage(), OffsetDateTime.now()));
-      }
+    /**
+     * Claims a batch of ready outbox rows, submits them to Solr, and deletes the successfully
+     * indexed rows. Retries are scheduled automatically via exponential back-off on failure.
+     */
+    @Scheduled(fixedRateString = "${constants.solr.outbox.drain-interval-ms:1000}")
+    public void drain() {
+        Mono<Integer> work =
+                outboxRepository
+                        .claimBatch(OffsetDateTime.now(), MAX_ATTEMPTS, batchSize)
+                        .collectList()
+                        .flatMap(this::processBatch);
+
+        transactionalOperator
+                .transactional(work)
+                .subscribe(
+                        count -> {
+                            if (count > 0) logger.atInfo().log("Solr outbox: flushed {} doc(s)", count);
+                        },
+                        e -> logger.atError().withThrowable(e).log("Solr outbox drain cycle failed"));
     }
 
-    Mono<Void> exhaustCorrupt = corrupt.isEmpty()
-        ? Mono.empty()
-        : Flux.fromIterable(corrupt).flatMap(outboxRepository::save).then();
+    private Mono<Integer> processBatch(List<SolrOutboxEntry> batch) {
+        if (batch.isEmpty()) {
+            return Mono.just(0);
+        }
 
-    if (good.isEmpty()) {
-      return exhaustCorrupt.thenReturn(0);
+        List<SolrOutboxEntry> good = new ArrayList<>(batch.size());
+        List<SolrOutboxEntry> corrupt = new ArrayList<>();
+        List<SolrInputDocument> docs = new ArrayList<>(batch.size());
+
+        for (SolrOutboxEntry entry : batch) {
+            try {
+                docs.add(MAPPER.readValue(entry.payloadJson(), SolrOutboxPayload.class).toSolrDocument());
+                good.add(entry);
+            } catch (Exception e) {
+                logger.atError().withThrowable(e).log(
+                        "Corrupt Solr outbox payload for {}:{}:{} — exhausting entry immediately",
+                        entry.project(), entry.unitPath(), entry.version());
+                // Set attempts to MAX so the nightly compaction archives it to dead-letter
+                corrupt.add(new SolrOutboxEntry(
+                        entry.id(), entry.createdAt(), entry.project(), entry.unitPath(), entry.version(),
+                        entry.payloadJson(), MAX_ATTEMPTS,
+                        "Corrupt payload: " + e.getMessage(), OffsetDateTime.now()));
+            }
+        }
+
+        Mono<Void> exhaustCorrupt = corrupt.isEmpty()
+                ? Mono.empty()
+                : Flux.fromIterable(corrupt).flatMap(outboxRepository::save).then();
+
+        if (good.isEmpty()) {
+            return exhaustCorrupt.thenReturn(0);
+        }
+
+        return solrService
+                .storeDocumentBatch(docs)
+                .then(outboxRepository.deleteAllById(good.stream().map(SolrOutboxEntry::id).toList()))
+                .then(exhaustCorrupt)
+                .thenReturn(good.size())
+                .onErrorResume(ex -> {
+                    logger.atWarn().withThrowable(ex).log(
+                            "Solr batch write failed ({} doc(s)) — scheduling retries with back-off",
+                            good.size());
+                    String errMsg = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+                    return Flux.fromIterable(good)
+                            .flatMap(e -> outboxRepository.save(e.withFailure(errMsg)))
+                            .then(exhaustCorrupt)
+                            .thenReturn(0);
+                });
     }
 
-    return solrService
-        .storeDocumentBatch(docs)
-        .then(outboxRepository.deleteAllById(good.stream().map(SolrOutboxEntry::id).toList()))
-        .then(exhaustCorrupt)
-        .thenReturn(good.size())
-        .onErrorResume(ex -> {
-          logger.atWarn().withThrowable(ex).log(
-              "Solr batch write failed ({} doc(s)) — scheduling retries with back-off",
-              good.size());
-          String errMsg = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-          return Flux.fromIterable(good)
-              .flatMap(e -> outboxRepository.save(e.withFailure(errMsg)))
-              .then(exhaustCorrupt)
-              .thenReturn(0);
-        });
-  }
+    // -------------------------------------------------------------------------
+    // Compaction
+    // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-  // Compaction
-  // -------------------------------------------------------------------------
+    /**
+     * Nightly compaction: moves exhausted rows ({@code attempts >= MAX_ATTEMPTS}) from the live
+     * outbox to the {@code solr_outbox_dead} dead-letter table, then removes them from
+     * {@code solr_outbox}. Both operations run in the same transaction.
+     *
+     * <p>Dead-letter rows are never automatically deleted and can be replayed manually via SQL
+     * or a future admin endpoint.
+     */
+    @Scheduled(cron = "${constants.solr.outbox.compaction-cron:0 0 3 * * *}")
+    public void compactDeadLetters() {
+        Mono<Void> work = outboxRepository
+                .moveExhaustedToDeadLetter(MAX_ATTEMPTS)
+                .doOnNext(n -> {
+                    if (n > 0) logger.atWarn().log("Solr outbox compaction: archived {} dead-letter row(s)", n);
+                })
+                .then(outboxRepository.deleteExhausted(MAX_ATTEMPTS))
+                .doOnNext(n -> {
+                    if (n > 0) logger.atInfo().log("Solr outbox compaction: removed {} exhausted row(s)", n);
+                })
+                .then();
 
-  /**
-   * Nightly compaction: moves exhausted rows ({@code attempts >= MAX_ATTEMPTS}) from the live
-   * outbox to the {@code solr_outbox_dead} dead-letter table, then removes them from
-   * {@code solr_outbox}. Both operations run in the same transaction.
-   *
-   * <p>Dead-letter rows are never automatically deleted and can be replayed manually via SQL
-   * or a future admin endpoint.
-   */
-  @Scheduled(cron = "${constants.solr.outbox.compaction-cron:0 0 3 * * *}")
-  public void compactDeadLetters() {
-    Mono<Void> work = outboxRepository
-        .moveExhaustedToDeadLetter(MAX_ATTEMPTS)
-        .doOnNext(n -> {
-          if (n > 0) logger.atWarn().log("Solr outbox compaction: archived {} dead-letter row(s)", n);
-        })
-        .then(outboxRepository.deleteExhausted(MAX_ATTEMPTS))
-        .doOnNext(n -> {
-          if (n > 0) logger.atInfo().log("Solr outbox compaction: removed {} exhausted row(s)", n);
-        })
-        .then();
-
-    transactionalOperator
-        .transactional(work)
-        .subscribe(
-            _ -> {},
-            e -> logger.atError().withThrowable(e).log("Solr outbox compaction failed"));
-  }
+        transactionalOperator
+                .transactional(work)
+                .subscribe(
+                        _ -> {
+                        },
+                        e -> logger.atError().withThrowable(e).log("Solr outbox compaction failed"));
+    }
 }

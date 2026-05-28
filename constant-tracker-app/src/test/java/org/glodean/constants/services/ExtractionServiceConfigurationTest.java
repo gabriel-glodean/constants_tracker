@@ -8,6 +8,7 @@ import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.ConstantUsageInterpreterRegistry;
 import org.glodean.constants.extractor.bytecode.InternalStringConcatPatternSplitter;
 import org.junit.jupiter.api.Test;
+import reactor.core.scheduler.Scheduler;
 
 /**
  * Unit tests for ExtractionServiceConfiguration bean factory methods.
@@ -21,6 +22,13 @@ class ExtractionServiceConfigurationTest {
     ExecutorService executor = config.bytecodeAnalysisExecutor();
     assertThat(executor).isNotNull();
     executor.shutdown();
+  }
+
+  @Test
+  void blockingIoScheduler_returnsNonNullScheduler() {
+    Scheduler scheduler = config.blockingIoScheduler();
+    assertThat(scheduler).isNotNull();
+    config.shutdownBytecodeExecutor();
   }
 
   @Test

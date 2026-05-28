@@ -102,7 +102,58 @@ Integration tests (`constant-tracker-app/src/test/.../integration/`) use Testcon
 
 ## External Services (local dev)
 
-- **Solr 9**: `http://localhost:8983/solr/` — collection `Constants`, schema in `constant-tracker-app/solr/managed-schema.xml`
+- **Solr 10**: `http://localhost:8983/solr/` — collection `Constants`, schema in `constant-tracker-app/solr/managed-schema.xml`
 - **Redis 7**: `localhost:6379`
 - **PostgreSQL 17**: `localhost:5432` — database `constant_tracker`; schema managed by Flyway (migrations in `constant-tracker-app/src/main/resources/db/migration/`)
 - Spin up all three: `docker compose up -d` (from repo root)
+
+## Data Management — Purging a Project/Version
+
+To fully remove all data for a given `<project>` at `<version>` from all three stores:
+
+### 1. PostgreSQL (cascade deletes handle child tables automatically)
+
+```bash
+docker exec postgres psql -U postgres -d constant_tracker -c "
+BEGIN;
+DELETE FROM version_deletions WHERE project = '<project>' AND version = <version>;
+DELETE FROM solr_outbox       WHERE project = '<project>' AND version = <version>;
+DELETE FROM solr_outbox_dead  WHERE project = '<project>' AND version = <version>;
+DELETE FROM unit_descriptors  WHERE project = '<project>' AND version = <version>;
+DELETE FROM project_versions  WHERE project = '<project>' AND version = <version>;
+COMMIT;
+"
+```
+
+`unit_descriptors → unit_snapshots → unit_constants → constant_usages` are all `ON DELETE CASCADE`, so deleting from `unit_descriptors` is sufficient for that chain.
+
+### 2. Solr (field names: `project`, `unit_version`)
+
+```bash
+# PowerShell
+Invoke-RestMethod -Uri "http://localhost:8983/solr/Constants/update?commit=true" \
+  -Method Post -ContentType "application/json" \
+  -Body '{"delete": {"query": "project:\"<project>\" AND unit_version:<version>"}}'
+```
+
+### 3. Redis (version counter key pattern: `IdCounter:<project>`)
+
+```bash
+docker exec redis redis-cli DEL "IdCounter:<project>"
+```
+
+### Verify
+
+```bash
+# Postgres — both should return 0
+docker exec postgres psql -U postgres -d constant_tracker -c \
+  "SELECT COUNT(*) FROM project_versions WHERE project='<project>';
+   SELECT COUNT(*) FROM unit_descriptors WHERE project='<project>';"
+
+# Redis — should return empty
+docker exec redis redis-cli KEYS "*<project>*"
+
+# Solr — numFound should be 0
+Invoke-RestMethod "http://localhost:8983/solr/Constants/select?q=project%3A%22<project>%22&rows=0"
+```
+

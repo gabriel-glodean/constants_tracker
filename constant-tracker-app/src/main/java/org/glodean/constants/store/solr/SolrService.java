@@ -44,219 +44,222 @@ import static org.glodean.constants.util.LogSanitizer.sanitize;
  */
 @Service
 public class SolrService implements UnitConstantsStore {
-  private static final Logger logger = LogManager.getLogger(SolrService.class);
+    private static final Logger logger = LogManager.getLogger(SolrService.class);
 
-  private final HttpSolrClientBase solrClient;
+    private final HttpSolrClientBase solrClient;
 
-  /**
-   * Creates a {@code SolrService} backed by the given HTTP Solr client.
-   *
-   * @param solrClient the pre-configured Solr client (URL set in {@code constants.solr.url})
-   */
-  public SolrService(@Autowired HttpSolrClientBase solrClient) {
-    this.solrClient = solrClient;
-  }
-
-  /** Throws {@link UnsupportedOperationException} — version assignment is owned by the composite. */
-  @Override
-  public Mono<UnitConstants> store(UnitConstants constants, String project) {
-    throw new UnsupportedOperationException(
-        "SolrService does not manage version assignment; use CompositeUnitConstantsStore");
-  }
-
-
-  /**
-   * Stores a simplified flat Solr document for the given class snapshot.
-   *
-   * <p>Document fields are built via {@link SolrOutboxPayload#from} to keep field construction
-   * logic in a single place (shared with the outbox processor).
-   *
-   * @param constants the unit constants to index
-   * @param project   the project identifier
-   * @param version   the version number
-   * @return a {@link Mono} emitting the original {@code constants} on success
-   */
-
-  @Timed(value = "solr.store", description = "Time to store a unit in Solr")
-  @Override
-  public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
-    String sourcePath = constants.source().path();
-    logger.atInfo().log(
-        "Storing to Solr (direct): {} project={} version={}", sanitize(sourcePath), sanitize(project), version);
-    SolrInputDocument doc = SolrOutboxPayload.from(constants, project, version).toSolrDocument();
-    return storeDocumentBatch(List.of(doc)).thenReturn(constants);
-  }
-
-  /**
-   * Submits a batch of pre-built Solr documents in a single {@link UpdateRequest} with a
-   * hard commit. Called by {@link SolrOutboxProcessor}; documents are already assembled from
-   * the outbox {@link SolrOutboxPayload}.
-   *
-   * @param docs the documents to index; must not be empty
-   * @return a {@link Mono} that completes when Solr acknowledges the commit
-   */
-  @Timed(value = "solr.store_batch", description = "Time to store a batch of documents in Solr")
-  public Mono<Void> storeDocumentBatch(List<SolrInputDocument> docs) {
-    if (docs.isEmpty()) {
-      return Mono.empty();
+    /**
+     * Creates a {@code SolrService} backed by the given HTTP Solr client.
+     *
+     * @param solrClient the pre-configured Solr client (URL set in {@code constants.solr.url})
+     */
+    @Autowired
+    public SolrService(HttpSolrClientBase solrClient) {
+        this.solrClient = solrClient;
     }
-    logger.atInfo().log("Submitting {} doc(s) to Solr", docs.size());
-    var request = new UpdateRequest();
-    docs.forEach(request::add);
-    request.setParam("commit", "true");
-    return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION)).then();
-  }
 
-  /**
-   * Full-text / fuzzy search across constant values.
-   *
-   * <p>Uses the eDisMax query parser with two search fields:
-   * <ul>
-   *   <li>{@code constant_values_t} — standard tokenised field (BM25 scoring)</li>
-   *   <li>{@code constant_values_ngram} — edge n-gram field for prefix / partial matches</li>
-   * </ul>
-   *
-   * <p>The caller provides a plain-text {@code term}; Lucene query syntax is built internally
-   * via {@link SearchQueryBuilder}. Special characters are escaped automatically and fuzzy
-   * suffixes ({@code ~N}) are appended per-token when {@code editDistance > 0}.
-   *
-   * @param project      project to restrict results to; pass {@code null} or empty string to search
-   *                     across all projects
-   * @param term         plain-text search term
-   * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo,
-   *                     {@code 2} = two typos
-   * @param maxRows      maximum number of hits to return
-   * @return ranked {@link FuzzySearchResponse}
-   */
-  @Timed(value = "solr.fuzzy_search", description = "Time to execute fuzzy search")
-  @Override
-  public Mono<FuzzySearchResponse> fuzzySearch(
-      String project, String term, int editDistance, int maxRows) {
-    String queryText = SearchQueryBuilder.build(term, editDistance);
-    logger.atInfo().log(
-        "Fuzzy search: project={} term={} editDistance={} rows={} query={}",
-        sanitize(project), sanitize(term), editDistance, maxRows, sanitize(queryText));
-
-    QueryRequest query = getQueryRequest(project, maxRows, queryText);
-    query.setPath("/select");
-
-    return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
-        .map(SolrService::parseFuzzyResponse);
-  }
-
-  private static @NonNull QueryRequest getQueryRequest(String project, int maxRows, String queryText) {
-    ModifiableSolrParams params = new ModifiableSolrParams();
-    params.set("q", queryText);
-    params.set("defType", "edismax");
-    params.set("qf", "constant_values_t^2.0 constant_values_ngram^1.0");
-    params.set("pf", "constant_values_t^3.0"); // phrase boost
-    if (!Strings.isNullOrEmpty(project)) {
-      params.set("fq", "project:\"" + ClientUtils.escapeQueryChars(project) + "\"");
+    /**
+     * Throws {@link UnsupportedOperationException} — version assignment is owned by the composite.
+     */
+    @Override
+    public Mono<UnitConstants> store(UnitConstants constants, String project) {
+        throw new UnsupportedOperationException(
+                "SolrService does not manage version assignment; use CompositeUnitConstantsStore");
     }
-    params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t,semantic_pairs_ss");
-    params.set("rows", maxRows);
 
-    return new QueryRequest(params);
-  }
 
-  /**
-   * Looks up constant pairs for an exact document key ({@code project:className:version}).
-   *
-   * <p>Issues a Solr {@code id} query and parses the {@code constant_pairs_ss} multi-value
-   * field into the result map.
-   *
-   * @param key composite key in the format {@code "<project>:<className>:<version>"}
-   * @return a {@link reactor.core.publisher.Mono} emitting the constant-to-usage-type map;
-   *         errors with {@link IllegalArgumentException} if the document is not found
-   */
-  @Timed(value = "solr.find", description = "Time to find a unit in Solr")
-  @Override
-  public Mono<GetUnitConstantsReply> find(String key) {
-    ModifiableSolrParams params = new ModifiableSolrParams();
-    params.set("q", "id:\"" + ClientUtils.escapeQueryChars(key) + "\"");
-    params.set("fl", "constant_pairs_ss");
-    params.set("rows", 1);
-    QueryRequest query = new QueryRequest(params);
-    query.setPath("/select");
-    logger.atInfo().log("Solr search query for key={}", sanitize(key));
-    return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
-        .map(SolrService::parsePairs);
-  }
+    /**
+     * Stores a simplified flat Solr document for the given class snapshot.
+     *
+     * <p>Document fields are built via {@link SolrOutboxPayload#from} to keep field construction
+     * logic in a single place (shared with the outbox processor).
+     *
+     * @param constants the unit constants to index
+     * @param project   the project identifier
+     * @param version   the version number
+     * @return a {@link Mono} emitting the original {@code constants} on success
+     */
 
-  /**
-   * Parses the raw Solr response into a {@link GetUnitConstantsReply}.
-   *
-   * <p>Each {@code constant_pairs_ss} entry has the format {@code "<value>|<USAGE_TYPE>"}.
-   * Semantic type and value type are not stored in Solr, so those fields will be {@code null}.
-   *
-   * @param list the raw Solr {@link NamedList} response
-   * @return a {@link GetUnitConstantsReply} built from the pair strings
-   * @throws IllegalArgumentException if the response contains no matching documents
-   */
-  private static GetUnitConstantsReply parsePairs(NamedList<Object> list) {
-    Map<String, List<GetUnitConstantsReply.UsageInfo>> grouped = new LinkedHashMap<>();
-    if (list.get("response") instanceof Collection<?> response) {
-      if (response.isEmpty()) {
-        throw new IllegalArgumentException("Unknown unit!");
-      }
-      for (var doc : response) {
-        if (doc instanceof Map<?, ?> solrDoc) {
-          Object raw = solrDoc.get("constant_pairs_ss");
-          if (raw instanceof Collection<?> pairsList) {
-            for (var item : pairsList) {
-              if (item instanceof String pairStr) {
-                int sep = pairStr.lastIndexOf('|');
-                if (sep > 0) {
-                  String value = pairStr.substring(0, sep);
-                  String structuralType = pairStr.substring(sep + 1);
-                  grouped.computeIfAbsent(value, _ -> new ArrayList<>())
-                      .add(new GetUnitConstantsReply.UsageInfo(structuralType, null));
-                }
-              }
-            }
-          }
+    @Timed(value = "solr.store", description = "Time to store a unit in Solr")
+    @Override
+    public Mono<UnitConstants> store(UnitConstants constants, String project, int version) {
+        String sourcePath = constants.source().path();
+        logger.atInfo().log(
+                "Storing to Solr (direct): {} project={} version={}", sanitize(sourcePath), sanitize(project), version);
+        SolrInputDocument doc = SolrOutboxPayload.from(constants, project, version).toSolrDocument();
+        return storeDocumentBatch(List.of(doc)).thenReturn(constants);
+    }
+
+    /**
+     * Submits a batch of pre-built Solr documents in a single {@link UpdateRequest} with a
+     * hard commit. Called by {@link SolrOutboxProcessor}; documents are already assembled from
+     * the outbox {@link SolrOutboxPayload}.
+     *
+     * @param docs the documents to index; must not be empty
+     * @return a {@link Mono} that completes when Solr acknowledges the commit
+     */
+    @Timed(value = "solr.store_batch", description = "Time to store a batch of documents in Solr")
+    public Mono<Void> storeDocumentBatch(List<SolrInputDocument> docs) {
+        if (docs.isEmpty()) {
+            return Mono.empty();
         }
-      }
+        logger.atInfo().log("Submitting {} doc(s) to Solr", docs.size());
+        var request = new UpdateRequest();
+        docs.forEach(request::add);
+        request.setParam("commit", "true");
+        return Mono.fromFuture(solrClient.requestAsync(request, DATA_LOCATION)).then();
     }
-    List<GetUnitConstantsReply.ConstantEntry> entries = grouped.entrySet().stream()
-        .map(e -> new GetUnitConstantsReply.ConstantEntry(e.getKey(), null, e.getValue()))
-        .toList();
-    return new GetUnitConstantsReply(entries);
-  }
-  
-  /**
-   * Parses a Solr query response into a {@link FuzzySearchResponse}.
-   *
-   * <p>Reads the {@link SolrDocumentList} from the {@code "response"} key, maps each
-   * document to a {@link FuzzySearchHit}, and returns the total-found count alongside
-   * the hit list.
-   *
-   * @param list the raw Solr {@link NamedList} response
-   * @return a {@link FuzzySearchResponse} with hits and total count; empty response if
-   *         the response block is missing or not a {@link SolrDocumentList}
-   */
-  private static FuzzySearchResponse parseFuzzyResponse(NamedList<Object> list) {
-    if (!(list.get("response") instanceof SolrDocumentList docs)) {
-      return new FuzzySearchResponse(List.of(), 0L);
+
+    /**
+     * Full-text / fuzzy search across constant values.
+     *
+     * <p>Uses the eDisMax query parser with two search fields:
+     * <ul>
+     *   <li>{@code constant_values_t} — standard tokenised field (BM25 scoring)</li>
+     *   <li>{@code constant_values_ngram} — edge n-gram field for prefix / partial matches</li>
+     * </ul>
+     *
+     * <p>The caller provides a plain-text {@code term}; Lucene query syntax is built internally
+     * via {@link SearchQueryBuilder}. Special characters are escaped automatically and fuzzy
+     * suffixes ({@code ~N}) are appended per-token when {@code editDistance > 0}.
+     *
+     * @param project      project to restrict results to; pass {@code null} or empty string to search
+     *                     across all projects
+     * @param term         plain-text search term
+     * @param editDistance fuzzy tolerance per token: {@code 0} = exact, {@code 1} = one typo,
+     *                     {@code 2} = two typos
+     * @param maxRows      maximum number of hits to return
+     * @return ranked {@link FuzzySearchResponse}
+     */
+    @Timed(value = "solr.fuzzy_search", description = "Time to execute fuzzy search")
+    @Override
+    public Mono<FuzzySearchResponse> fuzzySearch(
+            String project, String term, int editDistance, int maxRows) {
+        String queryText = SearchQueryBuilder.build(term, editDistance);
+        logger.atInfo().log(
+                "Fuzzy search: project={} term={} editDistance={} rows={} query={}",
+                sanitize(project), sanitize(term), editDistance, maxRows, sanitize(queryText));
+
+        QueryRequest query = getQueryRequest(project, maxRows, queryText);
+        query.setPath("/select");
+
+        return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
+                .map(SolrService::parseFuzzyResponse);
     }
-    long numFound = docs.getNumFound();
-    List<FuzzySearchHit> hits = new ArrayList<>(docs.size());
-    for (SolrDocument doc : docs) {
-      String project = (String) doc.getFieldValue("project");
-      String unitName = (String) doc.getFieldValue("unit_name");
-      Object rawVersion = doc.getFieldValue("unit_version");
-      int version = rawVersion instanceof Number n ? n.intValue() : 0;
-      String sourceKind = (String) doc.getFieldValue("source_kind");
-      Collection<Object> rawValues = doc.getFieldValues("constant_values_t");
-      List<String> values = rawValues == null
-          ? List.of()
-          : rawValues.stream().map(Object::toString).toList();
-      Collection<Object> rawSemantic = doc.getFieldValues("semantic_pairs_ss");
-      List<String> semanticPairs = rawSemantic == null
-          ? List.of()
-          : rawSemantic.stream().map(Object::toString).toList();
-      hits.add(new FuzzySearchHit(project, unitName, version, sourceKind, values, semanticPairs));
+
+    private static @NonNull QueryRequest getQueryRequest(String project, int maxRows, String queryText) {
+        ModifiableSolrParams params = new ModifiableSolrParams();
+        params.set("q", queryText);
+        params.set("defType", "edismax");
+        params.set("qf", "constant_values_t^2.0 constant_values_ngram^1.0");
+        params.set("pf", "constant_values_t^3.0"); // phrase boost
+        if (!Strings.isNullOrEmpty(project)) {
+            params.set("fq", "project:\"" + ClientUtils.escapeQueryChars(project) + "\"");
+        }
+        params.set("fl", "project,unit_name,unit_version,source_kind,constant_values_t,semantic_pairs_ss");
+        params.set("rows", maxRows);
+
+        return new QueryRequest(params);
     }
-    return new FuzzySearchResponse(hits, numFound);
-  }
+
+    /**
+     * Looks up constant pairs for an exact document key ({@code project:className:version}).
+     *
+     * <p>Issues a Solr {@code id} query and parses the {@code constant_pairs_ss} multi-value
+     * field into the result map.
+     *
+     * @param key composite key in the format {@code "<project>:<className>:<version>"}
+     * @return a {@link reactor.core.publisher.Mono} emitting the constant-to-usage-type map;
+     * errors with {@link IllegalArgumentException} if the document is not found
+     */
+    @Timed(value = "solr.find", description = "Time to find a unit in Solr")
+    @Override
+    public Mono<GetUnitConstantsReply> find(String key) {
+        ModifiableSolrParams params = new ModifiableSolrParams();
+        params.set("q", "id:\"" + ClientUtils.escapeQueryChars(key) + "\"");
+        params.set("fl", "constant_pairs_ss");
+        params.set("rows", 1);
+        QueryRequest query = new QueryRequest(params);
+        query.setPath("/select");
+        logger.atInfo().log("Solr search query for key={}", sanitize(key));
+        return Mono.fromFuture(solrClient.requestAsync(query, DATA_LOCATION))
+                .map(SolrService::parsePairs);
+    }
+
+    /**
+     * Parses the raw Solr response into a {@link GetUnitConstantsReply}.
+     *
+     * <p>Each {@code constant_pairs_ss} entry has the format {@code "<value>|<USAGE_TYPE>"}.
+     * Semantic type and value type are not stored in Solr, so those fields will be {@code null}.
+     *
+     * @param list the raw Solr {@link NamedList} response
+     * @return a {@link GetUnitConstantsReply} built from the pair strings
+     * @throws IllegalArgumentException if the response contains no matching documents
+     */
+    private static GetUnitConstantsReply parsePairs(NamedList<Object> list) {
+        Map<String, List<GetUnitConstantsReply.UsageInfo>> grouped = new LinkedHashMap<>();
+        if (list.get("response") instanceof Collection<?> response) {
+            if (response.isEmpty()) {
+                throw new IllegalArgumentException("Unknown unit!");
+            }
+            for (var doc : response) {
+                if (doc instanceof Map<?, ?> solrDoc) {
+                    Object raw = solrDoc.get("constant_pairs_ss");
+                    if (raw instanceof Collection<?> pairsList) {
+                        for (var item : pairsList) {
+                            if (item instanceof String pairStr) {
+                                int sep = pairStr.lastIndexOf('|');
+                                if (sep > 0) {
+                                    String value = pairStr.substring(0, sep);
+                                    String structuralType = pairStr.substring(sep + 1);
+                                    grouped.computeIfAbsent(value, _ -> new ArrayList<>())
+                                            .add(new GetUnitConstantsReply.UsageInfo(structuralType, null));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        List<GetUnitConstantsReply.ConstantEntry> entries = grouped.entrySet().stream()
+                .map(e -> new GetUnitConstantsReply.ConstantEntry(e.getKey(), null, e.getValue()))
+                .toList();
+        return new GetUnitConstantsReply(entries);
+    }
+
+    /**
+     * Parses a Solr query response into a {@link FuzzySearchResponse}.
+     *
+     * <p>Reads the {@link SolrDocumentList} from the {@code "response"} key, maps each
+     * document to a {@link FuzzySearchHit}, and returns the total-found count alongside
+     * the hit list.
+     *
+     * @param list the raw Solr {@link NamedList} response
+     * @return a {@link FuzzySearchResponse} with hits and total count; empty response if
+     * the response block is missing or not a {@link SolrDocumentList}
+     */
+    private static FuzzySearchResponse parseFuzzyResponse(NamedList<Object> list) {
+        if (!(list.get("response") instanceof SolrDocumentList docs)) {
+            return new FuzzySearchResponse(List.of(), 0L);
+        }
+        long numFound = docs.getNumFound();
+        List<FuzzySearchHit> hits = new ArrayList<>(docs.size());
+        for (SolrDocument doc : docs) {
+            String project = (String) doc.getFieldValue("project");
+            String unitName = (String) doc.getFieldValue("unit_name");
+            Object rawVersion = doc.getFieldValue("unit_version");
+            int version = rawVersion instanceof Number n ? n.intValue() : 0;
+            String sourceKind = (String) doc.getFieldValue("source_kind");
+            Collection<Object> rawValues = doc.getFieldValues("constant_values_t");
+            List<String> values = rawValues == null
+                    ? List.of()
+                    : rawValues.stream().map(Object::toString).toList();
+            Collection<Object> rawSemantic = doc.getFieldValues("semantic_pairs_ss");
+            List<String> semanticPairs = rawSemantic == null
+                    ? List.of()
+                    : rawSemantic.stream().map(Object::toString).toList();
+            hits.add(new FuzzySearchHit(project, unitName, version, sourceKind, values, semanticPairs));
+        }
+        return new FuzzySearchResponse(hits, numFound);
+    }
 }

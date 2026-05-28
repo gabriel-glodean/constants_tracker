@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.zip.ZipInputStream;
 import org.glodean.constants.extractor.ModelExtractor;
 import org.glodean.constants.extractor.ModelExtractorSupplierRepository;
-import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.BytecodeModelExtractor;
 import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
@@ -38,24 +37,26 @@ import reactor.core.scheduler.Schedulers;
  *       to {@link BytecodeModelExtractor#forZipStream}.</li>
  * </ul>
  *
- * <p>All bulk extractions share a single {@code bytecodeAnalysisExecutor} thread pool
- * (sized to {@link Runtime#availableProcessors()}) defined in
- * {@link ExtractionServiceConfiguration}. The pool is reused across calls — no thread-pool
- * creation overhead per extraction.
+ * <p>All bulk extractions pass a single {@code bytecodeAnalysisExecutor} thread pool
+ * (sized to {@link Runtime#availableProcessors()}, defined in
+ * {@link ExtractionServiceConfiguration}) directly to {@link BytecodeModelExtractor} for
+ * internal parallelism.  The pool is reused across calls — no thread-pool creation overhead
+ * per extraction.  The streaming path additionally uses {@code Schedulers.boundedElastic()}
+ * for the outer blocking callables (file-walk and chunk submission) to avoid a deadlock that
+ * would occur if those blocking waits were scheduled on the analysis executor itself.
  */
 @Service
 public class ConcreteExtractionService implements ExtractionService {
 
-  private final AnalysisMerger merger;
+  private static final LoggingExtractionNotifier NOTIFIER = new LoggingExtractionNotifier();
+
   private final ExecutorService bytecodeAnalysisExecutor;
   private final ModelExtractorSupplierRepository bytecodeExtractorRepository;
 
   @Autowired
   public ConcreteExtractionService(
-      AnalysisMerger merger,
       @Qualifier("bytecodeAnalysisExecutor") ExecutorService bytecodeAnalysisExecutor,
       ModelExtractorSupplierRepository bytecodeExtractorRepository) {
-    this.merger = merger;
     this.bytecodeAnalysisExecutor = bytecodeAnalysisExecutor;
     this.bytecodeExtractorRepository = bytecodeExtractorRepository;
   }
@@ -80,7 +81,7 @@ public class ConcreteExtractionService implements ExtractionService {
       throws ModelExtractor.ExtractionException {
     try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
       return BytecodeModelExtractor
-          .forFileSystem(bytecodeAnalysisExecutor, fs, new LoggingExtractionNotifier(), bytecodeExtractorRepository)
+          .forFileSystem(bytecodeAnalysisExecutor, fs, NOTIFIER, bytecodeExtractorRepository)
           .extract(descriptor);
     } catch (ModelExtractor.ExtractionException e) {
       throw e;
@@ -97,6 +98,7 @@ public class ConcreteExtractionService implements ExtractionService {
    * and emits the results — so bytes and futures from chunk N are GC-eligible before chunk N+1
    * bytes are read.
    */
+  @Timed(value = "extraction.jar.streaming", description = "Time to stream-extract a JAR file")
   @Override
   public Flux<List<UnitConstants>> extractJarFileStreaming(
       Path jarPath, int batchSize) {
@@ -113,7 +115,7 @@ public class ConcreteExtractionService implements ExtractionService {
                       Mono.fromCallable(() ->
                               BytecodeModelExtractor.extractPathChunk(
                                   bytecodeAnalysisExecutor, pathChunk,
-                                  new LoggingExtractionNotifier(),
+                                  NOTIFIER,
                                   bytecodeExtractorRepository))
                           .subscribeOn(Schedulers.boundedElastic())
                           .map(ArrayList::new)

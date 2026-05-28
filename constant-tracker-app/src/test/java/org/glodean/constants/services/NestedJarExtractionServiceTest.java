@@ -38,6 +38,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
 /**
@@ -76,7 +77,8 @@ class NestedJarExtractionServiceTest {
   @BeforeEach
   void setUp() {
     service = new NestedJarExtractionService(
-        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository, 500);
+        extractionService, descriptorRepository, projectVersionService, jarExtractionRepository,
+        Schedulers.immediate(), 500);
 
     // Default: project has an open version.
     when(projectVersionService.getOrCreateOpenVersion(PROJECT))

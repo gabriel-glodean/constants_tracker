@@ -33,9 +33,10 @@ public class RedisVersionSynchronizer implements ApplicationRunner {
   private final ProjectVersionRepository versionRepository;
   private final RedisConnectionFactory connectionFactory;
 
+  @Autowired
   public RedisVersionSynchronizer(
-      @Autowired ProjectVersionRepository versionRepository,
-      @Autowired RedisConnectionFactory connectionFactory) {
+      ProjectVersionRepository versionRepository,
+      RedisConnectionFactory connectionFactory) {
     this.versionRepository = versionRepository;
     this.connectionFactory = connectionFactory;
   }

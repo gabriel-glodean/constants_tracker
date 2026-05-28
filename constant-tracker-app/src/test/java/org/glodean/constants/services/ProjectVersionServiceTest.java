@@ -15,7 +15,6 @@ import java.util.Set;
 import org.glodean.constants.store.VersionIncrementer;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
 import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
@@ -33,7 +32,6 @@ class ProjectVersionServiceTest {
 
   @Mock ProjectVersionRepository versionRepo;
   @Mock VersionDeletionRepository deletionRepo;
-  @Mock UnitDescriptorRepository descriptorRepo;
   @Mock UnitSnapshotRepository snapshotRepo;
   @Mock VersionIncrementer versionIncrementer;
 
@@ -42,7 +40,7 @@ class ProjectVersionServiceTest {
   @BeforeEach
   void setUp() {
     service =
-        new ProjectVersionService(versionRepo, deletionRepo, descriptorRepo, snapshotRepo, versionIncrementer);
+        new ProjectVersionService(versionRepo, deletionRepo, snapshotRepo, versionIncrementer);
   }
 
   static ProjectVersionEntity openVersion(String project, int version, Integer parent) {

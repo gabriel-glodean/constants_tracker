@@ -70,12 +70,13 @@ public class PostgresService implements UnitConstantsStore {
   private final ConstantUsageRepository usageRepo;
   private final SolrOutboxRepository solrOutboxRepo;
 
+  @Autowired
   public PostgresService(
-      @Autowired UnitDescriptorRepository descriptorRepo,
-      @Autowired UnitSnapshotRepository snapshotRepo,
-      @Autowired UnitConstantRepository constantRepo,
-      @Autowired ConstantUsageRepository usageRepo,
-      @Autowired SolrOutboxRepository solrOutboxRepo) {
+      UnitDescriptorRepository descriptorRepo,
+      UnitSnapshotRepository snapshotRepo,
+       UnitConstantRepository constantRepo,
+      ConstantUsageRepository usageRepo,
+      SolrOutboxRepository solrOutboxRepo) {
     this.descriptorRepo = descriptorRepo;
     this.snapshotRepo = snapshotRepo;
     this.constantRepo = constantRepo;

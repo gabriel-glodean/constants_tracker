@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 import org.glodean.constants.store.VersionIncrementer;
 import org.glodean.constants.store.postgres.entity.ProjectVersionEntity;
 import org.glodean.constants.store.postgres.repository.ProjectVersionRepository;
-import org.glodean.constants.store.postgres.repository.UnitDescriptorRepository;
 import org.glodean.constants.store.postgres.entity.UnitSnapshotEntity;
 import org.glodean.constants.store.postgres.repository.UnitSnapshotRepository;
 import org.glodean.constants.store.postgres.entity.VersionDeletionEntity;
@@ -35,19 +34,17 @@ public class ProjectVersionService {
   private static final Logger logger = LogManager.getLogger(ProjectVersionService.class);
   private final ProjectVersionRepository versionRepo;
   private final VersionDeletionRepository deletionRepo;
-  private final UnitDescriptorRepository descriptorRepo;
   private final UnitSnapshotRepository snapshotRepo;
   private final VersionIncrementer versionIncrementer;
 
+  @Autowired
   public ProjectVersionService(
-      @Autowired ProjectVersionRepository versionRepo,
-      @Autowired VersionDeletionRepository deletionRepo,
-      @Autowired UnitDescriptorRepository descriptorRepo,
-      @Autowired UnitSnapshotRepository snapshotRepo,
-      @Autowired VersionIncrementer versionIncrementer) {
+      ProjectVersionRepository versionRepo,
+      VersionDeletionRepository deletionRepo,
+      UnitSnapshotRepository snapshotRepo,
+      VersionIncrementer versionIncrementer) {
     this.versionRepo = versionRepo;
     this.deletionRepo = deletionRepo;
-    this.descriptorRepo = descriptorRepo;
     this.snapshotRepo = snapshotRepo;
     this.versionIncrementer = versionIncrementer;
   }

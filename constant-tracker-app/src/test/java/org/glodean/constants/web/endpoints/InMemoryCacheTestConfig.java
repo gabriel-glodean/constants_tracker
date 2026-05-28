@@ -28,8 +28,7 @@ public class InMemoryCacheTestConfig {
             .register(name -> name.endsWith(".class"), BytecodeSourceKind.CLASS_FILE,
                 ClassModelExtractor.supplier(merger))
             .build();
-    return new ConcreteExtractionService(
-       merger, null, repo);
+    return new ConcreteExtractionService(null, repo);
   }
 
   /** Disable security for controller slice tests — no auth headers required. */

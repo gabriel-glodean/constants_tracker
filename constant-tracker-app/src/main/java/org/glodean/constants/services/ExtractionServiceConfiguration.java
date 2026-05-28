@@ -4,6 +4,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import org.glodean.constants.extractor.ModelExtractorSupplierRepository;
 import org.glodean.constants.extractor.bytecode.AnalysisMerger;
 import org.glodean.constants.extractor.bytecode.BytecodeSourceKind;
@@ -47,6 +49,7 @@ public class ExtractionServiceConfiguration {
   private static final Logger logger = LogManager.getLogger(ExtractionServiceConfiguration.class);
 
   private ExecutorService bytecodeAnalysisExecutor;
+  private ExecutorService blockingIoExecutor;
 
   /**
    * Shared fixed-thread-pool used by all bytecode extractions.
@@ -61,11 +64,30 @@ public class ExtractionServiceConfiguration {
     return this.bytecodeAnalysisExecutor;
   }
 
+  /**
+   * Reactor {@link Scheduler} for blocking I/O offloading, backed by virtual threads.
+   *
+   * <p>Used wherever blocking I/O (ZIP reading, class extraction) must be moved off the
+   * event loop via {@code subscribeOn}. Virtual threads are cheap to create and park
+   * without holding OS threads, making them a better fit than {@code boundedElastic} for
+   * this workload.
+   */
+  @Bean
+  Scheduler blockingIoScheduler() {
+    logger.atInfo().log("Creating virtual-thread-backed blocking I/O scheduler");
+    this.blockingIoExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    return Schedulers.fromExecutorService(blockingIoExecutor, "vt-io");
+  }
+
   @PreDestroy
   void shutdownBytecodeExecutor() {
     if (bytecodeAnalysisExecutor != null) {
       logger.atInfo().log("Shutting down bytecode analysis executor");
       bytecodeAnalysisExecutor.close();
+    }
+    if (blockingIoExecutor != null) {
+      logger.atInfo().log("Shutting down blocking I/O executor");
+      blockingIoExecutor.close();
     }
   }
 
