@@ -5,7 +5,7 @@ export interface MetadataOption {
 
 export interface MetadataResponse {
   types: MetadataOption[]
-  usageTypes: MetadataOption[]
+  structuralTypes: MetadataOption[]
   semanticTypes: MetadataOption[]
 }
 

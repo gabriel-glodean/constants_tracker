@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type EventHandler, type SyntheticEvent } from 'react'
+import { useEffect, useMemo, useState, type EventHandler, type SyntheticEvent } from 'react'
 import { getClassConstants, type ConstantEntry } from '@/api/classApi'
 import { getMetadata, type MetadataOption, type MetadataResponse } from '@/api/metadataApi'
+import { getAllConstantDetails } from '@/api/constantDetailsApi'
 import { getUnits, type UnitGroup } from '@/api/unitsApi'
 import { AlertCircle, ChevronDown, FolderTree, FileCode2, SlidersHorizontal } from 'lucide-react'
 
@@ -13,7 +14,7 @@ interface ClassLookupFormProps {
 interface AppliedFilters {
   types: string[]
   semanticTypes: string[]
-  usageTypes: string[]
+  structuralTypes: string[]
 }
 
 interface MetadataMultiSelectGroupProps {
@@ -79,15 +80,13 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
   const [metadata, setMetadata] = useState<MetadataResponse | null>(null)
   const [loadingMetadata, setLoadingMetadata] = useState(false)
   const [metadataError, setMetadataError] = useState('')
-  const lastScopeRef = useRef<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedSemanticTypes, setSelectedSemanticTypes] = useState<string[]>([])
-  const [selectedUsageTypes, setSelectedUsageTypes] = useState<string[]>([])
+  const [selectedStructuralTypes, setselectedStructuralTypes] = useState<string[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingUnits, setLoadingUnits] = useState(false)
-  const classConstantsCacheRef = useRef<Map<string, ConstantEntry[]>>(new Map())
 
   useEffect(() => {
     let alive = true
@@ -119,7 +118,7 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
   const filterSummary = [
     selectedTypes.length,
     selectedSemanticTypes.length,
-    selectedUsageTypes.length,
+    selectedStructuralTypes.length,
   ].reduce((sum, count) => sum + count, 0)
 
   const metadataStatus = loadingMetadata
@@ -150,41 +149,13 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
       .filter(group => group.units.length > 0)
   }, [groups, filter, matchingUnits])
 
-  async function loadUnitConstants(unitName: string): Promise<ConstantEntry[]> {
-    const cached = classConstantsCacheRef.current.get(unitName)
-    if (cached) return cached
-
-    const data = await getClassConstants({
-      project: activeProject,
-      className: unitName,
-      version: activeVersion,
-    }, { fetcher })
-
-    classConstantsCacheRef.current.set(unitName, data.constants)
-    return data.constants
-  }
-
-  function constantMatchesFilters(entry: ConstantEntry, filters: AppliedFilters): boolean {
-    const structuralTypes = entry.usages.map(u => u.structuralType)
-    const usageMatches = filters.usageTypes.length === 0 || structuralTypes.some(t => filters.usageTypes.includes(t))
-    if (!usageMatches) return false
-
-    // valueType is always provided by the backend
-    const typeMatches = filters.types.length === 0 || (!!entry.valueType && filters.types.includes(entry.valueType))
-    if (!typeMatches) return false
-
-    const semanticNames = entry.usages.flatMap(u => u.semanticType ? [u.semanticType.name] : [])
-    return filters.semanticTypes.length === 0
-      || semanticNames.some(n => filters.semanticTypes.includes(n))
-  }
-
   async function applyMetadataFilters(filtersToApply: AppliedFilters, sourceGroups: UnitGroup[] = groups) {
     setFiltersNotice('')
 
     const hasAnyFilter =
       filtersToApply.types.length > 0 ||
       filtersToApply.semanticTypes.length > 0 ||
-      filtersToApply.usageTypes.length > 0
+      filtersToApply.structuralTypes.length > 0
 
     if (!hasAnyFilter) {
       setMatchingUnits(null)
@@ -193,19 +164,61 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
 
     setApplyingFilters(true)
     try {
-      const allUnits = sourceGroups.flatMap(group => group.units)
-      const matchCandidates = await Promise.all(
-        allUnits.map(async unit => {
-          try {
-            const constants = await loadUnitConstants(unit.name)
-            const hasMatch = constants.some(entry => constantMatchesFilters(entry, filtersToApply))
-            return hasMatch ? unit.name : null
-          } catch {
-            return null
+      // Build the cross-product of all three axes so that OR-within-category and
+      // AND-between-categories semantics are preserved:
+      //   (A OR B) AND (X OR Y) AND (P OR Q)  ≡  union of all (A,X,P), (A,X,Q), ...
+      // Absent selections expand to a single undefined entry (= no server-side filter for that axis).
+      // All three axes are pushed server-side — constantValueType is now a DB column filter.
+      const structuralAxis: (string | undefined)[] = filtersToApply.structuralTypes.length > 0
+        ? filtersToApply.structuralTypes
+        : [undefined]
+      const semanticAxis: (string | undefined)[] = filtersToApply.semanticTypes.length > 0
+        ? filtersToApply.semanticTypes
+        : [undefined]
+      const valueTypeAxis: (string | undefined)[] = filtersToApply.types.length > 0
+        ? filtersToApply.types
+        : [undefined]
+
+      // Build a set of all known unit names for reverse-mapping locationClassName → unit name.
+      const allUnitNames = new Set(sourceGroups.flatMap(g => g.units.map(u => u.name)))
+
+      const seenRowKey = new Set<string>()
+      const matchedUnitNames = new Set<string>()
+
+      for (const structuralType of structuralAxis) {
+        for (const semanticType of semanticAxis) {
+          for (const constantValueType of valueTypeAxis) {
+            const rows = await getAllConstantDetails(activeProject, activeVersion, {
+              structuralType,
+              semanticType,
+              constantValueType,
+              fetcher,
+            })
+
+            for (const row of rows) {
+              // Deduplicate across overlapping calls.
+              const key = `${row.locationClassName}\x00${row.constantValue}\x00${row.structuralType}\x00${row.semanticTypeName ?? ''}`
+              if (seenRowKey.has(key)) continue
+              seenRowKey.add(key)
+
+              // Map locationClassName (JVM internal format, e.g. com/acme/Foo) to unit name
+              // (e.g. com/acme/Foo.class).  Config-file units may already match without the suffix.
+              const withSuffix = row.locationClassName + '.class'
+              if (allUnitNames.has(withSuffix)) {
+                matchedUnitNames.add(withSuffix)
+              } else if (allUnitNames.has(row.locationClassName)) {
+                matchedUnitNames.add(row.locationClassName)
+              }
+            }
           }
-        }),
-      )
-      setMatchingUnits(new Set(matchCandidates.filter((value): value is string => value != null)))
+        }
+      }
+
+      setMatchingUnits(matchedUnitNames)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setFiltersNotice(`Filter failed: ${message}`)
+      setMatchingUnits(null)
     } finally {
       setApplyingFilters(false)
     }
@@ -237,16 +250,9 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
         filters: {
           types: selectedTypes,
           semanticTypes: selectedSemanticTypes,
-          usageTypes: selectedUsageTypes,
+          structuralTypes: selectedStructuralTypes,
         },
       })
-
-      // Bust the constants cache only when the project/version scope changes.
-      const scopeKey = `${activeProject}@${activeVersion}`
-      if (lastScopeRef.current !== scopeKey) {
-        classConstantsCacheRef.current.clear()
-        lastScopeRef.current = scopeKey
-      }
 
       setGroups(data)
       // Reset the filter view — the user can explicitly re-apply filters via the button.
@@ -294,8 +300,12 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
     setResult(null)
     setSelectedUnit(unitName)
     try {
-      const constants = await loadUnitConstants(unitName)
-      setResult(constants)
+      const data = await getClassConstants({
+        project: activeProject,
+        className: unitName,
+        version: activeVersion,
+      }, { fetcher })
+      setResult(data.constants)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lookup failed')
     } finally {
@@ -387,10 +397,10 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
                         onToggle={value => toggleValue(selectedSemanticTypes, value, setSelectedSemanticTypes)}
                       />
                       <MetadataMultiSelectGroup
-                        label="Usage type"
-                        options={metadata.usageTypes}
-                        selected={selectedUsageTypes}
-                        onToggle={value => toggleValue(selectedUsageTypes, value, setSelectedUsageTypes)}
+                        label="Structural type"
+                        options={metadata.structuralTypes}
+                        selected={selectedStructuralTypes}
+                        onToggle={value => toggleValue(selectedStructuralTypes, value, setselectedStructuralTypes)}
                       />
                     </div>
                   )}
@@ -401,7 +411,7 @@ export function ClassLookupForm({ project: sharedProject, version: sharedVersion
                       void applyMetadataFilters({
                         types: selectedTypes,
                         semanticTypes: selectedSemanticTypes,
-                        usageTypes: selectedUsageTypes,
+                        structuralTypes: selectedStructuralTypes,
                       })
                     }}
                     disabled={loadingUnits || applyingFilters || !hasScope || !hasLoadedUnits}

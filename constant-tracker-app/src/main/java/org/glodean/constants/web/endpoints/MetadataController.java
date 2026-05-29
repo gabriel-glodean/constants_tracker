@@ -46,7 +46,7 @@ public class MetadataController {
 
   @GetMapping
   public Mono<MetadataResponse> metadata() {
-  return types().map(types -> new MetadataResponse(types, usageTypes(), semanticTypes()));
+  return types().map(types -> new MetadataResponse(types, structuralTypes(), semanticTypes()));
   }
 
   @GetMapping("/types")
@@ -54,9 +54,9 @@ public class MetadataController {
   return types();
   }
 
-  @GetMapping("/usage-types")
-  public Mono<List<MetadataOptionResponse>> usageTypesMetadata() {
-	return Mono.just(usageTypes());
+  @GetMapping("/structural-types")
+  public Mono<List<MetadataOptionResponse>> structuralTypesMetadata() {
+	return Mono.just(structuralTypes());
   }
 
   @GetMapping("/semantic-types")
@@ -72,7 +72,7 @@ public class MetadataController {
 			.toList());
   }
 
-  private List<MetadataOptionResponse> usageTypes() {
+  private List<MetadataOptionResponse> structuralTypes() {
 	return Arrays.stream(UnitConstant.UsageType.values())
 		.map(type -> new MetadataOptionResponse(type.name(), humanize(type.name())))
 		.toList();

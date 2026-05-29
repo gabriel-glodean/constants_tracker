@@ -11,7 +11,7 @@ export interface UnitGroup {
 export interface UnitsLookupFilters {
   types?: string[];
   semanticTypes?: string[];
-  usageTypes?: string[];
+  structuralTypes?: string[];
 }
 
 export interface UnitsLookupOptions {
@@ -28,7 +28,7 @@ export async function getUnits(
   const query = new URLSearchParams({ project, version: String(version) })
   for (const type of options?.filters?.types ?? []) query.append('type', type)
   for (const semanticType of options?.filters?.semanticTypes ?? []) query.append('semanticType', semanticType)
-  for (const usageType of options?.filters?.usageTypes ?? []) query.append('usageType', usageType)
+  for (const usageType of options?.filters?.structuralTypes ?? []) query.append('structuralType', usageType)
   const res = await fetcher(`/units?${query.toString()}`, { method: 'GET' })
   if (!res.ok) {
     if (res.status === 404) return [];

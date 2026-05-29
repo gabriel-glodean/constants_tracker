@@ -147,27 +147,50 @@
       • Service Worker + cache strategy (offline shell / stale-while-revalidate)
 
 - ⏳ Class Lookup UX upgrade: collapsible unit tree + constant-type filtering            P1d
-  → ✅ PARTIAL (May 2026): metadata API + filter panel done
-      • GET /metadata endpoint (MetadataController) returns all constant types, usage types,
-        and semantic types as MetadataResponse — consumed by metadataApi.ts on mount
+  → ✅ PARTIAL (May 2026): metadata API + filter panel + server-side filtering done
+      • GET /metadata endpoint (MetadataController) returns all constant types, structural
+        types (renamed from usageTypes), and semantic types as MetadataResponse — consumed
+        by metadataApi.ts on mount
+      • Naming consistency: usageTypes → structuralTypes throughout (DB column, API field,
+        MetadataController endpoint /metadata/structural-types, unitsApi.ts, UI components)
       • ClassLookupForm shows an "advanced filters" panel (multi-select checkboxes) for
-        types, semantic types, and usage types; filter summary shows count of active selections
-      • "Apply filters" fetches constants for every unit in the scope, applies AND semantics
-        client-side across structural type + value type + semantic type; non-matching units
-        are hidden; constants cache keyed by project@version to avoid redundant fetches
+        types, semantic types, and structural types; filter summary shows count of active selections
       • Text filter over unit names combined with metadata filter (AND)
-      • unitsApi.ts passes type/semanticType/usageType query params to /units (UI plumbing
-        is in place, but UnitListingController does not yet consume these params — see below)
+      • UnitListingRequest record: shared @ModelAttribute for GET /units and GET /units/constants;
+        components: project (@NotBlank @ValidProjectName), version (@Positive), structuralType,
+        semanticType, constantValueType, page (@PositiveOrZero), pageSize (@Positive); helpers:
+        isFiltered(), effectivePage(), effectivePageSize(int), offset(int)
+      • GET /units: accepts optional structuralType / semanticType / constantValueType query
+        params; routes to UnitConstantQueries.unitCounts() when any filter is present,
+        falls back to UnitSnapshotRepository for unfiltered requests
+      • GET /units/constants (new — ConstantDetailController): flat paged list of
+        constant+usage rows; used by filter panel and LLM discovery tool; pageSize defaults to 100
+      • UnitConstantQueries (@Component, DatabaseClient-based): dynamic SQL across
+        unit_descriptors → unit_snapshots → unit_constants → constant_usages; null filters
+        omitted from WHERE clause (no IS NULL OR tricks); SemanticTypeStore resolves
+        semanticType name → (kind, name) DB columns; unknown names use __UNKNOWN__ sentinel
+        to return zero rows safely; constantValueType pushes value-type filter server-side
+      • constantDetailsApi.ts: getAllConstantDetails() paginates GET /units/constants;
+        supports structuralType / semanticType / constantValueType filters; maxPages cap
+        (default 500) throws with clear message instead of looping infinitely
+      • ClassLookupForm.tsx applyMetadataFilters: cross-product loop over all three filter
+        axes (structural × semantic × valueType), each combination is one server-side call;
+        deduplication across overlapping calls via seenRowKey set; error surfaced via filtersNotice
+      • Bug fix: selecting only "value type" filter previously caused infinite pagination
+        (no server-side filter → full table scan); constantValueType is now pushed to DB
+      • Backend tests: UnitConstantQueriesTest (14 tests — all branches covered: no filter,
+        structuralType, CORE/CUSTOM/unknown semanticType, constantValueType, all combined,
+        paging); ConstantDetailControllerTest + UnitListingControllerTest updated for
+        constantValueType filter; JaCoCo gate passes at 90%+
+      • UI tests: constantDetailsApi.test.ts (7 tests — single page, filters, multi-page
+        pagination, error, maxPages cap, globalThis.fetch fallback); Jest coverage 94%+,
+        all thresholds above 85%
   → ⏳ Remaining:
-      • UnitListingController.listUnits(): accept optional type/semanticType/usageType query
-        params and push the filter into UnitSnapshotRepository so large projects don't send
-        all units to the client before filtering (currently applied client-side only)
       • Collapsible unitPath groups (per group expand/collapse toggle)
       • "Expand all / Collapse all" global controls
       • One-click reset for active filters
       • Optional: highlight per-unit matching type counts in the unit row
       • Jest tests for collapse state, expand/collapse-all, reset
-      • Backend contract tests for filtered /units response shape
 
 ## ════════════════════════════════════════════════════
 ## V2B — Operations
@@ -369,9 +392,14 @@
 ##                               1 weekend  (~2 d)    3 days        Jun W2        / Jun W1
 ##       P1b: React ErrorBoundary + Service Worker cache strategy    ~1 d   /  1.5 d
 ##            (offline banner + useBackendStatus done May 2026)
-##       P1d: UnitListingController filter params + collapsible tree ~1 d   /  1.5 d
-##            + expand/collapse-all + one-click reset + backend tests
-##            (metadata API, filter panel, text+type AND done May 2026)
+##       P1d: server-side filter params done (May 2026); remaining:  ~1 d   /  1.5 d
+##            collapsible unitPath groups + expand/collapse-all + one-click reset + tests
+##            ✅ Done (May 2026): UnitListingRequest, UnitConstantQueries (DatabaseClient),
+##               GET /units filtered routing, GET /units/constants (ConstantDetailController),
+##               constantDetailsApi.ts (paged, maxPages cap), ClassLookupForm 3-axis
+##               cross-product loop (structural × semantic × valueType), all server-side;
+##               naming: usageTypes → structuralTypes everywhere; infinite-pagination bug fix;
+##               JaCoCo gate 90%+ (14 new UnitConstantQueriesTest), Jest 94%+ (7 new tests)
 ##
 ##  7   P2j + P2k  (calibration + condy support)  ← immediately after all P1 tasks done
 ##                               1–2 weekends (~3 d)  3 days        Jun W3        / Jun W2
@@ -428,7 +456,9 @@
 ##          secrets.yml audit), P2k (condy StructuredConstantValue hierarchy — diverges from
 ##          original spec; see P2k note above)
 ##   Partial (May 2026, uncommitted): P1b (offline detection done; ErrorBoundary + SW remaining),
-##          P1d (filter panel + metadata API done; collapsible tree + backend params remaining)
+##          P1d (server-side filtering + GET /units/constants + constantDetailsApi + naming
+##          consistency + infinite-pagination fix + full test coverage done May 2026;
+##          collapsible tree + expand/collapse-all + reset remaining)
 ##   Reordered: P2j + P2k pulled into sprint 7 (immediately after all P1 tasks);
 ##              P0d decoupled into sprint 5; ops bundle (P2a–P2h) pushed to sprint 8
 ## ─────────────────────────────────────────────────────────────────────────────────────

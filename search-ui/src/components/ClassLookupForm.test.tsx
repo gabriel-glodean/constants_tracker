@@ -2,13 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ClassLookupForm } from './ClassLookupForm'
 import * as classApi from '@/api/classApi'
+import * as constantDetailsApi from '@/api/constantDetailsApi'
 import * as metadataApi from '@/api/metadataApi'
 import * as unitsApi from '@/api/unitsApi'
 
 jest.mock('@/api/classApi')
+jest.mock('@/api/constantDetailsApi')
 jest.mock('@/api/metadataApi')
 jest.mock('@/api/unitsApi')
 const mockedGet = classApi.getClassConstants as jest.MockedFunction<typeof classApi.getClassConstants>
+const mockedGetConstantDetails = constantDetailsApi.getAllConstantDetails as jest.MockedFunction<typeof constantDetailsApi.getAllConstantDetails>
 const mockedGetMetadata = metadataApi.getMetadata as jest.MockedFunction<typeof metadataApi.getMetadata>
 const mockedGetUnits = unitsApi.getUnits as jest.MockedFunction<typeof unitsApi.getUnits>
 
@@ -28,7 +31,7 @@ describe('ClassLookupForm', () => {
         { name: 'String', displayName: 'String' },
         { name: 'Long', displayName: 'Long' },
       ],
-      usageTypes: [
+      structuralTypes: [
         { name: 'METHOD_INVOCATION_PARAMETER', displayName: 'Method Invocation Parameter' },
         { name: 'FIELD_READ', displayName: 'Field Read' },
       ],
@@ -87,17 +90,23 @@ describe('ClassLookupForm', () => {
         ],
       },
     ])
-    mockedGet
-      .mockResolvedValueOnce({
-        constants: [
-          { value: 'token', valueType: 'String', usages: [{ structuralType: 'METHOD_INVOCATION_PARAMETER', semanticType: null }] },
-        ],
-      })
-      .mockResolvedValueOnce({
-        constants: [
-          { value: 'value', valueType: 'String', usages: [{ structuralType: 'FIELD_READ', semanticType: null }] },
-        ],
-      })
+    // getAllConstantDetails returns rows only for MatchClass (which has METHOD_INVOCATION_PARAMETER).
+    // locationClassName matches the unit name directly so the fallback path exercises correctly.
+    mockedGetConstantDetails.mockResolvedValue([
+      {
+        constantValue: 'token',
+        constantValueType: 'String',
+        structuralType: 'METHOD_INVOCATION_PARAMETER',
+        semanticTypeKind: 'NONE',
+        semanticTypeName: null,
+        semanticDisplayName: null,
+        locationClassName: 'com.example.MatchClass',
+        locationMethodName: 'process',
+        locationMethodDescriptor: '()V',
+        locationLineNumber: 42,
+        confidence: 1.0,
+      },
+    ])
 
     render(<ClassLookupForm />)
     await waitFor(() => expect(mockedGetMetadata).toHaveBeenCalledTimes(1))
@@ -113,6 +122,9 @@ describe('ClassLookupForm', () => {
       expect(screen.queryByText('com.example.OtherClass')).not.toBeInTheDocument()
     })
 
+    expect(mockedGetConstantDetails).toHaveBeenCalledWith('proj', 1, expect.objectContaining({
+      structuralType: 'METHOD_INVOCATION_PARAMETER',
+    }))
     expect(mockedGetUnits).toHaveBeenCalledTimes(1)
   })
 

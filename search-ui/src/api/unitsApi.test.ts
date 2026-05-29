@@ -26,7 +26,7 @@ describe('getUnits', () => {
       filters: {
         types: ['String', 'Long'],
         semanticTypes: ['LOG_MESSAGE'],
-        usageTypes: ['METHOD_INVOCATION_PARAMETER', 'FIELD_READ'],
+        structuralTypes: ['METHOD_INVOCATION_PARAMETER', 'FIELD_READ'],
       },
     })
 
@@ -37,7 +37,7 @@ describe('getUnits', () => {
     expect(url.searchParams.get('version')).toBe('3')
     expect(url.searchParams.getAll('type')).toEqual(['String', 'Long'])
     expect(url.searchParams.getAll('semanticType')).toEqual(['LOG_MESSAGE'])
-    expect(url.searchParams.getAll('usageType')).toEqual(['METHOD_INVOCATION_PARAMETER', 'FIELD_READ'])
+    expect(url.searchParams.getAll('structuralType')).toEqual(['METHOD_INVOCATION_PARAMETER', 'FIELD_READ'])
   })
 
   it('returns an empty list on 404', async () => {
