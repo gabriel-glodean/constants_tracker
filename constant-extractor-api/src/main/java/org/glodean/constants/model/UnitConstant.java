@@ -1,17 +1,10 @@
 package org.glodean.constants.model;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Represents a discovered constant value for a generic unit (class file, properties file, etc.)
  * along with its observed usages.
- *
- * This record replaces the older {@code ClassConstant} and supports constants coming from
- * different unit types such as property files. The record name was changed to {@code UnitConstant}
- * to reflect the broader applicability.
  *
  * @param value the constant value (String, Number, etc.)
  * @param usages detailed usage contexts for this constant
@@ -105,7 +98,7 @@ public record UnitConstant(Object value, Set<ConstantUsage> usages) {
             SemanticType semanticType,
             UsageLocation location,
             double confidence,
-            Map<String, Object> metadata
+            SequencedMap<String, Object> metadata
     ) {
         public ConstantUsage{
             Objects.requireNonNull(structuralType, "Structural type cannot be null");
@@ -123,7 +116,7 @@ public record UnitConstant(Object value, Set<ConstantUsage> usages) {
                 UsageLocation location,
                 double confidence
         ) {
-            this(structuralType, semanticType, location, confidence, Collections.emptyMap());
+            this(structuralType, semanticType, location, confidence, new LinkedHashMap<>());
         }
     }
 

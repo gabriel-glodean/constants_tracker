@@ -23,17 +23,17 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretJavaNetUrl() {
-        ConstantUsage usage = interpreter.interpret(loc(10), ctx("java/net/URL", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(10), ctx("java.net.URL", "<init>"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
-        assertEquals("java/net/URL", usage.metadata().get("urlClass"));
+        assertEquals("java.net.URL", usage.metadata().get("urlClass"));
         assertEquals("<init>", usage.metadata().get("urlMethod"));
     }
 
     @Test
     void testInterpretJavaNetUri() {
-        ConstantUsage usage = interpreter.interpret(loc(15), ctx("java/net/URI", "create"));
+        ConstantUsage usage = interpreter.interpret(loc(15), ctx("java.net.URI", "create"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -41,7 +41,7 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretHttpRequestBuilder() {
-        ConstantUsage usage = interpreter.interpret(loc(20), ctx("java/net/http/HttpRequest", "newBuilder"));
+        ConstantUsage usage = interpreter.interpret(loc(20), ctx("java.net.http.HttpRequest", "newBuilder"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -49,7 +49,7 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretApacheHttpGet() {
-        ConstantUsage usage = interpreter.interpret(loc(25), ctx("org/apache/http/client/methods/HttpGet", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(25), ctx("org.apache.http.client.methods.HttpGet", "<init>"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.85, usage.confidence());
@@ -57,7 +57,7 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretSpringRestTemplate() {
-        ConstantUsage usage = interpreter.interpret(loc(30), ctx("org/springframework/web/client/RestTemplate", "getForObject"));
+        ConstantUsage usage = interpreter.interpret(loc(30), ctx("org.springframework.web.client.RestTemplate", "getForObject"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.85, usage.confidence());
@@ -65,7 +65,7 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretOkHttp() {
-        ConstantUsage usage = interpreter.interpret(loc(35), ctx("okhttp3/Request$Builder", "url"));
+        ConstantUsage usage = interpreter.interpret(loc(35), ctx("okhttp3.Request.Builder", "url"));
 
         assertEquals(CoreSemanticType.URL_RESOURCE, usage.semanticType());
         assertEquals(0.85, usage.confidence());
@@ -73,7 +73,7 @@ class UrlResourceConstantUsageInterpreterTest {
 
     @Test
     void testInterpretNonUrlMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java/lang/String", "valueOf"));
+        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java.lang.String", "valueOf"));
 
         assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
         assertEquals(0.0, usage.confidence());
@@ -88,10 +88,10 @@ class UrlResourceConstantUsageInterpreterTest {
     }
 
     private static UsageLocation loc(int offset) {
-        return new UsageLocation("com/example/HttpClient", "fetch", "()V", offset, null);
+        return new UsageLocation("com.example.HttpClient", "fetch", "()void", offset, null);
     }
 
     private static MethodCallContext ctx(String targetClass, String targetMethod) {
-        return new MethodCallContext(targetClass, targetMethod, "(Ljava/lang/String;)V", ReceiverKind.EXTERNAL_OBJECT);
+        return new MethodCallContext(targetClass, targetMethod, "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
     }
 }

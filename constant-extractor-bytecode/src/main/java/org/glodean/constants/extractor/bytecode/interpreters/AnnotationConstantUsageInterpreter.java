@@ -5,6 +5,7 @@ import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,37 +16,37 @@ import java.util.Set;
  */
 public class AnnotationConstantUsageInterpreter implements ConstantUsageInterpreter {
     private static final Set<String> ENDPOINT_ANNOTATIONS = Set.of(
-            "Lorg/springframework/web/bind/annotation/RequestMapping;",
-            "Lorg/springframework/web/bind/annotation/GetMapping;",
-            "Lorg/springframework/web/bind/annotation/PostMapping;",
-            "Lorg/springframework/web/bind/annotation/PutMapping;",
-            "Lorg/springframework/web/bind/annotation/DeleteMapping;",
-            "Lorg/springframework/web/bind/annotation/PatchMapping;",
-            "Ljakarta/ws/rs/Path;",
-            "Ljavax/ws/rs/Path;"
+            "org.springframework.web.bind.annotation.RequestMapping",
+            "org.springframework.web.bind.annotation.GetMapping",
+            "org.springframework.web.bind.annotation.PostMapping",
+            "org.springframework.web.bind.annotation.PutMapping",
+            "org.springframework.web.bind.annotation.DeleteMapping",
+            "org.springframework.web.bind.annotation.PatchMapping",
+            "jakarta.ws.rs.Path",
+            "javax.ws.rs.Path"
     );
     private static final Set<String> ENDPOINT_ELEMENTS = Set.of("value", "path");
     private static final Set<String> PROPERTY_ANNOTATIONS = Set.of(
-            "Lorg/springframework/beans/factory/annotation/Value;",
-            "Lorg/springframework/boot/context/properties/ConfigurationProperties;",
-            "Ljakarta/inject/Named;",
-            "Ljavax/inject/Named;"
+            "org.springframework.beans.factory.annotation.Value",
+            "org.springframework.boot.context.properties.ConfigurationProperties",
+            "jakarta.inject.Named",
+            "javax.inject.Named"
     );
     private static final Set<String> SQL_ANNOTATIONS = Set.of(
-            "Ljakarta/persistence/Table;",
-            "Ljavax/persistence/Table;",
-            "Ljakarta/persistence/Column;",
-            "Ljavax/persistence/Column;",
-            "Ljakarta/persistence/NamedQuery;",
-            "Ljavax/persistence/NamedQuery;",
-            "Ljakarta/persistence/NamedNativeQuery;",
-            "Ljavax/persistence/NamedNativeQuery;"
+            "jakarta.persistence.Table",
+            "javax.persistence.Table",
+            "jakarta.persistence.Column",
+            "javax.persistence.Column",
+            "jakarta.persistence.NamedQuery",
+            "javax.persistence.NamedQuery",
+            "jakarta.persistence.NamedNativeQuery",
+            "javax.persistence.NamedNativeQuery"
     );
     private static final Set<String> SQL_QUERY_ELEMENTS = Set.of("query", "value");
     private static final Set<String> SQL_NAME_ELEMENTS = Set.of("name", "catalog", "schema");
     private static final Set<String> REGEX_ANNOTATIONS = Set.of(
-            "Ljakarta/validation/constraints/Pattern;",
-            "Ljavax/validation/constraints/Pattern;"
+            "jakarta.validation.constraints.Pattern",
+            "javax.validation.constraints.Pattern"
     );
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
@@ -79,11 +80,11 @@ public class AnnotationConstantUsageInterpreter implements ConstantUsageInterpre
             AnnotationValueContext.TargetKind targetKind) {
         return new ConstantUsage(
                 UsageType.ANNOTATION_VALUE, semanticType, location, confidence,
-                Map.of(
+                new LinkedHashMap<>(Map.of(
                         "annotationDescriptor", annotationDescriptor,
                         "elementName", elementName,
                         "targetKind", targetKind.name()
-                )
+                ))
         );
     }
     private static ConstantUsage unknown(UsageLocation location) {

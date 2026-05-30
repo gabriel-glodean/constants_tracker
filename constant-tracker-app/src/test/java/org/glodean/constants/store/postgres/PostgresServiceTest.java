@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -188,7 +189,7 @@ class PostgresServiceTest {
   @Test
   void storeWithUsageMetadataPersistsSuccessfully() {
     var loc = new UsageLocation("com/example/Client", "send", "()V", 0, null);
-    var metadata = Map.<String, Object>of("key", "value", "retries", 3);
+    var metadata = new LinkedHashMap<>(Map.<String, Object>of("key", "value", "retries", 3));
     var usage =
         new ConstantUsage(
             UsageType.STRING_CONCATENATION_MEMBER, CoreSemanticType.URL_RESOURCE,

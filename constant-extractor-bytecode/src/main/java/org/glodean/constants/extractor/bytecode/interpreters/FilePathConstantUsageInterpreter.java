@@ -7,6 +7,7 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,15 +20,15 @@ import java.util.Set;
 public class FilePathConstantUsageInterpreter implements ConstantUsageInterpreter {
 
     private static final Set<String> PATH_CLASSES = Set.of(
-            "java/io/File",
-            "java/io/FileInputStream",
-            "java/io/FileOutputStream",
-            "java/io/FileReader",
-            "java/io/FileWriter",
-            "java/nio/file/Path",
-            "java/nio/file/Paths",
-            "java/nio/file/Files",
-            "java/nio/file/FileSystems"
+            "java.io.File",
+            "java.io.FileInputStream",
+            "java.io.FileOutputStream",
+            "java.io.FileReader",
+            "java.io.FileWriter",
+            "java.nio.file.Path",
+            "java.nio.file.Paths",
+            "java.nio.file.Files",
+            "java.nio.file.FileSystems"
     );
 
     private static final Set<String> PATH_FACTORY_METHODS = Set.of(
@@ -49,11 +50,11 @@ public class FilePathConstantUsageInterpreter implements ConstantUsageInterprete
                         CoreSemanticType.FILE_PATH,
                         location,
                         confidence,
-                        Map.of(
+                        new LinkedHashMap<>(Map.of(
                                 "fileClass", mc.targetClass(),
                                 "fileMethod", mc.targetMethod(),
                                 "methodDescriptor", mc.methodDescriptor()
-                        )
+                        ))
                 );
             }
             return unknown(location);
@@ -72,7 +73,7 @@ public class FilePathConstantUsageInterpreter implements ConstantUsageInterprete
     }
 
     private double calculateConfidence(String targetClass) {
-        if (targetClass.startsWith("java/nio/file/")) {
+        if (targetClass.startsWith("java.nio.file.")) {
             return 0.95;
         }
         return 0.90;

@@ -24,20 +24,20 @@ class SqlConstantUsageInterpreterTest {
     @Test
     void testInterpretJdbcStatement() {
         UsageLocation location = loc(10);
-        MethodCallContext context = ctx("java/sql/Statement", "executeQuery");
+        MethodCallContext context = ctx("java.sql.Statement", "executeQuery");
 
         ConstantUsage usage = interpreter.interpret(location, context);
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(UsageType.METHOD_INVOCATION_PARAMETER, usage.structuralType());
         assertEquals(0.95, usage.confidence());
-        assertEquals("java/sql/Statement", usage.metadata().get("dbClass"));
+        assertEquals("java.sql.Statement", usage.metadata().get("dbClass"));
         assertEquals("executeQuery", usage.metadata().get("dbMethod"));
     }
 
     @Test
     void testInterpretPreparedStatement() {
-        ConstantUsage usage = interpreter.interpret(loc(5), ctx("java/sql/Connection", "prepareStatement"));
+        ConstantUsage usage = interpreter.interpret(loc(5), ctx("java.sql.Connection", "prepareStatement"));
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -45,7 +45,7 @@ class SqlConstantUsageInterpreterTest {
 
     @Test
     void testInterpretJpaEntityManager() {
-        ConstantUsage usage = interpreter.interpret(loc(15), ctx("jakarta/persistence/EntityManager", "createQuery"));
+        ConstantUsage usage = interpreter.interpret(loc(15), ctx("jakarta.persistence.EntityManager", "createQuery"));
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.90, usage.confidence());
@@ -53,7 +53,7 @@ class SqlConstantUsageInterpreterTest {
 
     @Test
     void testInterpretJavaxEntityManager() {
-        ConstantUsage usage = interpreter.interpret(loc(15), ctx("javax/persistence/EntityManager", "createNativeQuery"));
+        ConstantUsage usage = interpreter.interpret(loc(15), ctx("javax.persistence.EntityManager", "createNativeQuery"));
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.90, usage.confidence());
@@ -61,7 +61,7 @@ class SqlConstantUsageInterpreterTest {
 
     @Test
     void testInterpretSpringJdbcTemplate() {
-        ConstantUsage usage = interpreter.interpret(loc(20), ctx("org/springframework/jdbc/core/JdbcTemplate", "queryForObject"));
+        ConstantUsage usage = interpreter.interpret(loc(20), ctx("org.springframework.jdbc.core.JdbcTemplate", "queryForObject"));
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.85, usage.confidence());
@@ -69,7 +69,7 @@ class SqlConstantUsageInterpreterTest {
 
     @Test
     void testInterpretNonSqlMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(25), ctx("java/lang/String", "valueOf"));
+        ConstantUsage usage = interpreter.interpret(loc(25), ctx("java.lang.String", "valueOf"));
 
         assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
         assertEquals(0.0, usage.confidence());
@@ -84,10 +84,10 @@ class SqlConstantUsageInterpreterTest {
     }
 
     private static UsageLocation loc(int offset) {
-        return new UsageLocation("com/example/Dao", "query", "()V", offset, null);
+        return new UsageLocation("com.example.Dao", "query", "()void", offset, null);
     }
 
     private static MethodCallContext ctx(String targetClass, String targetMethod) {
-        return new MethodCallContext(targetClass, targetMethod, "(Ljava/lang/String;)V", ReceiverKind.EXTERNAL_OBJECT);
+        return new MethodCallContext(targetClass, targetMethod, "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
     }
 }

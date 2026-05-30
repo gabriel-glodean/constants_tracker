@@ -22,6 +22,9 @@ import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaDescriptor;
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
+
 /**
  * Extracts constant values from annotations on classes, methods, fields, and parameters.
  *
@@ -51,7 +54,7 @@ final class AnnotationConstantExtractor {
     extractAnnotations(
         model.findAttribute(Attributes.runtimeVisibleAnnotations()),
         model.findAttribute(Attributes.runtimeInvisibleAnnotations()),
-        className, "<class>", "()V", TargetKind.CLASS, map);
+        className, "<class>", "()void", TargetKind.CLASS, map);
 
     // Field-level annotations
     for (FieldModel fm : model.fields()) {
@@ -59,13 +62,13 @@ final class AnnotationConstantExtractor {
           fm.findAttribute(Attributes.runtimeVisibleAnnotations()),
           fm.findAttribute(Attributes.runtimeInvisibleAnnotations()),
           className, "<field:" + fm.fieldName().stringValue() + ">",
-          fm.fieldType().stringValue(), TargetKind.FIELD, map);
+          toJavaDescriptor(fm.fieldType().stringValue()), TargetKind.FIELD, map);
     }
 
     // Method-level and parameter annotations
     for (MethodModel mm : model.methods()) {
       String methodName = mm.methodName().stringValue();
-      String methodDesc = mm.methodType().stringValue();
+      String methodDesc = toJavaDescriptor(mm.methodType().stringValue());
       var visible = mm.findAttribute(Attributes.runtimeVisibleAnnotations());
       var invisible = mm.findAttribute(Attributes.runtimeInvisibleAnnotations());
       visible.ifPresent(attr -> processAnnotations(attr.annotations(),
@@ -123,7 +126,7 @@ final class AnnotationConstantExtractor {
       String className, String methodName, String methodDescriptor,
       TargetKind targetKind, Multimap<Object, ConstantUsage> map) {
     for (Annotation ann : annotations) {
-      String annDesc = ann.classSymbol().descriptorString();
+      String annDesc = toJavaName(ann.classSymbol());
       for (AnnotationElement elem : ann.elements()) {
         processAnnotationValue(
             elem.value(), annDesc, elem.name().stringValue(),

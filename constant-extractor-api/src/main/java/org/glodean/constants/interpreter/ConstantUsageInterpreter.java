@@ -4,6 +4,8 @@ import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.SequencedMap;
+
 /**
  * Strategy for converting a raw constant usage location into a classified
  * {@link ConstantUsage}.
@@ -22,7 +24,9 @@ public interface ConstantUsageInterpreter {
      * Each {@link ConstantUsageInterpreter} implementation defines and expects
      * its own concrete subtype.
      */
-    interface InterpretationContext {}
+    interface InterpretationContext {
+        SequencedMap<String, Object> attributes();
+    }
 
     /**
      * Converts a usage location into a structured constant usage description.

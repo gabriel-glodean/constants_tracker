@@ -7,6 +7,7 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,8 +25,8 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
     );
 
     private static final Set<String> PRECONDITION_CLASSES = Set.of(
-            "java/util/Objects",
-            "com/google/common/base/Preconditions"
+            "java.util.Objects",
+            "com.google.common.base.Preconditions"
     );
 
     private static final Set<String> PRECONDITION_METHODS = Set.of(
@@ -43,11 +44,11 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
                         CoreSemanticType.ERROR_MESSAGE,
                         location,
                         confidence,
-                        Map.of(
+                        new LinkedHashMap<>(Map.of(
                                 "errorClass", mc.targetClass(),
                                 "errorMethod", mc.targetMethod(),
                                 "methodDescriptor", mc.methodDescriptor()
-                        )
+                        ))
                 );
             }
             return unknown(location);
@@ -71,7 +72,7 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
     }
 
     private boolean isExceptionClass(String className) {
-        String simpleName = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
+        String simpleName = className.contains(".") ? className.substring(className.lastIndexOf('.') + 1) : className;
         return EXCEPTION_SUFFIXES.stream().anyMatch(simpleName::endsWith);
     }
 

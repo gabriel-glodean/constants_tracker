@@ -7,6 +7,7 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,11 +34,11 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
 
 
     private static final Set<String> LOGGER_CLASSES = Set.of(
-            "org/slf4j/Logger",
-            "org/apache/logging/log4j/Logger",
-            "org/apache/log4j/Logger",
-            "java/util/logging/Logger",
-            "ch/qos/logback/classic/Logger"
+            "org.slf4j.Logger",
+            "org.apache.logging.log4j.Logger",
+            "org.apache.log4j.Logger",
+            "java.util.logging.Logger",
+            "ch.qos.logback.classic.Logger"
     );
 
     private static final Set<String> LOGGING_METHODS = Set.of(
@@ -47,8 +48,8 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
     );
 
     private static final Set<String> SYSTEM_OUT_CLASSES = Set.of(
-            "java/io/PrintStream",
-            "java/io/PrintWriter"
+            "java.io.PrintStream",
+            "java.io.PrintWriter"
     );
 
     /**
@@ -73,11 +74,11 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
                         CoreSemanticType.LOG_MESSAGE,
                         location,
                         confidence,
-                        Map.of(
+                        new LinkedHashMap<>(Map.of(
                                 "loggerClass", mc.targetClass(),
                                 "loggerMethod", mc.targetMethod(),
                                 "methodDescriptor", mc.methodDescriptor()
-                        )
+                        ))
                 );
             }
             // Not a logging call

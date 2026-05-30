@@ -23,17 +23,17 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretIllegalArgumentException() {
-        ConstantUsage usage = interpreter.interpret(loc(10), ctx("java/lang/IllegalArgumentException", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(10), ctx("java.lang.IllegalArgumentException", "<init>"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
-        assertEquals("java/lang/IllegalArgumentException", usage.metadata().get("errorClass"));
+        assertEquals("java.lang.IllegalArgumentException", usage.metadata().get("errorClass"));
         assertEquals("<init>", usage.metadata().get("errorMethod"));
     }
 
     @Test
     void testInterpretRuntimeException() {
-        ConstantUsage usage = interpreter.interpret(loc(15), ctx("java/lang/RuntimeException", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(15), ctx("java.lang.RuntimeException", "<init>"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -41,7 +41,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretCustomException() {
-        ConstantUsage usage = interpreter.interpret(loc(20), ctx("com/example/MyCustomException", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(20), ctx("com.example.MyCustomException", "<init>"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -49,7 +49,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretError() {
-        ConstantUsage usage = interpreter.interpret(loc(25), ctx("java/lang/AssertionError", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(25), ctx("java.lang.AssertionError", "<init>"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
@@ -57,7 +57,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretObjectsRequireNonNull() {
-        ConstantUsage usage = interpreter.interpret(loc(30), ctx("java/util/Objects", "requireNonNull"));
+        ConstantUsage usage = interpreter.interpret(loc(30), ctx("java.util.Objects", "requireNonNull"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.90, usage.confidence());
@@ -65,7 +65,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretGuavaPreconditions() {
-        ConstantUsage usage = interpreter.interpret(loc(35), ctx("com/google/common/base/Preconditions", "checkArgument"));
+        ConstantUsage usage = interpreter.interpret(loc(35), ctx("com.google.common.base.Preconditions", "checkArgument"));
 
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.90, usage.confidence());
@@ -73,7 +73,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretNonExceptionInit() {
-        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java/lang/StringBuilder", "<init>"));
+        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java.lang.StringBuilder", "<init>"));
 
         assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
         assertEquals(0.0, usage.confidence());
@@ -81,7 +81,7 @@ class ErrorMessageConstantUsageInterpreterTest {
 
     @Test
     void testInterpretNonErrorMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(45), ctx("java/lang/String", "valueOf"));
+        ConstantUsage usage = interpreter.interpret(loc(45), ctx("java.lang.String", "valueOf"));
 
         assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
         assertEquals(0.0, usage.confidence());
@@ -96,10 +96,10 @@ class ErrorMessageConstantUsageInterpreterTest {
     }
 
     private static UsageLocation loc(int offset) {
-        return new UsageLocation("com/example/Service", "validate", "()V", offset, null);
+        return new UsageLocation("com.example.Service", "validate", "()void", offset, null);
     }
 
     private static MethodCallContext ctx(String targetClass, String targetMethod) {
-        return new MethodCallContext(targetClass, targetMethod, "(Ljava/lang/String;)V", ReceiverKind.EXTERNAL_OBJECT);
+        return new MethodCallContext(targetClass, targetMethod, "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
     }
 }

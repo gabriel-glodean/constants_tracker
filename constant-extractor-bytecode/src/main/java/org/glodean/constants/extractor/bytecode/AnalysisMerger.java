@@ -1,7 +1,6 @@
 package org.glodean.constants.extractor.bytecode;
 
 import static java.lang.classfile.Opcode.*;
-import static org.glodean.constants.extractor.bytecode.Utils.toInternalName;
 import static org.glodean.constants.extractor.bytecode.Utils.toJavaDescriptor;
 import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 import static org.glodean.constants.model.UnitConstant.UsageType.*;
@@ -50,18 +49,39 @@ import org.glodean.constants.model.UnitConstant.UsageLocation;
  *   <li>Calls each interpreter and records the resulting {@link ConstantUsage}.</li>
  * </ol>
  *
- * @param patternSplitter function to extract literal parts from invokedynamic string-concat patterns
+ * @param patternSplitter          function to extract literal parts from invokedynamic
+ *                                 string-concat patterns
  * @param usageInterpreterRegistry registry of interpreters for constant usage classification
  */
-public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
-                             ConstantUsageInterpreterRegistry usageInterpreterRegistry) {
+public record AnalysisMerger(
+        Function<String, Set<String>> patternSplitter,
+        ConstantUsageInterpreterRegistry usageInterpreterRegistry) {
+
+    // Named distances from the stack top — avoids magic numbers in the switch arms.
+    private static final int TOP = 1;  // most recently pushed value
+    private static final int SECOND = 2;  // one below top
+    private static final int THIRD = 3;  // two below top
+
+    private static final String STRING_CONCAT_FACTORY = "java/lang/invoke/StringConcatFactory";
+
+    private static final EnumSet<Opcode> UNARY_ARITHMETIC_OPCODES = EnumSet.of(
+            INEG, LNEG, FNEG, DNEG,
+            ISHL, LSHL, ISHR, LSHR,
+            IUSHR, LUSHR,
+            IAND, LAND,
+            IOR, LOR,
+            IXOR, LXOR);
+
+    // -------------------------------------------------------------------------
+    // Constructors
+    // -------------------------------------------------------------------------
+
     /**
      * Creates an {@code AnalysisMerger} backed by a default (all-no-op) registry.
      *
      * <p>Useful in contexts where no semantic interpreters have been registered yet.
-         * Every discovered constant will be recorded with
-         * {@link org.glodean.constants.model.UnitConstant.CoreSemanticType#UNKNOWN} and
-     * zero confidence.
+     * Every discovered constant will be recorded with
+     * {@link org.glodean.constants.model.UnitConstant.CoreSemanticType#UNKNOWN} and zero confidence.
      *
      * @param patternSplitter function that splits a string-concat pattern into a set of
      *                        literal substrings
@@ -70,35 +90,27 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
         this(patternSplitter, ConstantUsageInterpreterRegistry.builder().build());
     }
 
-    /**
-     * Creates an {@code AnalysisMerger}.
-     *
-     * @param patternSplitter          function that splits a string-concat pattern into a set of
-     *                                 literal substrings
-     * @param usageInterpreterRegistry registry supplying interpreters per usage type
-     */
     public AnalysisMerger {
         Objects.requireNonNull(patternSplitter, "patternSplitter cannot be null");
         Objects.requireNonNull(usageInterpreterRegistry, "usageInterpreterRegistry cannot be null");
     }
 
+    // -------------------------------------------------------------------------
+    // Public entry point
+    // -------------------------------------------------------------------------
+
     /**
-     * Merges bytecode-level state information into a multimap of constant value to
+     * Merges bytecode-level state information into a multimap of constant value →
      * {@link ConstantUsage}.
-     *
-     * <p>Each instruction is paired with its IN state. For instructions that consume constants
-     * (field stores, method calls, arithmetic, string concatenation) the merger builds the
-     * matching context, resolves interpreters from the registry, and calls
-     * {@link ConstantUsageInterpreter#interpret(UsageLocation, ConstantUsageInterpreter.InterpretationContext)}
-     * for every registered interpreter.
      *
      * <p>Instructions whose IN state is {@code null} (unreachable code) are silently skipped.
      *
-     * @param className        slash-separated internal class name (e.g., {@code "com/example/Foo"})
-     * @param methodName       method name (e.g., {@code "process"} or {@code "<init>"})
-     * @param methodDescriptor JVM method descriptor (e.g., {@code "(Ljava/lang/String;)V"})
+     * @param className        dot-separated Java class name (e.g. {@code "com.example.Foo"})
+     * @param methodName       method name (e.g. {@code "process"} or {@code "<init>"})
+     * @param methodDescriptor Java method descriptor in compact dot-notation
+     *                         (e.g. {@code "(java.lang.String)void"})
      * @param code             list of code elements in instruction order
-     * @param in               corresponding IN states for each instruction (must match code length)
+     * @param in               corresponding IN states (must match {@code code} length)
      * @return multimap of constant values to their usage descriptions
      */
     public Multimap<Object, ConstantUsage> merge(
@@ -107,216 +119,254 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
             String methodDescriptor,
             List<CodeElement> code,
             List<State> in) {
-        Multimap<Object, ConstantUsage> map = HashMultimap.create();
-        int[] lineNumbers = buildLineNumbers(code);
-        for (int i = 0; i < code.size(); i++) {
-            State state = i < in.size() ? in.get(i) : null;
-            if (state == null) continue;
-            handle(code.get(i), state, map, className, methodName, methodDescriptor, i, lineNumbers[i]);
-        }
-        return map;
-    }
 
-    /**
-     * Scans the code element list for {@link LineNumber} pseudo-instructions and builds an
-     * array mapping each element index to its effective source line number.
-     *
-     * <p>The effective line for index {@code i} is the line declared by the most recent
-     * {@code LineNumber} element at or before index {@code i}, or {@code -1} if none has
-     * appeared yet.
-     *
-     * @param code the list of code elements in instruction order
-     * @return array of the same length as {@code code}; each entry holds the active line number
-     *         ({@code >= 0}) or {@code -1} if no line information is available
-     */
-    static int[] buildLineNumbers(List<CodeElement> code) {
-        int[] lines = new int[code.size()];
-        int current = -1;
-        for (int i = 0; i < code.size(); i++) {
-            if (code.get(i) instanceof LineNumber ln) {
-                current = ln.line();
+        Multimap<Object, ConstantUsage> usages = HashMultimap.create();
+        int currentLineNumber = -1;
+        int index = 0;
+        for (var entry : code) {
+            if (entry instanceof LineNumber ln) {
+                currentLineNumber = ln.line();
+                index++;
+                continue;
             }
-            lines[i] = current;
+
+            State state = index < in.size() ? in.get(index) : null;
+            if (state == null) {
+                index++;
+                continue; // unreachable code — skip
+            }
+            UsageLocation location =
+                    locationOf(className, methodName, methodDescriptor, index, currentLineNumber);
+            dispatch(entry, state, usages, location);
+            index++;
         }
-        return lines;
+        return usages;
     }
 
     // -------------------------------------------------------------------------
-    // Opcodes that operate on a single operand (right-hand side only)
+    // Instruction dispatch
     // -------------------------------------------------------------------------
-    private static final EnumSet<Opcode> UNARY_OPCODES =
-            EnumSet.of(
-                    INEG, LNEG, FNEG, DNEG,
-                    ISHL, LSHL, ISHR, LSHR,
-                    IUSHR, LUSHR,
-                    IAND, LAND,
-                    IOR, LOR,
-                    IXOR, LXOR);
 
-    // -------------------------------------------------------------------------
-    // Outer dispatch: build context and delegate to the inner handler
-    // -------------------------------------------------------------------------
-    private void handle(
+    private void dispatch(
             CodeElement instr,
             State state,
-            Multimap<Object, ConstantUsage> map,
-            String className,
-            String methodName,
-            String methodDescriptor,
-            int instrIndex,
-            int lineNumber) {
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
         if (instr == null) return;
-        Integer lineNum = lineNumber >= 0 ? lineNumber : null;
-        UsageLocation location = new UsageLocation(className, methodName, methodDescriptor, instrIndex, lineNum);
+
         switch (instr) {
+            case FieldInstruction fi when fi.opcode() == PUTFIELD ->
+                    classifySlot(stackAt(state, TOP), usages, FIELD_STORE,
+                            fieldContext(fi, receiverKindOf(stackAt(state, THIRD))),
+                            location);
 
-            // -- instance field store (putfield) -----------------------------------
-            case FieldInstruction fi when fi.opcode() == PUTFIELD -> {
-                ReceiverKind rk = receiverKindOf(stackAt(state, 2));
-                handle(stackAt(state, 1), map, FIELD_STORE,
-                        new FieldStoreContext(
-                                toJavaName(fi.owner().asSymbol()),
-                                fi.name().stringValue(),
-                                toJavaName(fi.typeSymbol()),
-                                rk),
-                        location);
-            }
+            case FieldInstruction fi when fi.opcode() == PUTSTATIC ->
+                    classifySlot(stackAt(state, TOP), usages, STATIC_FIELD_STORE,
+                            fieldContext(fi, ReceiverKind.STATIC),
+                            location);
 
-            // -- static field store (putstatic) ------------------------------------
-            case FieldInstruction fi when fi.opcode() == PUTSTATIC -> handle(stackAt(state, 1), map, STATIC_FIELD_STORE,
-                    new FieldStoreContext(
-                            toJavaName(fi.owner().asSymbol()),
-                            fi.name().stringValue(),
-                            toJavaName(fi.typeSymbol()),
-                            ReceiverKind.STATIC),
-                    location);
+            case InvokeInstruction ii -> classifyMethodInvocation(ii, state, usages, location);
 
-            // -- regular method invocation -----------------------------------------
-            case InvokeInstruction ii -> {
-                int paramCount = ii.typeSymbol().parameterCount();
-                ReceiverKind rk = ii.opcode() == INVOKESTATIC
-                        ? ReceiverKind.STATIC
-                        : receiverKindOf(stackAt(state, paramCount + 1));
-                MethodCallContext ctx = new MethodCallContext(
-                        ii.owner().name().stringValue(),
-                        ii.name().stringValue(),
-                        toJavaDescriptor(ii.typeSymbol()),
-                        rk);
-                for (int idx = 1; idx <= paramCount; idx++) {
-                    handle(stackAt(state, idx), map, METHOD_INVOCATION_PARAMETER, ctx, location);
-                }
-                if (ii.opcode() != INVOKESTATIC) {
-                    handle(stackAt(state, paramCount + 1), map, METHOD_INVOCATION_TARGET, ctx, location);
-                }
-            }
+            case InvokeDynamicInstruction idi when isStringConcatFactory(idi) ->
+                    classifyStringConcatenation(idi, state, usages, location);
 
-            // -- invokedynamic: string concatenation --------------------------------
-            case InvokeDynamicInstruction idi when
-                    idi.name().stringValue().equals("makeConcatWithConstants")
-                            && idi.bootstrapMethod().owner()
-                            .equals(ClassDesc.ofInternalName("java/lang/invoke/StringConcatFactory")) -> {
-                String pattern = (String) Iterables.getFirst(idi.bootstrapArgs(), "");
-                StringConcatenationContext literalCtx =
-                        new StringConcatenationContext(StringConcatenationContext.ConstantSource.LITERAL);
-                StringConcatenationContext resolvedCtx =
-                        new StringConcatenationContext(StringConcatenationContext.ConstantSource.RESOLVED_CONSTANT);
-                // literals baked into the invokedynamic recipe
-                Collection<ConstantUsageInterpreter> interps =
-                        usageInterpreterRegistry.getInterpreters(STRING_CONCATENATION_MEMBER);
-                for (String literal : patternSplitter.apply(pattern)) {
-                    for (var interp : interps) {
-                        map.put(literal, interp.interpret(location, literalCtx));
-                    }
-                }
-                // stack arguments resolved to constants
-                for (int idx = 1; idx <= idi.typeSymbol().parameterCount(); idx++) {
-                    handle(stackAt(state, idx), map, STRING_CONCATENATION_MEMBER, resolvedCtx, location);
-                }
-            }
+            case InvokeDynamicInstruction idi -> classifyDynamicInvocation(idi, state, usages, location);
 
-            // -- invokedynamic: other (lambdas, etc.) ------------------------------
-            case InvokeDynamicInstruction idi -> {
-                MethodCallContext ctx = new MethodCallContext(
-                        toInternalName(idi.bootstrapMethod().owner()),
-                        idi.name().stringValue(),
-                        toJavaDescriptor(idi.typeSymbol()),
-                        ReceiverKind.STATIC);
-                for (int idx = 1; idx <= idi.typeSymbol().parameterCount(); idx++) {
-                    handle(stackAt(state, idx), map, METHOD_INVOCATION_PARAMETER, ctx, location);
-                }
-            }
+            case IncrementInstruction ii -> classifyIncrement(ii, state, usages, location);
 
-            // -- iinc: increment a local variable ----------------------------------
-            case IncrementInstruction ii -> {
-                PointsToSet slot = ii.slot() < state.locals.size() ? state.locals.get(ii.slot()) : null;
-                if (slot != null) {
-                    handle(slot, map, ARITHMETIC_OPERAND, new ArithmeticOperandContext("+="), location);
-                }
-            }
+            case OperatorInstruction oi when oi.opcode() != ARRAYLENGTH ->
+                    classifyArithmetic(oi, state, usages, location);
 
-            // -- arithmetic / bitwise operators ------------------------------------
-            case OperatorInstruction oi when oi.opcode() != ARRAYLENGTH -> {
-                ArithmeticOperandContext ctx = new ArithmeticOperandContext(toJavaOperator(oi.opcode()));
-                handle(stackAt(state, 1), map, ARITHMETIC_OPERAND, ctx, location);
-                if (!UNARY_OPCODES.contains(oi.opcode())) {
-                    handle(stackAt(state, 2), map, ARITHMETIC_OPERAND, ctx, location);
-                }
-            }
-
-            default -> {
-            }
+            default -> { /* not a constant-bearing instruction */ }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Inner handler: iterate entities, call every matching interpreter
+    // Per-instruction classifiers
     // -------------------------------------------------------------------------
-    private void handle(
+
+    private void classifyMethodInvocation(
+            InvokeInstruction ii,
+            State state,
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
+        int paramCount = ii.typeSymbol().parameterCount();
+        MethodCallContext ctx;
+        if (ii.opcode() != INVOKESTATIC){
+            PointsToSet receiverSlot = stackAt(state, paramCount + 1);
+            ctx = new MethodCallContext(
+                    toJavaName(ii.owner().asSymbol()),
+                    ii.name().stringValue(),
+                    toJavaDescriptor(ii.typeSymbol()),
+                    receiverKindOf(receiverSlot));
+            classifySlot(receiverSlot, usages, METHOD_INVOCATION_TARGET, ctx, location);
+        } else {
+            ctx = new MethodCallContext(
+                    toJavaName(ii.owner().asSymbol()),
+                    ii.name().stringValue(),
+                    toJavaDescriptor(ii.typeSymbol()),
+                    ReceiverKind.STATIC);
+        }
+        for (int paramPos = 1; paramPos <= paramCount; paramPos++) {
+            classifySlot(stackAt(state, paramPos), usages, METHOD_INVOCATION_PARAMETER, ctx, location);
+        }
+    }
+
+    private void classifyStringConcatenation(
+            InvokeDynamicInstruction idi,
+            State state,
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
+        String pattern = (String) Iterables.getFirst(idi.bootstrapArgs(), "");
+
+        var interprets =
+                usageInterpreterRegistry.getInterpreters(STRING_CONCATENATION_MEMBER);
+        if (interprets.isEmpty()) return;
+
+        // Classify string literals baked into the invokedynamic recipe.
+        for (String literal : patternSplitter.apply(pattern)) {
+            for (ConstantUsageInterpreter interpreter : interprets) {
+                usages.put(literal, interpreter.interpret(location, StringConcatenationContext.LITERAL));
+            }
+        }
+        // Classify stack arguments that resolved to constants.
+        int paramCount = idi.typeSymbol().parameterCount();
+        for (int paramPos = 1; paramPos <= paramCount; paramPos++) {
+            classifySlot(stackAt(state, paramPos), usages, STRING_CONCATENATION_MEMBER, StringConcatenationContext.RESOLVED_CONSTANT, location);
+        }
+    }
+
+    private void classifyDynamicInvocation(
+            InvokeDynamicInstruction idi,
+            State state,
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
+        MethodCallContext ctx = new MethodCallContext(
+                toJavaName(idi.bootstrapMethod().owner()),
+                idi.name().stringValue(),
+                toJavaDescriptor(idi.typeSymbol()),
+                ReceiverKind.STATIC);
+
+        int paramCount = idi.typeSymbol().parameterCount();
+        for (int paramPos = 1; paramPos <= paramCount; paramPos++) {
+            classifySlot(stackAt(state, paramPos), usages, METHOD_INVOCATION_PARAMETER, ctx, location);
+        }
+    }
+
+    private void classifyIncrement(
+            IncrementInstruction ii,
+            State state,
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
+        PointsToSet slot = ii.slot() < state.locals.size() ? state.locals.get(ii.slot()) : null;
+        if (slot != null) {
+            classifySlot(slot, usages, ARITHMETIC_OPERAND, new ArithmeticOperandContext("+="), location);
+        }
+    }
+
+    private void classifyArithmetic(
+            OperatorInstruction oi,
+            State state,
+            Multimap<Object, ConstantUsage> usages,
+            UsageLocation location) {
+
+        ArithmeticOperandContext ctx = new ArithmeticOperandContext(toJavaOperator(oi.opcode()));
+        classifySlot(stackAt(state, TOP), usages, ARITHMETIC_OPERAND, ctx, location);
+        if (!UNARY_ARITHMETIC_OPCODES.contains(oi.opcode())) {
+            classifySlot(stackAt(state, SECOND), usages, ARITHMETIC_OPERAND, ctx, location);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Core classifier — runs all matching interpreters against a points-to set
+    // -------------------------------------------------------------------------
+
+    /**
+     * Runs every registered interpreter for {@code usageType} against each constant entity in
+     * {@code slot}. Zero-confidence results are dropped when at least one interpreter matched,
+     * so a SQL constant passed to a JDBC call is not also recorded as {@code UNKNOWN}.
+     */
+    private void classifySlot(
             PointsToSet slot,
-            Multimap<Object, ConstantUsage> map,
+            Multimap<Object, ConstantUsage> usages,
             UnitConstant.UsageType usageType,
             ConstantUsageInterpreter.InterpretationContext context,
             UsageLocation location) {
+
         if (slot == null || slot.isEmpty()) return;
         Collection<ConstantUsageInterpreter> interpreters =
                 usageInterpreterRegistry.getInterpreters(usageType);
         if (interpreters.isEmpty()) return;
+
         for (var entity : slot) {
-            if (entity instanceof Constant<?> c) {
-                List<ConstantUsage> results = interpreters.stream()
-                        .map(interp -> interp.interpret(location, context))
-                        .toList();
-                boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
-                for (var usage : results) {
-                    // Drop zero-confidence fallbacks when at least one interpreter matched,
-                    // so that a SQL constant passed to a JDBC call isn't also recorded as UNKNOWN.
-                    if (!anyMatched || usage.confidence() > 0) {
-                        map.put(c.value(), usage);
-                    }
-                }
+            switch (entity) {
+                case Constant<?> c -> classifyValues(List.of(c.value()), interpreters, context, location, usages);
+                case ConstantPropagation cp -> classifyValues(cp.values(), interpreters, context, location, usages);
+                default -> { /* not a constant value — skip */ }
             }
-            if (entity instanceof ConstantPropagation cp) {
-                cp.values().forEach(v -> {
-                    List<ConstantUsage> results = interpreters.stream()
-                            .map(interp -> interp.interpret(location, context))
-                            .toList();
-                    boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
-                    for (var usage : results) {
-                        if (!anyMatched || usage.confidence() > 0) {
-                            map.put(v, usage);
-                        }
-                    }
-                });
+        }
+    }
+
+    private static void classifyValues(
+            Collection<?> values,
+            Collection<ConstantUsageInterpreter> interpreters,
+            ConstantUsageInterpreter.InterpretationContext context,
+            UsageLocation location,
+            Multimap<Object, ConstantUsage> usages) {
+
+        for (Object value : values) {
+            List<ConstantUsage> results = interpreters.stream()
+                    .map(interpreter -> interpreter.interpret(location, context))
+                    .toList();
+            boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
+            for (ConstantUsage usage : results) {
+                if (!anyMatched || usage.confidence() > 0) {
+                    usages.put(value, usage);
+                }
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Helpers
+    // Context builders
+    // -------------------------------------------------------------------------
+
+    private static FieldStoreContext fieldContext(FieldInstruction fi, ReceiverKind receiverKind) {
+        return new FieldStoreContext(
+                toJavaName(fi.owner().asSymbol()),
+                fi.name().stringValue(),
+                toJavaName(fi.typeSymbol()),
+                receiverKind);
+    }
+
+    private static boolean isStringConcatFactory(InvokeDynamicInstruction idi) {
+        return idi.name().stringValue().equals("makeConcatWithConstants")
+                && idi.bootstrapMethod().owner().equals(ClassDesc.ofInternalName(STRING_CONCAT_FACTORY));
+    }
+
+    // -------------------------------------------------------------------------
+    // Location / line-number helpers
+    // -------------------------------------------------------------------------
+
+    private static UsageLocation locationOf(
+            String className, String methodName, String methodDescriptor,
+            int instrIndex, int lineNumber) {
+        return new UsageLocation(
+                className, methodName, methodDescriptor,
+                instrIndex, lineNumber >= 0 ? lineNumber : null);
+    }
+
+    // -------------------------------------------------------------------------
+    // Stack / receiver helpers
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the points-to set at {@code fromTop} positions below the top of the stack,
+     * Returns the points-to set at {@code fromTop} positions below the stack top,
      * or {@code null} if the stack is too shallow.
      *
      * @param state   the current abstract state
@@ -324,16 +374,12 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
      */
     private static PointsToSet stackAt(State state, int fromTop) {
         int idx = state.stack.size() - fromTop;
-        return (idx >= 0 && idx < state.stack.size()) ? state.stack.get(idx) : null;
+        return (idx >= 0) ? state.stack.get(idx) : null;
     }
 
     /**
-     * Determines the {@link ReceiverKind} for a given receiver slot by checking whether
-     * any entity in the slot is the {@code this} reference of the enclosing method.
-     *
-     * @param slot the points-to set for the receiver; may be {@code null}
-     * @return {@link ReceiverKind#THIS} if the slot contains only the {@code this} reference,
-     * {@link ReceiverKind#EXTERNAL_OBJECT} otherwise
+     * Returns {@link ReceiverKind#THIS} if the slot contains the {@code this} reference of the
+     * enclosing method, {@link ReceiverKind#EXTERNAL_OBJECT} otherwise.
      */
     private static ReceiverKind receiverKindOf(PointsToSet slot) {
         if (slot == null || slot.isEmpty()) return ReceiverKind.EXTERNAL_OBJECT;
@@ -342,25 +388,27 @@ public record AnalysisMerger(Function<String, Set<String>> patternSplitter,
         return isThis ? ReceiverKind.THIS : ReceiverKind.EXTERNAL_OBJECT;
     }
 
+    // -------------------------------------------------------------------------
+    // Operator symbol mapping
+    // -------------------------------------------------------------------------
+
     /**
      * Maps a JVM arithmetic, bitwise, or shift opcode to its Java operator symbol.
      *
      * <p>Examples:
      * <ul>
-     *   <li>{@code IADD}, {@code DADD} → {@code "+"}</li>
-     *   <li>{@code IMUL}, {@code FMUL} → {@code "*"}</li>
-     *   <li>{@code ISHL}, {@code LSHL} → {@code "<<"}</li>
-     *   <li>{@code IUSHR}             → {@code ">>>"}</li>
-     *   <li>{@code IXOR}, {@code LXOR} → {@code "^"}</li>
+     *   <li>{@code IADD}, {@code DADD}  → {@code "+"}</li>
+     *   <li>{@code IMUL}, {@code FMUL}  → {@code "*"}</li>
+     *   <li>{@code ISHL}, {@code LSHL}  → {@code "<<"}</li>
+     *   <li>{@code IUSHR}               → {@code ">>>"}</li>
+     *   <li>{@code IXOR}, {@code LXOR}  → {@code "^"}</li>
      * </ul>
-     *
-     * @param opcode the JVM opcode
-     * @return the corresponding Java operator symbol
      */
     private static String toJavaOperator(Opcode opcode) {
         return switch (opcode) {
             case IADD, LADD, FADD, DADD -> "+";
-            case ISUB, LSUB, FSUB, DSUB, INEG, LNEG, FNEG, DNEG -> "-";
+            case ISUB, LSUB, FSUB, DSUB,
+                 INEG, LNEG, FNEG, DNEG -> "-";
             case IMUL, LMUL, FMUL, DMUL -> "*";
             case IDIV, LDIV, FDIV, DDIV -> "/";
             case IREM, LREM, FREM, DREM -> "%";

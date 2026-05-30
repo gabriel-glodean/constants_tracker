@@ -7,6 +7,7 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,10 +21,10 @@ import java.util.Set;
 public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
 
     private static final Set<String> JDBC_CLASSES = Set.of(
-            "java/sql/Statement",
-            "java/sql/PreparedStatement",
-            "java/sql/CallableStatement",
-            "java/sql/Connection"
+            "java.sql.Statement",
+            "java.sql.PreparedStatement",
+            "java.sql.CallableStatement",
+            "java.sql.Connection"
     );
 
     private static final Set<String> JDBC_METHODS = Set.of(
@@ -32,8 +33,8 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
     );
 
     private static final Set<String> JPA_CLASSES = Set.of(
-            "javax/persistence/EntityManager",
-            "jakarta/persistence/EntityManager"
+            "javax.persistence.EntityManager",
+            "jakarta.persistence.EntityManager"
     );
 
     private static final Set<String> JPA_METHODS = Set.of(
@@ -41,8 +42,8 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
     );
 
     private static final Set<String> SPRING_JDBC_CLASSES = Set.of(
-            "org/springframework/jdbc/core/JdbcTemplate",
-            "org/springframework/jdbc/core/namedparam/NamedParameterJdbcTemplate"
+            "org.springframework.jdbc.core.JdbcTemplate",
+            "org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate"
     );
 
     private static final Set<String> SPRING_JDBC_METHODS = Set.of(
@@ -60,11 +61,11 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
                         CoreSemanticType.SQL_FRAGMENT,
                         location,
                         confidence,
-                        Map.of(
+                        new LinkedHashMap<>(Map.of(
                                 "dbClass", mc.targetClass(),
                                 "dbMethod", mc.targetMethod(),
                                 "methodDescriptor", mc.methodDescriptor()
-                        )
+                        ))
                 );
             }
             return unknown(location);

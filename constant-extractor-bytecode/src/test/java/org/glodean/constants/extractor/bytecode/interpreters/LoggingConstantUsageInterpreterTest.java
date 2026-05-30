@@ -27,17 +27,17 @@ class LoggingConstantUsageInterpreterTest {
     @Test
     void testInterpretSLF4JLogging() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "doSomething",
-                "()V",
+                "()void",
                 10,
                 null
         );
 
         MethodCallContext context = new MethodCallContext(
-                "org/slf4j/Logger",
+                "org.slf4j.Logger",
                 "info",
-                "(Ljava/lang/String;)V",
+                "(java.lang.String)void",
                 ReceiverKind.EXTERNAL_OBJECT
         );
 
@@ -47,24 +47,24 @@ class LoggingConstantUsageInterpreterTest {
         assertEquals(CoreSemanticType.LOG_MESSAGE, usage.semanticType());
         assertEquals(location, usage.location());
         assertTrue(usage.confidence() >= 0.9, "Expected high confidence for SLF4J logger");
-        assertEquals("org/slf4j/Logger", usage.metadata().get("loggerClass"));
+        assertEquals("org.slf4j.Logger", usage.metadata().get("loggerClass"));
         assertEquals("info", usage.metadata().get("loggerMethod"));
     }
 
     @Test
     void testInterpretLog4j2Logging() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "handleError",
-                "()V",
+                "()void",
                 25,
                 null
         );
 
         MethodCallContext context = new MethodCallContext(
-                "org/apache/logging/log4j/Logger",
+                "org.apache.logging.log4j.Logger",
                 "error",
-                "(Ljava/lang/String;)V",
+                "(java.lang.String)void",
                 ReceiverKind.EXTERNAL_OBJECT
         );
 
@@ -77,17 +77,17 @@ class LoggingConstantUsageInterpreterTest {
     @Test
     void testInterpretSystemOut() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "debug",
-                "()V",
+                "()void",
                 5,
                 null
         );
 
         MethodCallContext context = new MethodCallContext(
-                "java/io/PrintStream",
+                "java.io.PrintStream",
                 "println",
-                "(Ljava/lang/String;)V",
+                "(java.lang.String)void",
                 ReceiverKind.EXTERNAL_OBJECT
         );
 
@@ -101,17 +101,17 @@ class LoggingConstantUsageInterpreterTest {
     @Test
     void testInterpretCustomLogger() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "process",
-                "()V",
+                "()void",
                 15,
                 null
         );
 
         MethodCallContext context = new MethodCallContext(
-                "com/mycompany/CustomLogger",
+                "com.mycompany.CustomLogger",
                 "debug",
-                "(Ljava/lang/String;)V",
+                "(java.lang.String)void",
                 ReceiverKind.EXTERNAL_OBJECT
         );
 
@@ -125,17 +125,17 @@ class LoggingConstantUsageInterpreterTest {
     @Test
     void testInterpretNonLoggingMethod() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "calculate",
-                "()V",
+                "()void",
                 20,
                 null
         );
 
         MethodCallContext context = new MethodCallContext(
-                "java/lang/String",
+                "java.lang.String",
                 "valueOf",
-                "(I)Ljava/lang/String;",
+                "(int)java.lang.String",
                 ReceiverKind.EXTERNAL_OBJECT
         );
 
@@ -148,9 +148,9 @@ class LoggingConstantUsageInterpreterTest {
     @Test
     void testInterpretWithoutContext() {
         UsageLocation location = new UsageLocation(
-                "com/example/MyClass",
+                "com.example.MyClass",
                 "test",
-                "()V",
+                "()void",
                 30,
                 null
         );

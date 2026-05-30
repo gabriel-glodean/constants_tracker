@@ -6,7 +6,6 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.SemanticType;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 
 final class ConfigValueClassifier {
@@ -30,7 +29,7 @@ final class ConfigValueClassifier {
     static UnitConstant toUnitConstant(Object value, String key, String fileName, String format) {
         var location = new UnitConstant.UsageLocation(fileName, key, format, null, 0);
         var semanticType = classifyValue(value, key);
-        Map<String, Object> metadata = new LinkedHashMap<>();
+        var metadata = new LinkedHashMap<String, Object>();
         metadata.put("keyPath", key);
         var usage =
                 new UnitConstant.ConstantUsage(UnitConstant.UsageType.FIELD_STORE, semanticType, location, 0.9, metadata);

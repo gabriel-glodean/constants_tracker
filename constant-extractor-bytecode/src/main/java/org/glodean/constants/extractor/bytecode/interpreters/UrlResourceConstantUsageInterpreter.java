@@ -7,6 +7,7 @@ import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,10 +21,10 @@ import java.util.Set;
 public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpreter {
 
     private static final Set<String> URL_CLASSES = Set.of(
-            "java/net/URL",
-            "java/net/URI",
-            "java/net/http/HttpRequest",
-            "java/net/http/HttpClient"
+            "java.net.URL",
+            "java.net.URI",
+            "java.net.http.HttpRequest",
+            "java.net.http.HttpClient"
     );
 
     private static final Set<String> URL_METHODS = Set.of(
@@ -32,13 +33,13 @@ public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpr
     );
 
     private static final Set<String> HTTP_CLIENT_CLASSES = Set.of(
-            "org/apache/http/client/methods/HttpGet",
-            "org/apache/http/client/methods/HttpPost",
-            "org/apache/http/client/methods/HttpPut",
-            "org/apache/http/client/methods/HttpDelete",
-            "okhttp3/Request$Builder",
-            "org/springframework/web/reactive/function/client/WebClient",
-            "org/springframework/web/client/RestTemplate"
+            "org.apache.http.client.methods.HttpGet",
+            "org.apache.http.client.methods.HttpPost",
+            "org.apache.http.client.methods.HttpPut",
+            "org.apache.http.client.methods.HttpDelete",
+            "okhttp3.Request.Builder",
+            "org.springframework.web.reactive.function.client.WebClient",
+            "org.springframework.web.client.RestTemplate"
     );
 
     private static final Set<String> HTTP_CLIENT_METHODS = Set.of(
@@ -58,11 +59,11 @@ public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpr
                         CoreSemanticType.URL_RESOURCE,
                         location,
                         confidence,
-                        Map.of(
+                        new LinkedHashMap<>(Map.of(
                                 "urlClass", mc.targetClass(),
                                 "urlMethod", mc.targetMethod(),
                                 "methodDescriptor", mc.methodDescriptor()
-                        )
+                        ))
                 );
             }
             return unknown(location);

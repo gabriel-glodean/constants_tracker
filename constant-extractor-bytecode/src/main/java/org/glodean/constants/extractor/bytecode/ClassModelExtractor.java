@@ -18,6 +18,7 @@ import org.glodean.constants.model.UnitConstants;
 import org.glodean.constants.model.UnitDescriptor;
 
 
+import static org.glodean.constants.extractor.bytecode.Utils.toJavaDescriptor;
 import static org.glodean.constants.extractor.bytecode.Utils.toJavaName;
 
 /**
@@ -86,7 +87,7 @@ public record ClassModelExtractor(ClassModel model, AnalysisMerger merger)
       joinedMap.putAll(merger.merge(
           javaClassName,
           mm.methodName().stringValue(),
-          mm.methodType().stringValue(),
+          toJavaDescriptor(mm.methodType().stringValue()),
           analysis.code,
           analysis.in));
     }
