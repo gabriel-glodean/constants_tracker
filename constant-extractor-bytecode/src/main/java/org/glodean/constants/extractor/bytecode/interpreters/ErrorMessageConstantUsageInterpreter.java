@@ -8,7 +8,6 @@ import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,25 +35,24 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
 
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext mc) {
-            if (isErrorMessage(mc.targetClass(), mc.targetMethod())) {
-                double confidence = calculateConfidence(mc.targetClass(), mc.targetMethod());
-                return new ConstantUsage(
-                        UsageType.METHOD_INVOCATION_PARAMETER,
-                        CoreSemanticType.ERROR_MESSAGE,
-                        location,
-                        confidence,
-                        new LinkedHashMap<>(Map.of(
-                                "errorClass", mc.targetClass(),
-                                "errorMethod", mc.targetMethod(),
-                                "methodDescriptor", mc.methodDescriptor()
-                        ))
-                );
-            }
-            return unknown(location);
-        }
+        if (context instanceof MethodCallContext mc && isErrorMethod(mc.targetClass(), mc.targetMethod())) {
+            double confidence = calculateConfidence(mc.targetClass(), mc.targetMethod());
+            var metadata = new LinkedHashMap<String, Object>();
+            metadata.put("errorClass", mc.targetClass());
+            metadata.put(
+                    "errorMethod", mc.targetMethod());
+            metadata.put(
+                    "methodDescriptor", mc.methodDescriptor());
 
-        return unknown(location);
+            return new ConstantUsage(
+                    UsageType.METHOD_INVOCATION_PARAMETER,
+                    CoreSemanticType.ERROR_MESSAGE,
+                    location,
+                    confidence,
+                    metadata);
+
+        }
+        return null;
     }
 
     @Override
@@ -62,7 +60,7 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
         return type == UsageType.METHOD_INVOCATION_PARAMETER;
     }
 
-    private boolean isErrorMessage(String targetClass, String targetMethod) {
+    private boolean isErrorMethod(String targetClass, String targetMethod) {
         // Exception/Error constructors
         if ("<init>".equals(targetMethod) && isExceptionClass(targetClass)) {
             return true;
@@ -84,9 +82,5 @@ public class ErrorMessageConstantUsageInterpreter implements ConstantUsageInterp
             return 0.90;
         }
         return 0.70;
-    }
-
-    private static ConstantUsage unknown(UsageLocation location) {
-        return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
     }
 }

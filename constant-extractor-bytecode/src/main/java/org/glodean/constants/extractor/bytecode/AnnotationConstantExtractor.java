@@ -192,7 +192,10 @@ final class AnnotationConstantExtractor {
     Collection<ConstantUsageInterpreter> interpreters =
         registry.getInterpreters(UsageType.ANNOTATION_VALUE);
     for (ConstantUsageInterpreter interp : interpreters) {
-      map.put(constantValue, interp.interpret(location, ctx));
+      ConstantUsage usage = interp.interpret(location, ctx);
+      if (usage != null) {
+        map.put(constantValue, usage);
+      }
     }
   }
 }

@@ -24,7 +24,7 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretIllegalArgumentException() {
         ConstantUsage usage = interpreter.interpret(loc(10), ctx("java.lang.IllegalArgumentException", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
         assertEquals("java.lang.IllegalArgumentException", usage.metadata().get("errorClass"));
@@ -34,7 +34,7 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretRuntimeException() {
         ConstantUsage usage = interpreter.interpret(loc(15), ctx("java.lang.RuntimeException", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -42,7 +42,7 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretCustomException() {
         ConstantUsage usage = interpreter.interpret(loc(20), ctx("com.example.MyCustomException", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -50,7 +50,7 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretError() {
         ConstantUsage usage = interpreter.interpret(loc(25), ctx("java.lang.AssertionError", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -58,7 +58,7 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretObjectsRequireNonNull() {
         ConstantUsage usage = interpreter.interpret(loc(30), ctx("java.util.Objects", "requireNonNull"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
@@ -66,33 +66,24 @@ class ErrorMessageConstantUsageInterpreterTest {
     @Test
     void testInterpretGuavaPreconditions() {
         ConstantUsage usage = interpreter.interpret(loc(35), ctx("com.google.common.base.Preconditions", "checkArgument"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.ERROR_MESSAGE, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
 
     @Test
     void testInterpretNonExceptionInit() {
-        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java.lang.StringBuilder", "<init>"));
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(40), ctx("java.lang.StringBuilder", "<init>")));
     }
 
     @Test
     void testInterpretNonErrorMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(45), ctx("java.lang.String", "valueOf"));
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(45), ctx("java.lang.String", "valueOf")));
     }
 
     @Test
     void testInterpretWithoutContext() {
-        ConstantUsage usage = interpreter.interpret(loc(50), null);
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(50), null));
     }
 
     private static UsageLocation loc(int offset) {

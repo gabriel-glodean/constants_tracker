@@ -51,25 +51,21 @@ public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpr
 
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext mc) {
-            if (isUrlMethod(mc.targetClass(), mc.targetMethod())) {
-                double confidence = calculateConfidence(mc.targetClass());
-                return new ConstantUsage(
-                        UsageType.METHOD_INVOCATION_PARAMETER,
-                        CoreSemanticType.URL_RESOURCE,
-                        location,
-                        confidence,
-                        new LinkedHashMap<>(Map.of(
-                                "urlClass", mc.targetClass(),
-                                "urlMethod", mc.targetMethod(),
-                                "methodDescriptor", mc.methodDescriptor()
-                        ))
-                );
-            }
-            return unknown(location);
+        if (context instanceof MethodCallContext mc && isUrlMethod(mc.targetClass(), mc.targetMethod())) {
+            double confidence = calculateConfidence(mc.targetClass());
+            return new ConstantUsage(
+                    UsageType.METHOD_INVOCATION_PARAMETER,
+                    CoreSemanticType.URL_RESOURCE,
+                    location,
+                    confidence,
+                    new LinkedHashMap<>(Map.of(
+                            "urlClass", mc.targetClass(),
+                            "urlMethod", mc.targetMethod(),
+                            "methodDescriptor", mc.methodDescriptor()
+                    ))
+            );
         }
-
-        return unknown(location);
+        return null;
     }
 
     @Override
@@ -89,9 +85,5 @@ public class UrlResourceConstantUsageInterpreter implements ConstantUsageInterpr
             return 0.95;
         }
         return 0.85;
-    }
-
-    private static ConstantUsage unknown(UsageLocation location) {
-        return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
     }
 }

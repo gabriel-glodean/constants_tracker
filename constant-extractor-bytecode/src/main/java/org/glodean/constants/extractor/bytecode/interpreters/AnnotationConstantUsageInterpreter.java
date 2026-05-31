@@ -1,15 +1,17 @@
 package org.glodean.constants.extractor.bytecode.interpreters;
+
 import org.glodean.constants.interpreter.AnnotationValueContext;
 import org.glodean.constants.interpreter.ConstantUsageInterpreter;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.CoreSemanticType;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
+
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 
-/** Interpreter for constants appearing in Java annotations.
+/**
+ * Interpreter for constants appearing in Java annotations.
  *
  * <p>Classifies annotation values as API endpoints, property keys, SQL fragments, and regex
  * patterns based on the annotation type and element name.
@@ -48,10 +50,11 @@ public class AnnotationConstantUsageInterpreter implements ConstantUsageInterpre
             "jakarta.validation.constraints.Pattern",
             "javax.validation.constraints.Pattern"
     );
+
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
         if (!(context instanceof AnnotationValueContext(String annDesc, String elementName, var targetKind))) {
-            return unknown(location);
+            return null;
         }
         if (ENDPOINT_ANNOTATIONS.contains(annDesc) && ENDPOINT_ELEMENTS.contains(elementName)) {
             return usage(location, CoreSemanticType.API_ENDPOINT, 0.95, annDesc, elementName, targetKind);
@@ -68,26 +71,24 @@ public class AnnotationConstantUsageInterpreter implements ConstantUsageInterpre
         if (REGEX_ANNOTATIONS.contains(annDesc) && "regexp".equals(elementName)) {
             return usage(location, CoreSemanticType.REGEX_PATTERN, 0.95, annDesc, elementName, targetKind);
         }
-        return unknown(location);
+        return null;
     }
+
     @Override
     public boolean canInterpret(UsageType type) {
         return type == UsageType.ANNOTATION_VALUE;
     }
+
     private static ConstantUsage usage(
             UsageLocation location, CoreSemanticType semanticType, double confidence,
             String annotationDescriptor, String elementName,
             AnnotationValueContext.TargetKind targetKind) {
+        var metadata = new LinkedHashMap<String, Object>();
+        metadata.put("annotationDescriptor", annotationDescriptor);
+        metadata.put("elementName", elementName);
+        metadata.put("targetKind", targetKind.name());
         return new ConstantUsage(
                 UsageType.ANNOTATION_VALUE, semanticType, location, confidence,
-                new LinkedHashMap<>(Map.of(
-                        "annotationDescriptor", annotationDescriptor,
-                        "elementName", elementName,
-                        "targetKind", targetKind.name()
-                ))
-        );
-    }
-    private static ConstantUsage unknown(UsageLocation location) {
-        return new ConstantUsage(UsageType.ANNOTATION_VALUE, CoreSemanticType.UNKNOWN, location, 0.0);
+                metadata);
     }
 }

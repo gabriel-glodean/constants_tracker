@@ -53,25 +53,21 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
 
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext mc) {
-            if (isSqlMethod(mc.targetClass(), mc.targetMethod())) {
-                double confidence = calculateConfidence(mc.targetClass());
-                return new ConstantUsage(
-                        UsageType.METHOD_INVOCATION_PARAMETER,
-                        CoreSemanticType.SQL_FRAGMENT,
-                        location,
-                        confidence,
-                        new LinkedHashMap<>(Map.of(
-                                "dbClass", mc.targetClass(),
-                                "dbMethod", mc.targetMethod(),
-                                "methodDescriptor", mc.methodDescriptor()
-                        ))
-                );
-            }
-            return unknown(location);
+        if (context instanceof MethodCallContext mc && isSqlMethod(mc.targetClass(), mc.targetMethod())) {
+            double confidence = calculateConfidence(mc.targetClass());
+            return new ConstantUsage(
+                    UsageType.METHOD_INVOCATION_PARAMETER,
+                    CoreSemanticType.SQL_FRAGMENT,
+                    location,
+                    confidence,
+                    new LinkedHashMap<>(Map.of(
+                            "dbClass", mc.targetClass(),
+                            "dbMethod", mc.targetMethod(),
+                            "methodDescriptor", mc.methodDescriptor()
+                    ))
+            );
         }
-
-        return unknown(location);
+        return null;
     }
 
     @Override
@@ -97,9 +93,5 @@ public class SqlConstantUsageInterpreter implements ConstantUsageInterpreter {
             return 0.90;
         }
         return 0.85;
-    }
-
-    private static ConstantUsage unknown(UsageLocation location) {
-        return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
     }
 }

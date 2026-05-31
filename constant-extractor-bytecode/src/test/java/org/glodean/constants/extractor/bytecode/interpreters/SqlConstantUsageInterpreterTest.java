@@ -27,6 +27,7 @@ class SqlConstantUsageInterpreterTest {
         MethodCallContext context = ctx("java.sql.Statement", "executeQuery");
 
         ConstantUsage usage = interpreter.interpret(location, context);
+        assertNotNull(usage);
 
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(UsageType.METHOD_INVOCATION_PARAMETER, usage.structuralType());
@@ -38,7 +39,7 @@ class SqlConstantUsageInterpreterTest {
     @Test
     void testInterpretPreparedStatement() {
         ConstantUsage usage = interpreter.interpret(loc(5), ctx("java.sql.Connection", "prepareStatement"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -46,7 +47,7 @@ class SqlConstantUsageInterpreterTest {
     @Test
     void testInterpretJpaEntityManager() {
         ConstantUsage usage = interpreter.interpret(loc(15), ctx("jakarta.persistence.EntityManager", "createQuery"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
@@ -54,7 +55,7 @@ class SqlConstantUsageInterpreterTest {
     @Test
     void testInterpretJavaxEntityManager() {
         ConstantUsage usage = interpreter.interpret(loc(15), ctx("javax.persistence.EntityManager", "createNativeQuery"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
@@ -62,25 +63,19 @@ class SqlConstantUsageInterpreterTest {
     @Test
     void testInterpretSpringJdbcTemplate() {
         ConstantUsage usage = interpreter.interpret(loc(20), ctx("org.springframework.jdbc.core.JdbcTemplate", "queryForObject"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.SQL_FRAGMENT, usage.semanticType());
         assertEquals(0.85, usage.confidence());
     }
 
     @Test
     void testInterpretNonSqlMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(25), ctx("java.lang.String", "valueOf"));
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(25), ctx("java.lang.String", "valueOf")));
     }
 
     @Test
     void testInterpretWithoutContext() {
-        ConstantUsage usage = interpreter.interpret(loc(30), null);
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(30), null));
     }
 
     private static UsageLocation loc(int offset) {

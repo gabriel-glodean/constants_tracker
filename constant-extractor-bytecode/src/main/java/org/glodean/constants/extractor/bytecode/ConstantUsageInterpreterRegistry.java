@@ -67,7 +67,6 @@ public class ConstantUsageInterpreterRegistry {
      * {@link #build()} do not affect the already-built instance.
      */
     public static final class Builder {
-        private final Set<UnitConstant.UsageType> missing = EnumSet.allOf(UnitConstant.UsageType.class);
         private final ImmutableListMultimap.Builder<UnitConstant.UsageType, ConstantUsageInterpreter> multimapBuilder;
 
         private Builder() {
@@ -91,7 +90,6 @@ public class ConstantUsageInterpreterRegistry {
             Objects.requireNonNull(usageType, "Usage type cannot be null");
             Objects.requireNonNull(interpreter, "Interpreter cannot be null");
             multimapBuilder.put(usageType, interpreter);
-            missing.remove(usageType);
             return this;
         }
 
@@ -99,11 +97,14 @@ public class ConstantUsageInterpreterRegistry {
          * Constructs an immutable {@link ConstantUsageInterpreterRegistry} from all
          * previously registered interpreters.
          *
+         * <p>A {@link NoOpConstantUsageInterpreter} is always appended for every
+         * {@link UnitConstant.UsageType}, acting as the universal {@code UNKNOWN / 0.0}
+         * fallback when no concrete interpreter returns a result.
+         *
          * @return a new, immutable {@code ConstantUsageInterpreterRegistry}
          */
         public ConstantUsageInterpreterRegistry build() {
-            for (UnitConstant.UsageType usageType : missing) {
-                // Register a default no-op interpreter for any usage types that were not explicitly handled
+            for (UnitConstant.UsageType usageType : UnitConstant.UsageType.values()) {
                 multimapBuilder.put(usageType, NoOpConstantUsageInterpreter.forType(usageType));
             }
             return new ConstantUsageInterpreterRegistry(multimapBuilder.build());
@@ -183,12 +184,12 @@ public class ConstantUsageInterpreterRegistry {
          */
         @Override
         public UnitConstant.ConstantUsage interpret(UnitConstant.UsageLocation location, InterpretationContext context) {
-            // Return a minimal usage with no semantic interpretation
             return new UnitConstant.ConstantUsage(
                     this.usageType,
-                    UnitConstant.CoreSemanticType.UNKNOWN,               // No semantic classification
+                    UnitConstant.CoreSemanticType.UNKNOWN,
                     location,
-                    0.0                                     // Zero confidence
+                    0.0,
+                    context.attributes()
             );
         }
 

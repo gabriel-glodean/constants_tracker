@@ -10,9 +10,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for the LoggingConstantUsageInterpreter.
- */
 class LoggingConstantUsageInterpreterTest {
 
     private final LoggingConstantUsageInterpreter interpreter = new LoggingConstantUsageInterpreter();
@@ -26,22 +23,11 @@ class LoggingConstantUsageInterpreterTest {
 
     @Test
     void testInterpretSLF4JLogging() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "doSomething",
-                "()void",
-                10,
-                null
-        );
-
-        MethodCallContext context = new MethodCallContext(
-                "org.slf4j.Logger",
-                "info",
-                "(java.lang.String)void",
-                ReceiverKind.EXTERNAL_OBJECT
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "doSomething", "()void", 10, null);
+        MethodCallContext context = new MethodCallContext("org.slf4j.Logger", "info", "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
 
         ConstantUsage usage = interpreter.interpret(location, context);
+        assertNotNull(usage);
 
         assertEquals(UsageType.METHOD_INVOCATION_PARAMETER, usage.structuralType());
         assertEquals(CoreSemanticType.LOG_MESSAGE, usage.semanticType());
@@ -53,22 +39,11 @@ class LoggingConstantUsageInterpreterTest {
 
     @Test
     void testInterpretLog4j2Logging() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "handleError",
-                "()void",
-                25,
-                null
-        );
-
-        MethodCallContext context = new MethodCallContext(
-                "org.apache.logging.log4j.Logger",
-                "error",
-                "(java.lang.String)void",
-                ReceiverKind.EXTERNAL_OBJECT
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "handleError", "()void", 25, null);
+        MethodCallContext context = new MethodCallContext("org.apache.logging.log4j.Logger", "error", "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
 
         ConstantUsage usage = interpreter.interpret(location, context);
+        assertNotNull(usage);
 
         assertEquals(CoreSemanticType.LOG_MESSAGE, usage.semanticType());
         assertTrue(usage.confidence() >= 0.9, "Expected high confidence for Log4j2 logger");
@@ -76,88 +51,40 @@ class LoggingConstantUsageInterpreterTest {
 
     @Test
     void testInterpretSystemOut() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "debug",
-                "()void",
-                5,
-                null
-        );
-
-        MethodCallContext context = new MethodCallContext(
-                "java.io.PrintStream",
-                "println",
-                "(java.lang.String)void",
-                ReceiverKind.EXTERNAL_OBJECT
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "debug", "()void", 5, null);
+        MethodCallContext context = new MethodCallContext("java.io.PrintStream", "println", "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
 
         ConstantUsage usage = interpreter.interpret(location, context);
+        assertNotNull(usage);
 
         assertEquals(CoreSemanticType.LOG_MESSAGE, usage.semanticType());
-        assertTrue(usage.confidence() >= 0.8 && usage.confidence() < 0.9,
-                "Expected medium-high confidence for System.out");
+        assertTrue(usage.confidence() >= 0.8 && usage.confidence() < 0.9, "Expected medium-high confidence for System.out");
     }
 
     @Test
     void testInterpretCustomLogger() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "process",
-                "()void",
-                15,
-                null
-        );
-
-        MethodCallContext context = new MethodCallContext(
-                "com.mycompany.CustomLogger",
-                "debug",
-                "(java.lang.String)void",
-                ReceiverKind.EXTERNAL_OBJECT
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "process", "()void", 15, null);
+        MethodCallContext context = new MethodCallContext("com.mycompany.CustomLogger", "debug", "(java.lang.String)void", ReceiverKind.EXTERNAL_OBJECT);
 
         ConstantUsage usage = interpreter.interpret(location, context);
+        assertNotNull(usage);
 
         assertEquals(CoreSemanticType.LOG_MESSAGE, usage.semanticType());
-        assertTrue(usage.confidence() >= 0.7 && usage.confidence() < 0.8,
-                "Expected medium confidence for custom logger");
+        assertTrue(usage.confidence() >= 0.7 && usage.confidence() < 0.8, "Expected medium confidence for custom logger");
     }
 
     @Test
     void testInterpretNonLoggingMethod() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "calculate",
-                "()void",
-                20,
-                null
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "calculate", "()void", 20, null);
+        MethodCallContext context = new MethodCallContext("java.lang.String", "valueOf", "(int)java.lang.String", ReceiverKind.EXTERNAL_OBJECT);
 
-        MethodCallContext context = new MethodCallContext(
-                "java.lang.String",
-                "valueOf",
-                "(int)java.lang.String",
-                ReceiverKind.EXTERNAL_OBJECT
-        );
-
-        ConstantUsage usage = interpreter.interpret(location, context);
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(location, context));
     }
 
     @Test
     void testInterpretWithoutContext() {
-        UsageLocation location = new UsageLocation(
-                "com.example.MyClass",
-                "test",
-                "()void",
-                30,
-                null
-        );
+        UsageLocation location = new UsageLocation("com.example.MyClass", "test", "()void", 30, null);
 
-        ConstantUsage usage = interpreter.interpret(location, null);
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(location, null));
     }
 }

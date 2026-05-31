@@ -16,7 +16,6 @@ import java.lang.classfile.instruction.LineNumber;
 import java.lang.constant.ClassDesc;
 import java.util.*;
 import java.util.function.Function;
-
 import org.glodean.constants.interpreter.ArithmeticOperandContext;
 import org.glodean.constants.interpreter.ConstantUsageInterpreter;
 import org.glodean.constants.interpreter.FieldStoreContext;
@@ -228,8 +227,11 @@ public record AnalysisMerger(
 
         // Classify string literals baked into the invokedynamic recipe.
         for (String literal : patternSplitter.apply(pattern)) {
-            for (ConstantUsageInterpreter interpreter : interprets) {
-                usages.put(literal, interpreter.interpret(location, StringConcatenationContext.LITERAL));
+            for (ConstantUsageInterpreter interp : interprets) {
+                ConstantUsage usage = interp.interpret(location, StringConcatenationContext.LITERAL);
+                if (usage != null) {
+                    usages.put(literal, usage);
+                }
             }
         }
         // Classify stack arguments that resolved to constants.
@@ -312,7 +314,7 @@ public record AnalysisMerger(
         }
     }
 
-    private static void classifyValues(
+    private void classifyValues(
             Collection<?> values,
             Collection<ConstantUsageInterpreter> interpreters,
             ConstantUsageInterpreter.InterpretationContext context,
@@ -321,7 +323,8 @@ public record AnalysisMerger(
 
         for (Object value : values) {
             List<ConstantUsage> results = interpreters.stream()
-                    .map(interpreter -> interpreter.interpret(location, context))
+                    .map(interp -> interp.interpret(location, context))
+                    .filter(Objects::nonNull)
                     .toList();
             boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
             for (ConstantUsage usage : results) {

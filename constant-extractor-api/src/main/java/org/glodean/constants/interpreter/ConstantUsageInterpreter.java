@@ -29,17 +29,18 @@ public interface ConstantUsageInterpreter {
     }
 
     /**
-     * Converts a usage location into a structured constant usage description.
+     * Converts a usage location into a structured constant usage description, or
+     * {@code null} if this interpreter does not recognize the context.
      *
      * @param location the location where the constant was found
      * @param context  additional data required for interpretation; must match the
      *                 concrete type expected by this interpreter
-     * @return a {@link ConstantUsage} describing how the constant is used
+     * @return a {@link ConstantUsage}, or {@code null} if this interpreter cannot interpret the usage
      */
     ConstantUsage interpret(UsageLocation location, InterpretationContext context);
 
     /**
-     * Returns whether this interpreter handles the given usage type.
+     * Returns whether this interpreter can try to handle the given usage type.
      *
      * @param type the usage type to test
      * @return {@code true} if this interpreter can process {@code type}

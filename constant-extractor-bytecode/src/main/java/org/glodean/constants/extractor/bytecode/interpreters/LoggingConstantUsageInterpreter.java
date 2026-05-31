@@ -62,40 +62,25 @@ public class LoggingConstantUsageInterpreter implements ConstantUsageInterpreter
      * @param location the location where the constant is used
      * @param context the interpretation context containing method invocation details (expects {@link MethodCallContext})
      * @return a {@link ConstantUsage} with LOG_MESSAGE semantic type if logging is detected,
-     *         or UNKNOWN otherwise
+     *         or {@code null} otherwise
      */
     @Override
     public ConstantUsage interpret(UsageLocation location, InterpretationContext context) {
-        if (context instanceof MethodCallContext mc) {
-            if (isLoggingMethod(mc.targetClass(), mc.targetMethod())) {
-                double confidence = calculateConfidence(mc.targetClass());
-                return new ConstantUsage(
-                        UsageType.METHOD_INVOCATION_PARAMETER,
-                        CoreSemanticType.LOG_MESSAGE,
-                        location,
-                        confidence,
-                        new LinkedHashMap<>(Map.of(
-                                "loggerClass", mc.targetClass(),
-                                "loggerMethod", mc.targetMethod(),
-                                "methodDescriptor", mc.methodDescriptor()
-                        ))
-                );
-            }
-            // Not a logging call
+        if (context instanceof MethodCallContext mc && isLoggingMethod(mc.targetClass(), mc.targetMethod())) {
+            double confidence = calculateConfidence(mc.targetClass());
             return new ConstantUsage(
                     UsageType.METHOD_INVOCATION_PARAMETER,
-                    CoreSemanticType.UNKNOWN,
+                    CoreSemanticType.LOG_MESSAGE,
                     location,
-                    0.0
+                    confidence,
+                    new LinkedHashMap<>(Map.of(
+                            "loggerClass", mc.targetClass(),
+                            "loggerMethod", mc.targetMethod(),
+                            "methodDescriptor", mc.methodDescriptor()
+                    ))
             );
         }
-        // Cannot interpret without method call context
-        return new ConstantUsage(
-                UsageType.METHOD_INVOCATION_PARAMETER,
-                CoreSemanticType.UNKNOWN,
-                location,
-                0.0
-        );
+        return null;
     }
 
     /**

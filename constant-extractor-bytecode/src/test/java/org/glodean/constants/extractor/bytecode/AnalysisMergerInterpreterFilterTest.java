@@ -35,10 +35,10 @@ import org.junit.jupiter.api.Test;
 @DisplayName("AnalysisMerger – interpreter filter (no duplicate UNKNOWN usages)")
 class AnalysisMergerInterpreterFilterTest {
 
-  /** Always returns UNKNOWN/0.0 — simulates a non-matching interpreter. */
+  /** Always returns empty — simulates a non-matching interpreter. */
   private static final ConstantUsageInterpreter UNKNOWN_INTERP = new ConstantUsageInterpreter() {
     @Override public ConstantUsage interpret(UsageLocation location, InterpretationContext ctx) {
-      return new ConstantUsage(UsageType.METHOD_INVOCATION_PARAMETER, CoreSemanticType.UNKNOWN, location, 0.0);
+      return null;
     }
     @Override public boolean canInterpret(UsageType type) { return type == UsageType.METHOD_INVOCATION_PARAMETER; }
   };

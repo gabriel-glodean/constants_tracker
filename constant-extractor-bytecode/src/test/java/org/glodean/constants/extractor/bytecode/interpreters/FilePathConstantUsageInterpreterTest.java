@@ -24,7 +24,7 @@ class FilePathConstantUsageInterpreterTest {
     @Test
     void testInterpretNioPathsGet() {
         ConstantUsage usage = interpreter.interpret(loc(10), ctx("java.nio.file.Paths", "get"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.FILE_PATH, usage.semanticType());
         assertEquals(0.95, usage.confidence());
         assertEquals("java.nio.file.Paths", usage.metadata().get("fileClass"));
@@ -34,7 +34,7 @@ class FilePathConstantUsageInterpreterTest {
     @Test
     void testInterpretNioPathOf() {
         ConstantUsage usage = interpreter.interpret(loc(15), ctx("java.nio.file.Path", "of"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.FILE_PATH, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -42,7 +42,7 @@ class FilePathConstantUsageInterpreterTest {
     @Test
     void testInterpretNioFilesReadString() {
         ConstantUsage usage = interpreter.interpret(loc(20), ctx("java.nio.file.Files", "readString"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.FILE_PATH, usage.semanticType());
         assertEquals(0.95, usage.confidence());
     }
@@ -50,7 +50,7 @@ class FilePathConstantUsageInterpreterTest {
     @Test
     void testInterpretJavaIoFileConstructor() {
         ConstantUsage usage = interpreter.interpret(loc(25), ctx("java.io.File", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.FILE_PATH, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
@@ -58,33 +58,24 @@ class FilePathConstantUsageInterpreterTest {
     @Test
     void testInterpretFileInputStream() {
         ConstantUsage usage = interpreter.interpret(loc(30), ctx("java.io.FileInputStream", "<init>"));
-
+        assertNotNull(usage);
         assertEquals(CoreSemanticType.FILE_PATH, usage.semanticType());
         assertEquals(0.90, usage.confidence());
     }
 
     @Test
     void testInterpretNonFileMethod() {
-        ConstantUsage usage = interpreter.interpret(loc(35), ctx("java.lang.String", "valueOf"));
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(35), ctx("java.lang.String", "valueOf")));
     }
 
     @Test
     void testInterpretUnknownMethodOnFileClass() {
-        ConstantUsage usage = interpreter.interpret(loc(40), ctx("java.io.File", "toString"));
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(40), ctx("java.io.File", "toString")));
     }
 
     @Test
     void testInterpretWithoutContext() {
-        ConstantUsage usage = interpreter.interpret(loc(45), null);
-
-        assertEquals(CoreSemanticType.UNKNOWN, usage.semanticType());
-        assertEquals(0.0, usage.confidence());
+        assertNull(interpreter.interpret(loc(45), null));
     }
 
     private static UsageLocation loc(int offset) {

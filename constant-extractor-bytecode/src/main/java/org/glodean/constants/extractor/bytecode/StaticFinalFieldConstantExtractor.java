@@ -86,7 +86,10 @@ final class StaticFinalFieldConstantExtractor {
         Collection<ConstantUsageInterpreter> interpreters =
             registry.getInterpreters(UsageType.STATIC_FIELD_STORE);
         for (ConstantUsageInterpreter interp : interpreters) {
-          map.put(value, interp.interpret(location, ctx));
+          ConstantUsage usage = interp.interpret(location, ctx);
+          if (usage != null) {
+            map.put(value, usage);
+          }
         }
       });
     }
