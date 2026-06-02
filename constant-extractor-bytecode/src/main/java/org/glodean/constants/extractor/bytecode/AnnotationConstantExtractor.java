@@ -176,6 +176,7 @@ final class AnnotationConstantExtractor {
           processAnnotations(List.of(nested.annotation()),
               className, methodName, methodDescriptor, targetKind, map);
       // OfEnum and OfClass don't carry user-defined constant strings/numbers
+      // really ?
       default -> {}
     }
   }

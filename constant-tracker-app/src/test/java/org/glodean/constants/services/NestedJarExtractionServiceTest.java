@@ -288,10 +288,11 @@ class NestedJarExtractionServiceTest {
   @Test
   void onlyNewNestedJarsExtracted_cachedOnesSkipped() throws Exception {
     byte[] libBytes = minimalJarBytes();
-    Path fatJar = buildFatJar(tempDir, "app.jar", java.util.Map.of(
-        "BOOT-INF/lib/cached.jar", libBytes,
-        "BOOT-INF/lib/fresh.jar", libBytes
-    ));
+    // LinkedHashMap guarantees cached.jar is visited first, matching the ordered mock stubs below.
+    java.util.Map<String, byte[]> entries = new java.util.LinkedHashMap<>();
+    entries.put("BOOT-INF/lib/cached.jar", libBytes);
+    entries.put("BOOT-INF/lib/fresh.jar", libBytes);
+    Path fatJar = buildFatJar(tempDir, "app.jar", entries);
 
     when(descriptorRepository.findByProjectAndVersionAndContentHash(
         eq(PROJECT), eq(VERSION), anyString()))
@@ -325,10 +326,12 @@ class NestedJarExtractionServiceTest {
   @Test
   void corruptNestedJar_skippedGracefully_otherJarsStillExtracted() throws Exception {
     byte[] corrupt = new byte[]{0x00, 0x01, 0x02}; // not a valid ZIP
-    Path fatJar = buildFatJar(tempDir, "app.jar", java.util.Map.of(
-        "BOOT-INF/lib/corrupt.jar", corrupt,
-        "BOOT-INF/lib/good.jar", minimalJarBytes()
-    ));
+    // Use LinkedHashMap to guarantee corrupt.jar is written before good.jar in the ZIP,
+    // so the ordered mock stubs (.thenThrow → .thenReturn) fire in the expected sequence.
+    java.util.Map<String, byte[]> entries = new java.util.LinkedHashMap<>();
+    entries.put("BOOT-INF/lib/corrupt.jar", corrupt);
+    entries.put("BOOT-INF/lib/good.jar", minimalJarBytes());
+    Path fatJar = buildFatJar(tempDir, "app.jar", entries);
 
     UnitConstants good = stubUnitConstants("good.jar");
     when(extractionService.extractZipStream(any(), any()))
