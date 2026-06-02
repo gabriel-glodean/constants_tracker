@@ -11,8 +11,7 @@ import java.lang.classfile.constantpool.IntegerEntry;
 import java.lang.classfile.constantpool.LongEntry;
 import java.lang.classfile.constantpool.StringEntry;
 import java.lang.reflect.AccessFlag;
-import java.util.Collection;
-import org.glodean.constants.interpreter.ConstantUsageInterpreter;
+
 import org.glodean.constants.interpreter.FieldStoreContext;
 import org.glodean.constants.interpreter.ReceiverKind;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
@@ -65,7 +64,6 @@ final class StaticFinalFieldConstantExtractor {
           case LongEntry    l -> l.longValue();
           case FloatEntry   f -> f.floatValue();
           case DoubleEntry  d -> d.doubleValue();
-          default -> null;
         };
 
         if (value == null) {
@@ -82,15 +80,7 @@ final class StaticFinalFieldConstantExtractor {
 
         FieldStoreContext ctx =
             new FieldStoreContext(className, fieldName, fieldDescriptor, ReceiverKind.STATIC);
-
-        Collection<ConstantUsageInterpreter> interpreters =
-            registry.getInterpreters(UsageType.STATIC_FIELD_STORE);
-        for (ConstantUsageInterpreter interp : interpreters) {
-          ConstantUsage usage = interp.interpret(location, ctx);
-          if (usage != null) {
-            map.put(value, usage);
-          }
-        }
+        registry.interpret(value, UsageType.STATIC_FIELD_STORE, map, location, ctx);
       });
     }
 

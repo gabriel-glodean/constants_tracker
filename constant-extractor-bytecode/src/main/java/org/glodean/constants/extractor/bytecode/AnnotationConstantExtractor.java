@@ -12,12 +12,10 @@ import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
 import java.lang.classfile.attribute.RuntimeInvisibleParameterAnnotationsAttribute;
 import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
 import java.lang.classfile.attribute.RuntimeVisibleParameterAnnotationsAttribute;
-import java.util.Collection;
 import java.util.List;
 import java.lang.classfile.Attributes;
 import org.glodean.constants.interpreter.AnnotationValueContext;
 import org.glodean.constants.interpreter.AnnotationValueContext.TargetKind;
-import org.glodean.constants.interpreter.ConstantUsageInterpreter;
 import org.glodean.constants.model.UnitConstant.ConstantUsage;
 import org.glodean.constants.model.UnitConstant.UsageLocation;
 import org.glodean.constants.model.UnitConstant.UsageType;
@@ -189,13 +187,6 @@ final class AnnotationConstantExtractor {
       TargetKind targetKind, Multimap<Object, ConstantUsage> map) {
     UsageLocation location = new UsageLocation(className, methodName, methodDescriptor, 0, null);
     AnnotationValueContext ctx = new AnnotationValueContext(annotationDescriptor, elementName, targetKind);
-    Collection<ConstantUsageInterpreter> interpreters =
-        registry.getInterpreters(UsageType.ANNOTATION_VALUE);
-    for (ConstantUsageInterpreter interp : interpreters) {
-      ConstantUsage usage = interp.interpret(location, ctx);
-      if (usage != null) {
-        map.put(constantValue, usage);
-      }
-    }
+    registry.interpret(constantValue, UsageType.ANNOTATION_VALUE, map, location, ctx);
   }
 }

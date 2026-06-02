@@ -8,7 +8,7 @@ import org.glodean.constants.model.UnitConstant;
 import java.util.*;
 
 /**
-     * Registry that maps {@link UnitConstant.UsageType} values to their corresponding
+ * Registry that maps {@link UnitConstant.UsageType} values to their corresponding
  * {@link ConstantUsageInterpreter} implementations.
  *
  * <p>A single usage type may be handled by multiple interpreters. Instances are
@@ -34,17 +34,16 @@ public class ConstantUsageInterpreterRegistry {
         this.interpreters = interpreters;
     }
 
-    /**
-     * Returns all interpreters registered for the given usage type.
-     *
-     * @param usageType the usage type to look up; must not be {@code null}
-     * @return an unmodifiable collection of interpreters for the given type;
-     * empty if none are registered
-     * @throws NullPointerException if {@code usageType} is {@code null}
-     */
-    public Collection<ConstantUsageInterpreter> getInterpreters(UnitConstant.UsageType usageType) {
-        Objects.requireNonNull(usageType, "Usage type cannot be null");
-        return interpreters.get(usageType);
+    public void interpret(Object value, UnitConstant.UsageType usageType, Multimap<Object, UnitConstant.ConstantUsage> usages, UnitConstant.UsageLocation location, ConstantUsageInterpreter.InterpretationContext context) {
+        var results = interpreters.get(usageType).stream()
+                .map(interp -> interp.interpret(location, context))
+                .filter(Objects::nonNull)
+                .toList();
+        if (results.isEmpty()) {
+            usages.put(value, NoOpConstantUsageInterpreter.forType(usageType).interpret(location, context));
+            return;
+        }
+        usages.putAll(value, results);
     }
 
     /**
@@ -77,10 +76,6 @@ public class ConstantUsageInterpreterRegistry {
          * Registers a {@link ConstantUsageInterpreter} for the specified
          * {@link UnitConstant.UsageType}.
          *
-         * <p>Multiple interpreters can be registered for the same usage type; they will
-         * all be returned by {@link ConstantUsageInterpreterRegistry#getInterpreters} in
-         * registration order.
-         *
          * @param usageType   the usage type this interpreter handles; must not be {@code null}
          * @param interpreter the interpreter to register; must not be {@code null}
          * @return this builder instance for method chaining
@@ -104,9 +99,6 @@ public class ConstantUsageInterpreterRegistry {
          * @return a new, immutable {@code ConstantUsageInterpreterRegistry}
          */
         public ConstantUsageInterpreterRegistry build() {
-            for (UnitConstant.UsageType usageType : UnitConstant.UsageType.values()) {
-                multimapBuilder.put(usageType, NoOpConstantUsageInterpreter.forType(usageType));
-            }
             return new ConstantUsageInterpreterRegistry(multimapBuilder.build());
         }
     }
@@ -133,7 +125,7 @@ public class ConstantUsageInterpreterRegistry {
      * // Returns a basic usage with UNKNOWN semantic type
      * </pre>
      */
-        enum NoOpConstantUsageInterpreter implements ConstantUsageInterpreter {
+    enum NoOpConstantUsageInterpreter implements ConstantUsageInterpreter {
         ARITHMETIC_OPERAND_INTERPRETER(UnitConstant.UsageType.ARITHMETIC_OPERAND),
 
         STRING_CONCATENATION_MEMBER_INTERPRETER(UnitConstant.UsageType.STRING_CONCATENATION_MEMBER),
@@ -144,9 +136,9 @@ public class ConstantUsageInterpreterRegistry {
 
         METHOD_INVOCATION_TARGET_INTERPRETER(UnitConstant.UsageType.METHOD_INVOCATION_TARGET),
 
-         METHOD_INVOCATION_PARAMETER_INTERPRETER(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER),
+        METHOD_INVOCATION_PARAMETER_INTERPRETER(UnitConstant.UsageType.METHOD_INVOCATION_PARAMETER),
 
-         ANNOTATION_VALUE_INTERPRETER(UnitConstant.UsageType.ANNOTATION_VALUE);
+        ANNOTATION_VALUE_INTERPRETER(UnitConstant.UsageType.ANNOTATION_VALUE);
 
         private final UnitConstant.UsageType usageType;
 
@@ -167,13 +159,14 @@ public class ConstantUsageInterpreterRegistry {
         NoOpConstantUsageInterpreter(UnitConstant.UsageType usageType) {
             this.usageType = usageType;
         }
+
         /**
          * Creates a minimal constant usage record without performing semantic analysis.
          * <p>
          * This method always returns a {@link UnitConstant.ConstantUsage} with:
          * <ul>
-          *   <li>Structural type: {@link UnitConstant.UsageType#METHOD_INVOCATION_PARAMETER} (default)</li>
-          *   <li>Semantic type: {@link UnitConstant.CoreSemanticType#UNKNOWN}</li>
+         *   <li>Structural type: {@link UnitConstant.UsageType#METHOD_INVOCATION_PARAMETER} (default)</li>
+         *   <li>Semantic type: {@link UnitConstant.CoreSemanticType#UNKNOWN}</li>
          *   <li>Confidence: 0.0 (no confidence in classification)</li>
          *   <li>Metadata: empty map</li>
          * </ul>

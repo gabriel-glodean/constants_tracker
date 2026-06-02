@@ -16,6 +16,7 @@ import java.lang.classfile.instruction.LineNumber;
 import java.lang.constant.ClassDesc;
 import java.util.*;
 import java.util.function.Function;
+
 import org.glodean.constants.interpreter.ArithmeticOperandContext;
 import org.glodean.constants.interpreter.ConstantUsageInterpreter;
 import org.glodean.constants.interpreter.FieldStoreContext;
@@ -193,7 +194,7 @@ public record AnalysisMerger(
 
         int paramCount = ii.typeSymbol().parameterCount();
         MethodCallContext ctx;
-        if (ii.opcode() != INVOKESTATIC){
+        if (ii.opcode() != INVOKESTATIC) {
             PointsToSet receiverSlot = stackAt(state, paramCount + 1);
             ctx = new MethodCallContext(
                     toJavaName(ii.owner().asSymbol()),
@@ -221,19 +222,9 @@ public record AnalysisMerger(
 
         String pattern = (String) Iterables.getFirst(idi.bootstrapArgs(), "");
 
-        var interprets =
-                usageInterpreterRegistry.getInterpreters(STRING_CONCATENATION_MEMBER);
-        if (interprets.isEmpty()) return;
-
         // Classify string literals baked into the invokedynamic recipe.
-        for (String literal : patternSplitter.apply(pattern)) {
-            for (ConstantUsageInterpreter interp : interprets) {
-                ConstantUsage usage = interp.interpret(location, StringConcatenationContext.LITERAL);
-                if (usage != null) {
-                    usages.put(literal, usage);
-                }
-            }
-        }
+        patternSplitter.apply(pattern).forEach(literal ->
+                usageInterpreterRegistry.interpret(literal, STRING_CONCATENATION_MEMBER, usages, location, StringConcatenationContext.LITERAL));
         // Classify stack arguments that resolved to constants.
         int paramCount = idi.typeSymbol().parameterCount();
         for (int paramPos = 1; paramPos <= paramCount; paramPos++) {
@@ -301,39 +292,17 @@ public record AnalysisMerger(
             UsageLocation location) {
 
         if (slot == null || slot.isEmpty()) return;
-        Collection<ConstantUsageInterpreter> interpreters =
-                usageInterpreterRegistry.getInterpreters(usageType);
-        if (interpreters.isEmpty()) return;
-
         for (var entity : slot) {
             switch (entity) {
-                case Constant<?> c -> classifyValues(List.of(c.value()), interpreters, context, location, usages);
-                case ConstantPropagation cp -> classifyValues(cp.values(), interpreters, context, location, usages);
+                case Constant<?> c ->
+                        usageInterpreterRegistry.interpret(c.value(), usageType, usages, location, context);
+                case ConstantPropagation cp ->
+                        cp.values().forEach(v -> usageInterpreterRegistry.interpret(v, usageType, usages, location, context));
                 default -> { /* not a constant value — skip */ }
             }
         }
     }
 
-    private void classifyValues(
-            Collection<?> values,
-            Collection<ConstantUsageInterpreter> interpreters,
-            ConstantUsageInterpreter.InterpretationContext context,
-            UsageLocation location,
-            Multimap<Object, ConstantUsage> usages) {
-
-        for (Object value : values) {
-            List<ConstantUsage> results = interpreters.stream()
-                    .map(interp -> interp.interpret(location, context))
-                    .filter(Objects::nonNull)
-                    .toList();
-            boolean anyMatched = results.stream().anyMatch(u -> u.confidence() > 0);
-            for (ConstantUsage usage : results) {
-                if (!anyMatched || usage.confidence() > 0) {
-                    usages.put(value, usage);
-                }
-            }
-        }
-    }
 
     // -------------------------------------------------------------------------
     // Context builders
