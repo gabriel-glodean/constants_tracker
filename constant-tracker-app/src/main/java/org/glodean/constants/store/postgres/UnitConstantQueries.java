@@ -37,38 +37,44 @@ import reactor.core.publisher.Flux;
 @Component
 public class UnitConstantQueries {
   private static final Logger log = LogManager.getLogger(UnitConstantQueries.class);
+  // GROUP BY + ORDER BY live in UNIT_COUNTS_SUFFIX — filters are appended between the two.
   private static final String UNIT_COUNTS_PREFIX = """
-      SELECT d.path               AS path,
-             s.unit_name          AS name,
-             COUNT(DISTINCT c.id) AS constants
-      FROM unit_descriptors d
-      JOIN unit_snapshots  s  ON s.descriptor_id = d.id
-      JOIN unit_constants  c  ON c.snapshot_id   = s.id
-      JOIN constant_usages cu ON cu.constant_id  = c.id
-      WHERE d.project = :project AND d.version = :version
+      SELECT ds.path               AS path,
+             ds.unit_name          AS name,
+             COUNT(DISTINCT c.id)  AS constants
+      FROM (
+        SELECT d.path, s.id AS snapshot_id, s.unit_name
+        FROM unit_descriptors d
+        JOIN unit_snapshots   s ON s.descriptor_id = d.id
+        WHERE d.project = :project AND d.version = :version
+      ) ds
+      JOIN unit_constants  c  ON c.snapshot_id  = ds.snapshot_id
+      JOIN constant_usages cu ON cu.constant_id = c.id
       """;
   private static final String UNIT_COUNTS_SUFFIX =
-      " GROUP BY d.path, s.unit_name ORDER BY d.path, s.unit_name LIMIT :limit OFFSET :offset";
+      " GROUP BY ds.path, ds.unit_name ORDER BY ds.path, ds.unit_name LIMIT :limit OFFSET :offset";
+  // GROUP BY + ORDER BY live in CONSTANT_DETAILS_SUFFIX — filters are appended between the two.
   private static final String CONSTANT_DETAILS_PREFIX = """
       SELECT uc.constant_value             AS constantValue,
              uc.constant_value_type        AS constantValueType,
              cu.structural_type            AS structuralType,
-             cu.semantic_type_kind         AS semanticTypeKind,
-             cu.semantic_type_name         AS semanticTypeName,
-             cu.semantic_display_name      AS semanticDisplayName,
-             cu.location_class_name        AS locationClassName,
-             cu.location_method_name       AS locationMethodName,
-             cu.location_method_descriptor AS locationMethodDescriptor,
-             cu.location_line_number       AS locationLineNumber,
-             cu.confidence                 AS confidence
-      FROM unit_descriptors d
-      JOIN unit_snapshots  s  ON s.descriptor_id = d.id
-      JOIN unit_constants  uc ON uc.snapshot_id  = s.id
-      JOIN constant_usages cu ON cu.constant_id  = uc.id
-      WHERE d.project = :project AND d.version = :version
+             cu.semantic_type_name         AS semanticType,
+             cu.confidence                 AS confidence,
+             cu.metadata                   AS metadata,
+             COUNT(*)                      AS occurrenceCount
+      FROM unit_constants  uc
+      JOIN constant_usages cu ON cu.constant_id = uc.id
+      WHERE uc.snapshot_id IN (
+        SELECT s.id
+        FROM unit_snapshots   s
+        JOIN unit_descriptors d ON d.id = s.descriptor_id
+        WHERE d.project = :project AND d.version = :version
+      )
       """;
   private static final String CONSTANT_DETAILS_SUFFIX =
-      " ORDER BY d.path, s.unit_name, uc.id, cu.id LIMIT :limit OFFSET :offset";
+      " GROUP BY uc.constant_value, uc.constant_value_type, cu.structural_type,"
+      + " cu.semantic_type_name, cu.confidence, cu.metadata"
+      + " ORDER BY occurrenceCount DESC, uc.constant_value LIMIT :limit OFFSET :offset";
   private final DatabaseClient db;
   private final SemanticTypeStore semanticTypeStore;
   public UnitConstantQueries(DatabaseClient db, SemanticTypeStore semanticTypeStore) {
@@ -101,17 +107,13 @@ public class UnitConstantQueries {
   public Flux<ConstantDetailRow> constantDetails(UnitListingRequest req, int defaultPageSize) {
     return query(req, defaultPageSize, CONSTANT_DETAILS_PREFIX, CONSTANT_DETAILS_SUFFIX,
         (row, ignore) -> new ConstantDetailRow(
-            row.get("constantValue",            String.class),
-            row.get("constantValueType",        String.class),
-            row.get("structuralType",           String.class),
-            row.get("semanticTypeKind",         String.class),
-            row.get("semanticTypeName",         String.class),
-            row.get("semanticDisplayName",      String.class),
-            row.get("locationClassName",        String.class),
-            row.get("locationMethodName",       String.class),
-            row.get("locationMethodDescriptor", String.class),
-            row.get("locationLineNumber",       Integer.class),
-            row.get("confidence",               Double.class)));
+            row.get("constantValue",   String.class),
+            row.get("constantValueType", String.class),
+            row.get("structuralType",  String.class),
+            row.get("semanticType",    String.class),
+            row.get("confidence",      Double.class),
+            row.get("metadata",        String.class),
+            row.get("occurrenceCount", Long.class)));
   }
   // -- private -----------------------------------------------------------------
   /**

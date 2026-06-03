@@ -21,8 +21,9 @@ import reactor.core.publisher.Mono;
  *
  * <h3>Key design decisions</h3>
  * <ul>
- *   <li>One row per {@code (unit_constant, constant_usage)} pair — a constant with multiple usages
- *       appears multiple times.  The LLM tool groups by value+structuralType as needed.</li>
+ *   <li>One row per distinct {@code (constantValue, metadata)} group — duplicates are collapsed
+ *       by the SQL {@code GROUP BY}, and {@code occurrenceCount} reflects how many raw usages
+ *       share that exact constant+context pair.</li>
  *   <li>Paging is always active ({@code page} / {@code pageSize}, default 100 rows).</li>
  *   <li>All filters are optional; omitting all of them returns every constant usage for the
  *       project/version (subject to the page limit).</li>
@@ -64,14 +65,10 @@ public class ConstantDetailController {
             row.constantValue(),
             row.constantValueType(),
             row.structuralType(),
-            row.semanticTypeKind(),
-            row.semanticTypeName(),
-            row.semanticDisplayName(),
-            row.locationClassName(),
-            row.locationMethodName(),
-            row.locationMethodDescriptor(),
-            row.locationLineNumber(),
-            row.confidence()))
+            row.semanticType(),
+            row.confidence(),
+            row.metadata(),
+            row.occurrenceCount()))
         .collectList();
   }
 }

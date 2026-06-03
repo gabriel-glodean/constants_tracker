@@ -28,11 +28,11 @@ class ConstantDetailControllerTest {
     when(unitConstantQueries.constantDetails(any(), eq(100)))
         .thenReturn(Flux.just(
             detail("http://api.example.com/v1", "String",
-                "METHOD_INVOCATION_PARAMETER", "CORE", "URL_RESOURCE", "URL Resource",
-                "com.acme.ApiClient", "fetch", "(Ljava/lang/String;)V", 42, 0.9),
+                "METHOD_INVOCATION_PARAMETER", "URL_RESOURCE", 0.9,
+                "{\"calleeOwner\":\"com.acme.ApiClient\",\"calleeName\":\"fetch\"}", 3L),
             detail("SELECT * FROM users", "String",
-                "METHOD_INVOCATION_PARAMETER", "CORE", "SQL_FRAGMENT", "SQL Fragment",
-                "com.acme.UserRepository", "findAll", "()Ljava/util/List;", 17, 0.95)));
+                "METHOD_INVOCATION_PARAMETER", "SQL_FRAGMENT", 0.95,
+                "{\"calleeOwner\":\"com.acme.UserRepository\",\"calleeName\":\"findAll\"}", 1L)));
     web.get()
         .uri("/units/constants?project=demo&version=2")
         .exchange()
@@ -41,36 +41,33 @@ class ConstantDetailControllerTest {
         .jsonPath("$[0].constantValue").isEqualTo("http://api.example.com/v1")
         .jsonPath("$[0].constantValueType").isEqualTo("String")
         .jsonPath("$[0].structuralType").isEqualTo("METHOD_INVOCATION_PARAMETER")
-        .jsonPath("$[0].semanticTypeKind").isEqualTo("CORE")
-        .jsonPath("$[0].semanticTypeName").isEqualTo("URL_RESOURCE")
-        .jsonPath("$[0].locationClassName").isEqualTo("com.acme.ApiClient")
-        .jsonPath("$[0].locationMethodName").isEqualTo("fetch")
-        .jsonPath("$[0].locationLineNumber").isEqualTo(42)
+        .jsonPath("$[0].semanticType").isEqualTo("URL_RESOURCE")
+        .jsonPath("$[0].confidence").isEqualTo(0.9)
+        .jsonPath("$[0].occurrenceCount").isEqualTo(3)
         .jsonPath("$[1].constantValue").isEqualTo("SELECT * FROM users")
-        .jsonPath("$[1].semanticTypeName").isEqualTo("SQL_FRAGMENT");
+        .jsonPath("$[1].semanticType").isEqualTo("SQL_FRAGMENT");
   }
   @Test
   void listConstantDetails_withStructuralTypeFilter_passesFilterToQuery() {
     when(unitConstantQueries.constantDetails(any(), eq(100)))
         .thenReturn(Flux.just(
             detail("debug msg", "String",
-                "METHOD_INVOCATION_PARAMETER", "CORE", "LOG_MESSAGE", "Log Message",
-                "com.acme.Service", "process", "()V", 10, 0.8)));
+                "METHOD_INVOCATION_PARAMETER", "LOG_MESSAGE", 0.8,
+                "{\"calleeOwner\":\"com.acme.Service\",\"calleeName\":\"process\"}", 2L)));
     web.get()
         .uri("/units/constants?project=demo&version=1&structuralType=METHOD_INVOCATION_PARAMETER")
         .exchange()
         .expectStatus().isOk()
         .expectBody()
         .jsonPath("$[0].structuralType").isEqualTo("METHOD_INVOCATION_PARAMETER")
-        .jsonPath("$[0].semanticTypeName").isEqualTo("LOG_MESSAGE");
+        .jsonPath("$[0].semanticType").isEqualTo("LOG_MESSAGE");
   }
   @Test
   void listConstantDetails_withConstantValueTypeFilter_passesFilterToQuery() {
     when(unitConstantQueries.constantDetails(any(), eq(100)))
         .thenReturn(Flux.just(
             detail("42", "Integer",
-                "ARITHMETIC_OPERAND", "CORE", "UNKNOWN", null,
-                "com.acme.Calc", "compute", "()I", 5, 0.6)));
+                "ARITHMETIC_OPERAND", "UNKNOWN", 0.6, "{}", 7L)));
     web.get()
         .uri("/units/constants?project=demo&version=1&constantValueType=Integer")
         .exchange()
@@ -84,15 +81,13 @@ class ConstantDetailControllerTest {
     when(unitConstantQueries.constantDetails(any(), eq(100)))
         .thenReturn(Flux.just(
             detail("some constant", "String",
-                "FIELD_STORE", "CORE", "UNKNOWN", null,
-                "com.acme.Config", "init", "()V", null, 0.5)));
+                "FIELD_STORE", "UNKNOWN", 0.5, "{}", 1L)));
     web.get()
         .uri("/units/constants?project=demo&version=3&semanticType=UNKNOWN")
         .exchange()
         .expectStatus().isOk()
         .expectBody()
-        .jsonPath("$[0].semanticTypeName").isEqualTo("UNKNOWN")
-        .jsonPath("$[0].semanticTypeKind").isEqualTo("CORE");
+        .jsonPath("$[0].semanticType").isEqualTo("UNKNOWN");
   }
   @Test
   void listConstantDetails_customPageSize_isRespected() {
@@ -149,14 +144,14 @@ class ConstantDetailControllerTest {
   private static ConstantDetailRow detail(
       String constantValue, String constantValueType,
       String structuralType,
-      String semanticTypeKind, String semanticTypeName, String semanticDisplayName,
-      String locationClassName, String locationMethodName, String locationMethodDescriptor,
-      Integer locationLineNumber, double confidence) {
+      String semanticType,
+      double confidence,
+      String metadata,
+      long occurrenceCount) {
     return new ConstantDetailRow(
         constantValue, constantValueType,
         structuralType,
-        semanticTypeKind, semanticTypeName, semanticDisplayName,
-        locationClassName, locationMethodName, locationMethodDescriptor,
-        locationLineNumber, confidence);
+        semanticType, confidence,
+        metadata, occurrenceCount);
   }
 }

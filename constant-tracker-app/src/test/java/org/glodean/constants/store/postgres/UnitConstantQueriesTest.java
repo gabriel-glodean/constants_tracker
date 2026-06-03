@@ -216,7 +216,8 @@ class UnitConstantQueriesTest {
   private static ConstantDetailRow detailRow(String value) {
     return new ConstantDetailRow(
         value, "String", "METHOD_INVOCATION_PARAMETER",
-        "CORE", "LOG_MESSAGE", "Log Message",
-        "com.Foo", "bar", "()V", 1, 0.9);
+        "LOG_MESSAGE", 0.9,
+        "{\"calleeOwner\":\"com.Foo\",\"calleeName\":\"bar\",\"calleeDescriptor\":\"()V\"}",
+        5L);
   }
 }
